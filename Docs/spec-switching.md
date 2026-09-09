@@ -6,37 +6,42 @@
 
 ## 2. 初期版の状態
 
-初期版でSwitcherが保持する状態は次の2つだけとする。
+初期版でSwitcherが保持する状態は次の3つだけとする。
 
-- 登録されたShot一覧
+- Shot A参照
+- Shot B参照
 - 現在のProgram Shot
 
 Selected、Preview、Transitioning、Tally、Bankなどの状態はまだ追加しない。
 
 ## 3. 直接Cut
 
-1. 数字キーに対応するShot番号を受け取る。
-2. 対象ShotとCinemachineCameraが有効か確認する。
-3. CinemachineのProgram対象を切り替える。
-4. 現在のProgram Shot参照を更新する。
-5. Program名をConsoleへ1回だけLogする。
+1. AまたはBのCut指示を受け取る。
+2. 対象Shotと専用CinemachineCameraが有効か確認する。
+3. 現在と異なるCinemachineCameraをLiveにする。
+4. Cinemachine BrainのCutとしてProgramを切り替える。
+5. 現在のProgram Shot参照を更新する。
+6. Program名をConsoleへ1回だけLogする。
 
 無効な番号、null参照、無効なShotでは現在のProgramを維持する。
 
 ## 4. Cinemachineによる切り替え
 
 - Program出力は1台のUnity CameraとCinemachine Brainを使用する。
+- A/Bには別々のCinemachineCameraを割り当てる。
 - Unity CameraへShot CameraのTransformやLensを毎フレームコピーしない。
+- Live中のCinemachineCameraへ別ShotのTransform、Spline、Lens、Targetを上書きしない。
 - 初期版はCutだけを実装する。
 - Cinemachine Blendと映像Crossfadeは初期版へ含めない。
 - Shotの有効化方法はCinemachine 3の推奨方式を確認して決める。
 
-## 5. Shot一覧
+## 5. A/Bの準備
 
-- Shot数を9に固定しない。
-- 数字キーで直接選べる範囲を超えたShotの操作方法は、Camera Bank実装時に決める。
-- 初期版のために64台対応を検証しない。
-- 登録上限と同時描画性能を同じ問題として扱わない。
+- AがLiveの間、BはSpline始点で移動停止状態にする。
+- BへCutした後にBの移動を開始する。
+- BがLiveの間、Aは安定構図を維持する。
+- Aへ戻った後にだけ、Bを次の使用へ向けて始点へResetする。
+- Live中のShotをResetまたは別Shot設定で再構成しない。
 
 ## 6. 同一Shotの選択
 
@@ -63,11 +68,15 @@ Log出力が送出処理を停止させないようにする。実用的なProgr
 
 Video TransitionはCinemachine Blendとは別機能として扱うが、必要になるまで設計しない。
 
+多カメラ化した後はA/B SlotへShot設定を交互にコピーせず、原則として1 Shotにつき1つのCinemachineCameraを用意して直接切り替える。A/B固定Slot方式は、大量の動的Shotを扱う必要性が実測された場合だけ再検討する。
+
 ## 9. 初期受け入れ条件
 
-1. 3台以上のShotを数字キーでCutできる。
-2. 無効な選択で現在のProgramを失わない。
-3. 同一Shotの再選択で移動状態がResetされない。
-4. Cut後のSpline Shotが動き続ける。
-5. Cut成功時にProgram Shot名が1回だけLogされる。
-6. Preview、Bank、Transition、Multiviewの先行実装がない。
+1. A/Bが別々のCinemachineCameraとして構成されている。
+2. AからB、BからAへ明確なCutとして切り替えられる。
+3. 無効な選択で現在のProgramを失わない。
+4. 同一Shotの再選択で移動状態がResetされない。
+5. BはCut後に始点から動き、終点でHoldする。
+6. Aへ戻るまでBをResetしない。
+7. Cut成功時にProgram Shot名が1回だけLogされる。
+8. Preview、Bank、Transition、Multiviewの先行実装がない。

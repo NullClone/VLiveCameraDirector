@@ -38,14 +38,17 @@
 
 [phases.md](phases.md)のStep 1は、少なくとも次の順へ分割する。
 
-1. Unity 6.3 / Cinemachine 3のpackage設定と最小Compile
-2. 新namespaceと最小asmdefの確定
-3. Fixed ShotとSpline Shotを表す`VLiveCameraShot`
-4. 2〜3台をCutする`VLiveCameraSwitcher`
-5. 数字キーだけを扱う`VLiveCameraKeyboardInput`
-6. Speed、Reverse、Hold、Resume
-7. Cut成功時のProgram Shot名ログ
-8. 動作確認Sceneと反復操作
+1. Cinemachine 2依存と削除・置換範囲の変更なし監査
+2. Unity 6.3 / Cinemachine 3のpackage設定と最小Compile
+3. 新namespaceと最小asmdefの確定
+4. 別々のCinemachineCameraを持つShot A / B
+5. AをFixed、BをSpline始点へ準備する`VLiveCameraShot`
+6. A/BをCinemachineのCutとして切り替える`VLiveCameraSwitcher`
+7. キー1 / 2だけを扱う`VLiveCameraKeyboardInput`
+8. Bの始点→移動→減速→終点Hold
+9. Speed、Reverse、Hold、Resume
+10. Cut成功時のProgram Shot名ログ
+11. 動作確認Sceneと反復操作
 
 各タスク完了後にdiffとUnity結果を確認し、次のタスク内容を調整する。
 
@@ -54,6 +57,8 @@
 - 依頼された範囲だけを変更する。
 - 仕様にないinterface、基底クラス、Manager、Service、Command Busを追加しない。
 - 将来のMIDI、AI、Preview、Patternのためのコードを追加しない。
+- 同じCinemachineCameraへ別ShotのTransform、Spline、Lens、Targetを上書きしない。
+- A/Bを汎用Slotとして動的に再構成しない。
 - ついでのリファクタリングやフォルダー再編を行わない。
 - 旧版互換のためのwrapper、属性、移行処理を追加しない。
 - 既存コードを削除する場合は、タスクに明記されたパスだけを対象にする。

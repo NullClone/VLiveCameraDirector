@@ -18,6 +18,7 @@
 開発手順:
 
 - [workflow.md](workflow.md) — Antigravityへの実装委譲、Review、検証
+- [next-agent-task.md](next-agent-task.md) — 次の作業エージェントへ渡す現在のプロンプト
 - [AGENTS.md](../AGENTS.md) — コードスタイルと過剰設計防止規則
 
 実装エージェントは全仕様書を読む必要はない。`AGENTS.md`、今回の担当仕様書1つ、短い実装タスクだけを使用する。

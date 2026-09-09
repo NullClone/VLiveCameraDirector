@@ -35,19 +35,22 @@
 
 ### 目的
 
-Unity 6.3とCinemachine 3で、複数ShotをキーボードCutし、移動Shotを手動調整できる状態を作る。
+Unity 6.3とCinemachine 3で、独立したCinemachineCameraを持つA/BをキーボードCutし、Bの移動を手動調整できる状態を作る。
 
 ### 実装範囲
 
+- Cinemachine 2依存ファイルと削除・置換範囲の実装前監査
 - package設定をUnity 6.3 / Cinemachine 3へ更新
 - Runtime namespaceを`toshi.VLiveKit.Camera`へ統一
 - `VLiveCameraShot`
 - `VLiveCameraSwitcher`
 - `VLiveCameraKeyboardInput`
 - 1台のProgram CameraとCinemachine Brain
-- Fixed Shot
-- Spline Shot
-- 数字キーCut
+- Shot A: 安定したFixed Shot
+- Shot B: 始点から終点へ移動するSpline Shot
+- A/Bの各Shotに専用CinemachineCamera
+- キー1 / 2によるA/B Cut
+- BのOff Air中の始点準備と終点Hold
 - Speed、Reverse、Hold、Resume
 - Cut成功時のProgram Shot名ログ
 - 動作確認用SceneまたはPrefab
@@ -64,17 +67,20 @@ Unity 6.3とCinemachine 3で、複数ShotをキーボードCutし、移動Shot�
 - Video Transition
 - Multiview
 - Command Bus、独自Solver、DI、汎用Adapter階層
+- 同じCinemachineCameraへ別Shot設定を上書きする方式
+- A/Bを汎用Slotとして動的再構成する方式
 
 ### 完了条件
 
 1. Unity 6.3とCinemachine 3でImportとCompileが成功する。
-2. 3台以上のFixed / Spline Shotを数字キーでCutできる。
-3. Spline ShotはCut後も自動で動き続ける。
-4. Speed、Reverse、Hold、Resumeで位置が飛ばない。
-5. 同一Shotの再選択で再生位置がResetされない。
-6. 無効な番号や参照欠落でProgramを失わない。
-7. Game Viewで切り替えと動きを目視確認する。
-8. 30分の反復操作で例外と入力残留がない。
+2. A/Bが別々のCinemachineCameraとして構成されている。
+3. AからB、BからAへCinemachineのCutとして切り替えられる。
+4. BはCut後に始点から終点へ動き、終点で収束してHoldする。
+5. Speed、Reverse、Hold、Resumeで位置が飛ばない。
+6. 同一Shotの再選択とLive中のBで再生位置がResetされない。
+7. 無効な指示や参照欠落でProgramを失わない。
+8. Game Viewで切り替え、始点、移動、終点構図を目視確認する。
+9. 30分の反復操作で例外と入力残留がない。
 
 ## 5. Step 2 — 現場向け手動スイッチング
 
@@ -88,6 +94,7 @@ Step 1の操作感をユーザーが確認してから、実装範囲を確定�
 - Cinemachine Blend
 - Pan、Tilt、Zoomなどのライブ調整
 - 操作状態のConsole
+- Shotごとに専用CinemachineCameraを追加する多カメラ構成
 
 この段階でも、MIDIと半自動化は実装しない。Step 1で不足した操作だけを仕様へ追加する。
 
@@ -126,3 +133,5 @@ Step 2で複数Shotを制作し、設定複製や入力差し替えの実害が�
 - 実装中に必要性が判明した仕様だけを、ユーザー承認後に追加する。
 - 旧版互換のために実装を複雑化しない。
 - 削除対象はタスクごとに具体的なパスを指定する。
+- 初期A/Bで設定コピー方式を導入せず、各ShotのCinemachineCameraを直接切り替える。
+- package更新前にCinemachine 2依存を監査し、削除・置換する正確なパスをユーザーが確認する。

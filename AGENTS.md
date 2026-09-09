@@ -4,7 +4,7 @@
 
 VLiveCameraUnit は、事前に用意した多数のカメラをライブ中に演奏するように切り替え、Cinemachine による追従・構図・補間で操作を支援する Unity 完結型のカメラシステムである。
 
-最初に作るのは手動運用の核である。カメラを選ぶだけで意図した動きが始まり、必要なときだけ速度、方向、Hold、画角へ介入できる状態を優先する。MIDI、AI、推薦、完全自動化は、この核が実際に成立してから扱う。
+最初に作るのはA/B手動運用の核である。1台のUnity CameraとCinemachine Brainに対し、AとBがそれぞれ独立したCinemachineCameraを持つ。Aは安定した戻り先、BはSpline移動Shotとし、必要なときだけ速度、方向、Holdへ介入する。MIDI、AI、推薦、完全自動化は、この核が実際に成立してから扱う。
 
 ## 仕様の優先順位
 
@@ -51,6 +51,8 @@ VLiveCameraUnit は、事前に用意した多数のカメラをライブ中に�
 - 最初の実装は [Docs/architecture.md](Docs/architecture.md) の最小構成だけを作る。
 - 固定ShotへSplineを強制しない。移動ShotだけがSplineを使用する。
 - Program出力は1台のUnity CameraとCinemachine Brainを基本とする。
+- 初期版のAとBは別々のCinemachineCameraとし、Live中の同じCinemachineCameraへ別Shotの位置、Spline、Lens、Targetを上書きしない。
+- A/Bを汎用Slotとして使い回す仕組みは作らない。将来も原則として1 Shotにつき1つのCinemachineCameraを使用する。
 - Shotごとの個別コードを量産せず、同じ実装で設定値を変える。
 
 ## C#コードスタイル

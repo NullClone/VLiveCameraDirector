@@ -10,19 +10,23 @@
 VLiveCameraKeyboardInput
            |
            v
-VLiveCameraSwitcher ------> VLiveCameraShot
-           |                       |
-           v                       v
-   CinemachineBrain        CinemachineCamera
-                                  + Spline
+VLiveCameraSwitcher
+      |          |
+      v          v
+Shot A         Shot B
+Fixed          Spline
+      \          /
+       CinemachineBrain
+              |
+        Unity Camera
 ```
 
 初期実装で新たに必要な主要型は3つとする。
 
 | 型 | 責務 |
 | --- | --- |
-| `VLiveCameraShot` | 1つのShot、CinemachineCamera参照、移動設定、速度、方向、Hold状態を管理する |
-| `VLiveCameraSwitcher` | Shot一覧、現在のProgram、番号指定Cutを管理する |
+| `VLiveCameraShot` | 1つのShotと専用CinemachineCamera参照を持ち、必要ならSpline移動を管理する |
+| `VLiveCameraSwitcher` | Shot A、Shot B、現在のProgram、A/B Cutを管理する |
 | `VLiveCameraKeyboardInput` | キーボード入力を読み、Switcherまたは現在のShotの公開メソッドを呼ぶ |
 
 最初の段階ではinterface、Command Bus、Registry、Coordinator、独自Solver、Adapter階層を作らない。
@@ -31,6 +35,8 @@ VLiveCameraSwitcher ------> VLiveCameraShot
 
 `VLiveCameraShot`はScene上のShotを表すMonoBehaviourとする。
 
+AとBは別々の`VLiveCameraShot`と`CinemachineCamera`で構成する。同じCinemachineCameraへ別Shotの設定を上書きして切り替えたように見せる方式は禁止する。
+
 最初に必要な設定:
 
 - Shot名
@@ -38,7 +44,6 @@ VLiveCameraSwitcher ------> VLiveCameraShot
 - FixedまたはSpline移動
 - Spline参照
 - 初期速度
-- Loopの有無
 - 初期方向
 
 最初に必要な操作:
@@ -49,26 +54,28 @@ VLiveCameraSwitcher ------> VLiveCameraShot
 - Hold
 - Resume
 
-Fixed ShotにはSplineを要求せず、TransformとCinemachine設定をそのまま使用する。移動ShotだけがCinemachine 3のSpline Dollyを使用する。
+Fixed ShotにはSplineを要求せず、TransformとCinemachine設定をそのまま使用する。移動ShotだけがCinemachine 3のSpline Dollyを使用する。初期版ではAをFixed Shot、BをSpline Shotとして設定する。
 
 ## 4. VLiveCameraSwitcher
 
-`VLiveCameraSwitcher`はScene上のShotリストと現在のProgram Shotを保持する。
+`VLiveCameraSwitcher`はScene上のShot A、Shot Bと現在のProgram Shotを保持する。
 
-- 番号からShotを選択する。
+- AまたはBを指定してCutする。
 - 無効な番号や参照欠落では、現在のProgramを維持する。
 - Cut時は対象のCinemachineCameraを有効なProgram状態にする。
-- 選択後、対象Shotの自動移動を継続する。
+- AがLiveの間にBを始点へ準備できる。
+- BへCutした後にBの移動を開始する。
+- BからAへ戻った後にだけBを次の使用へ向けてResetする。
 - 同じShotを再選択しても、既定では再生位置をResetしない。
-- Shot数を9に固定しない。ただし初期UIにBankは作らない。
 
-Program出力は1台のUnity CameraとCinemachine Brainを使用する。既存実装のようにUnity CameraのTransformやLensを毎フレームコピーしない。
+Program出力は1台のUnity CameraとCinemachine Brainを使用する。A/BのCinemachineCameraを切り替え、Unity CameraのTransformやLensを毎フレームコピーしない。Cinemachine Brainの既定TransitionはCutとする。
 
 ## 5. VLiveCameraKeyboardInput
 
 初期入力はUnity標準のキーボード入力で実装する。使用する入力APIは、Unity 6.3のプロジェクト設定を確認して決定する。
 
-- 数字キー: ShotをCut
+- キー1: Shot AへCut
+- キー2: Shot BへCut
 - 増減キー: 現在のShotの速度を変更
 - Reverseキー: 進行方向を反転
 - Holdキー: 押下またはToggleで停止
@@ -81,6 +88,7 @@ Program出力は1台のUnity CameraとCinemachine Brainを使用する。既存�
 - `VLiveCameraKeyboardInput`だけがキー入力を読む。
 - `VLiveCameraSwitcher`だけがProgram Shotを変更する。
 - 各`VLiveCameraShot`だけが自身のSpline進行状態を変更する。
+- A/Bの各Shotだけが自身のCinemachineCamera設定を所有する。
 - Cameraの最終評価はCinemachineへ任せる。
 - 同じSpline位置やLensへ複数コンポーネントから書き込まない。
 
@@ -122,8 +130,10 @@ RuntimeとEditorのasmdefは分離する。最初の動作版に不要な追加a
 ## 10. 初期受け入れ条件
 
 1. Unity 6.3とCinemachine 3でCompileできる。
-2. Fixed ShotとSpline Shotを同じSwitcherからCutできる。
-3. Spline ShotはProgram選択後も滑らかに動き続ける。
-4. 速度、Reverse、Hold、Resumeが現在のProgram Shotへ作用する。
-5. 無効な選択でProgramが失われない。
-6. 主要型が本仕様にない抽象層へ分割されていない。
+2. A/Bが別々のCinemachineCameraを持つ。
+3. AからB、BからAへCinemachineのCutとして切り替えられる。
+4. BはProgram選択後に始点から終点まで移動し、終点でHoldする。
+5. 速度、Reverse、Hold、ResumeがBのSpline進行へ作用する。
+6. Live中のCinemachineCameraへ別Shot設定を上書きしない。
+7. 無効な選択でProgramが失われない。
+8. 主要型が本仕様にない抽象層へ分割されていない。

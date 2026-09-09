@@ -10,23 +10,26 @@
 
 | 操作 | 対象 | 動作 |
 | --- | --- | --- |
-| Shot選択 | Switcher | 数字キーに対応するShotへCutする |
-| Speed Up / Down | Program Shot | Spline進行速度を増減する |
-| Reverse | Program Shot | 現在の進行方向を反転する |
-| Hold | Program Shot | 現在位置でSpline進行を停止する |
-| Resume | Program Shot | Holdを解除して進行を再開する |
+| Cut A | Switcher | 独立したCinemachineCameraを持つ安定Shot AへCutする |
+| Cut B | Switcher | 独立したCinemachineCameraを持つ移動Shot BへCutする |
+| Speed Up / Down | Live中のB | Spline進行速度を増減する |
+| Reverse | Live中のB | 現在の進行方向を反転する |
+| Hold | Live中のB | 現在位置でSpline進行を停止する |
+| Resume | Live中のB | Holdを解除して進行を再開する |
 
-固定ShotにSpeed、Reverse、Hold、Resumeを入力しても画を変更せず、例外を発生させない。
+AがLiveの場合にSpeed、Reverse、Hold、Resumeを入力しても画を変更せず、例外を発生させない。
 
 ## 3. 基本フロー
 
-1. オペレーターが数字キーを押す。
-2. Switcherが対応するShotをProgramにする。
-3. 移動Shotは設定されたSpline上の動きを開始または継続する。
-4. 操作がなければ、そのShotの既定速度と方向で動き続ける。
+1. AがLiveの間、BをSpline始点でStandbyさせる。
+2. オペレーターがキー2を押す。
+3. SwitcherがBのCinemachineCameraへCutする。
+4. Bが始点から終点へ移動し、終点でHoldする。
 5. 必要なときだけ速度、Reverse、Hold、Resumeを操作する。
+6. キー1でAへCutして安定構図へ戻る。
+7. BがOff Airになってから、次の使用に向けて始点へResetする。
 
-同じShotを再選択しても、既定ではSpline位置を先頭へ戻さない。再スタート機能は必要性が確認されてから追加する。
+同じShotを再選択しても、既定では状態を変更しない。Live中のBをResetして画面上で瞬間移動させない。
 
 ## 4. キーボード実装
 
@@ -70,8 +73,10 @@ MIDIはキーボード版が完成してから追加する。その時点で、�
 
 ## 8. 初期受け入れ条件
 
-1. キーボードだけで3台以上のShotをCutできる。
-2. Cut後の移動Shotが操作なしでも動き続ける。
-3. Speed、Reverse、Hold、ResumeがProgram Shotだけへ作用する。
-4. 固定Shotへの移動操作で例外が発生しない。
-5. 無効な選択とフォーカス喪失で状態が壊れない。
+1. キーボードだけでA/Bを交互にCutできる。
+2. A/Bは別々のCinemachineCameraである。
+3. BはCut後に始点から終点へ移動し、終点でHoldする。
+4. Speed、Reverse、Hold、ResumeがLive中のBだけへ作用する。
+5. Aへの移動操作で例外が発生しない。
+6. Live中のBをResetしない。
+7. 無効な選択とフォーカス喪失で状態が壊れない。

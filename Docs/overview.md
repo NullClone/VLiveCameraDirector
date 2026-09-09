@@ -10,13 +10,13 @@ VLiveCameraUnit は、事前に配置した多数のカメラをライブ中に�
 
 最初の完成目標は次の操作である。
 
-1. 移動する複数のCinemachineカメラを事前に配置する。
-2. 数字キーでカメラをCutする。
-3. 切り替えたカメラは、そのカメラに設定されたSpline上を動き続ける。
-4. オペレーターは速度変更、Reverse、Hold、Resumeを行える。
-5. 固定カメラは動かず、意図した固定画を維持する。
+1. 1台のUnity CameraとCinemachine Brainを用意する。
+2. AとBに、別々のCinemachineCameraを割り当てる。
+3. Aは正面ミドル等の安定した固定Shotとする。
+4. BはSpline上を始点から終点まで移動し、終点でHoldする。
+5. キーでA/BをCutし、オペレーターはBの速度変更、Reverse、Hold、Resumeを行える。
 
-この体験が実際に気持ちよく動くまでは、Preview、MIDI、AI、推薦、汎用Pattern基盤を実装しない。
+同じCinemachineCameraへA/Bの設定を上書きしない。AがLiveの間にBを始点へ準備し、BがLiveの間はAを安全な戻り先として維持する。この体験が実際に気持ちよく動くまでは、Preview、MIDI、AI、推薦、汎用Pattern基盤を実装しない。
 
 ## 3. 製品原則
 
@@ -45,10 +45,12 @@ VLiveCameraUnit は、事前に配置した多数のカメラをライブ中に�
 
 ## 5. 現在の対象
 
-- CinemachineCameraを使った固定ShotとSpline移動Shot
+- 独立したCinemachineCameraを持つA/Bの2 Shot
+- Aは固定の安定枠、BはSpline移動枠
 - 1台のProgram CameraとCinemachine Brain
-- キーボードによる直接Cut
+- キーボードによるA/Bの直接Cut
 - 移動速度、Reverse、Hold、Resume
+- Bの始点準備、終点への収束、終点Hold
 - 切り替え時に不自然な停止や値飛びがないこと
 - Cut成功時にProgram Shot名をConsoleへ1回表示
 
@@ -76,9 +78,10 @@ VLiveCameraUnit は、事前に配置した多数のカメラをライブ中に�
 
 ## 8. 最初の成功条件
 
-1. 3台以上のShotを数字キーで安定して切り替えられる。
-2. 移動Shotは選択後もSpline上を滑らかに動き続ける。
-3. Fixed、Forward、Reverse、Hold、Resumeが意図どおり動く。
-4. 入力がない状態でもShot固有の画が成立する。
-5. 30分の反復操作で例外、入力残留、状態破損が起きない。
-6. Unity上の目視確認で、切り替えと手動介入に不自然なジャンプがない。
+1. A/Bが別々のCinemachineCameraとして構成されている。
+2. AからB、BからAへ明確なCutとして安定して切り替えられる。
+3. Bは始点から滑らかに動き、終点で収束してHoldする。
+4. Forward、Reverse、Hold、Resumeで位置が飛ばない。
+5. Live中のCinemachineCameraへ別Shot設定を上書きしていない。
+6. 入力がない状態でもA/Bそれぞれの構図が成立する。
+7. 30分の反復操作で例外、入力残留、状態破損が起きない。
