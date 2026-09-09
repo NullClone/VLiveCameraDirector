@@ -1,142 +1,110 @@
-# カメラ・パターン仕様
+# カメラ仕様
 
 ## 1. 目的
 
-本仕様は、ライブで呼び出す Shot、カメラリグ、レーン、Motion Pattern、手動介入のデータモデルを定義する。
+この文書は、初期版のFixed ShotとSpline Shot、その移動と手動操作を定義する。汎用Motion PatternやAI生成形式はまだ定義しない。
 
-## 2. すべてのショットはレーンを持つ
+## 2. Shotの種類
 
-すべての Shot は、位置と向きの時間変化を定義するレーンを持つ。レーンは必ずしも移動を伴わない。
+初期版は2種類だけを実装する。
 
-- Fixed Shot は長さ 0 または一定位置を保持する Hold Lane として表現する。
-- Dolly、Crane、Orbit 等は Spline またはパラメトリックなレーンを使用する。
-- Handheld は基準レーンへ制約された微細運動を重ねる。
-- Tracking は対象に追従しつつ、基準となる構図レーンを維持する。
+### Fixed Shot
 
-これにより、静止と移動を別系統にせず、選択、再生、Hold、Reverse、時間同期を共通化する。
+- CinemachineCameraの位置、回転、Lens、追従設定を使用する。
+- Programに選ばれても移動しない。
+- Spline参照を要求しない。
+- 意図した固定画として扱い、無理に微動を加えない。
 
-## 3. Camera Shot
+### Spline Shot
 
-Camera Shot は本番で選択される最小単位であり、少なくとも次を保持する。
+- Cinemachine 3のSpline Dollyを使用する。
+- Programに選ばれた後、設定された速度と方向で動く。
+- Loopが有効なら終端から継続する。
+- Speed、Reverse、Hold、Resumeを受け付ける。
 
-- 永続的で重複しない Shot ID
-- 表示名、Bank、並び順、タグ
-- 使用する Cinemachine Rig と Lane
-- Motion Pattern
-- Tracking Target の解決規則
-- Framing、Lens、Focus の初期値と制限
-- Take 時の開始ポリシー
-- 推奨 Transition
-- Multiview 用サムネイルと短い説明
-- バージョン、作者、生成元、検証状態
+Orbit、Crane、Handheldなどの分類は、実際のShotを複数制作して共通差分が分かってから追加する。
 
-Scene 固有の対象は Target Resolver で解決し、再利用可能な Shot アセットへ不安定な Scene 参照を固定しない。
+## 3. VLiveCameraShotの設定
 
-## 4. Motion Pattern の位相
+最初に必要なSerializedFieldは次の範囲に留める。
 
-パターンは次の位相を任意に持つ。
+- Shot名
+- CinemachineCamera
+- Shot種類
+- SplineまたはSpline Dolly参照
+- 初期速度
+- 最小速度
+- 最大速度
+- Loop
+- 初期方向
+- Program選択時に再生を開始するか
 
-| 位相 | 目的 |
-| --- | --- |
-| Entry | Take 直後に画を成立させ、Main へ導入する |
-| Main / Loop | ショットの主運動を継続する |
-| Exit | 次の遷移へ向けて画を整える |
-| Hold | 意図的に位置、構図、レンズを保持する |
+項目名と正確な型はCinemachine 3の実APIを確認して決める。未使用の将来設定を追加しない。
 
-位相の省略は可能だが、Take 直後の状態は必ず定義する。Loop 境界で位置、速度、回転、レンズに不連続が生じないよう Editor 検証を行う。
+## 4. 再生状態
 
-## 5. Take 時の開始ポリシー
+Spline Shotが保持する状態は次のとおり。
 
-| ポリシー | 動作 | 主な用途 |
-| --- | --- | --- |
-| `RestartOnTake` | Entry の先頭から開始 | 初期既定。確実な演出開始 |
-| `ShowTimeSync` | ライブ共通時間から位相を計算 | 周期運動の同期 |
-| `BeatSync` | 次の拍または指定拍位置へ同期 | 楽曲に合わせた移動 |
-| `Resume` | 前回の再生位置から再開 | 継続する空間運動 |
+- 現在の進行方向
+- 現在速度
+- Hold中か
+- Programに選ばれているか
 
-初期実装では `RestartOnTake` を既定とし、他ポリシーは時間モデルと Preview 再現性を検証した後に追加する。
+Spline上の現在位置はCinemachineコンポーネントを正本とし、同じ値を別フィールドへ複製しない。Cinemachine API上で直接保持できない場合だけ、必要な状態を1か所に持つ。
 
-## 6. カメラ文法
+## 5. Program選択時
 
-Motion Pattern は次の軸を組み合わせて表現する。
+- Fixed Shotは現在の設定をそのまま使用する。
+- Spline Shotは既定速度で再生を開始または継続する。
+- 同じShotの再選択では、既定で再生位置を変更しない。
+- Shot切り替えのたびに無条件でSpline先頭へ戻さない。
+- 最初から再生する機能は、実際の演出要件が出た時点で明示的に追加する。
 
-| 軸 | 代表値 |
-| --- | --- |
-| Rig | Fixed、Dolly、Crane、Orbit、Handheld、Tracking |
-| Framing | Wide、Full、Medium、CloseUp、Detail |
-| Subject | Solo、Duo、Group、Stage、Audience、Prop |
-| Movement | Push、Pull、Truck、Pedestal、Arc、Orbit、Hold |
-| Timing | Duration、Speed Curve、Beat、Entry、Exit、Loop |
-| Aim | Target、Bone、Group Center、Screen Position、Offset、Damping |
-| Lens | Focal Length、Zoom Curve、Focus、Aperture、Dutch |
-| Character | Smooth、Energetic、Heavy、Floating、Handheld |
-| Variation | Amplitude、Direction、Seed、Intensity Range |
+## 6. 移動操作
 
-文法はタグだけでなく、Runtime が解釈できる型付きデータとして保存する。自由記述値だけで運動を決定しない。
+### Speed
 
-## 7. Lane と進行
+- 現在速度を最小値と最大値の範囲で変更する。
+- 方向は速度の符号と別状態にしてもよいが、二重管理にならない方法を選ぶ。
+- 値変更でSpline位置を飛ばさない。
 
-- Lane Position は原則として正規化値と実距離の両方を参照できる。
-- 速度は Lane の長さに依存する値と、ショット所要時間に依存する値を区別する。
-- Ease Curve は位置曲線と速度曲線の意味を混同しない。
-- Reverse は同じレーンを逆評価し、注視やレンズの方向依存カーブも規則に従って反転する。
-- Hold は時間源を失わずに進行だけを停止できる。
-- Resume 時の追いつき、時間同期維持、ローカル再開をポリシーとして定義する。
-- Spline 変更後は Shot の開始・終了・ループ・構図を再検証する。
+### Reverse
 
-## 8. 構図とターゲット
+- 現在位置を保持したまま進行方向だけを反転する。
+- 連打しても位置をResetしない。
 
-Shot は、対象を単なる Transform 参照ではなく意味で指定できる。
+### Hold / Resume
 
-- Performer ID または Role
-- Humanoid Bone または明示 Anchor
-- 複数対象の Group Center
-- Stage Anchor、Audience Anchor、Prop Anchor
-- 画面内の目標位置と余白
+- Holdは現在位置で進行を停止する。
+- ResumeはHold前の速度と方向で再開する。
+- Hold中もCinemachineの追従とAimは継続してよい。
 
-ターゲットが一時的に失われた場合は、最後の有効な構図を短時間保持する。代替対象の選択は Shot に明示されている場合だけ行い、無関係な対象へ自動で向けない。復帰時は Damping を通して再取得する。
+## 7. 構図と追従
 
-## 9. レンズとフォーカス
+初期版ではCinemachine 3標準コンポーネントのTracking Target、Composer、Dampingを使用する。独自の構図Solverを作らない。
 
-Lens と Focus は位置運動と同じ Pattern 内で同期できるが、独立した制御チャンネルを持つ。
+- Target参照が欠落しても例外を発生させない。
+- Target消失時に別の対象を自動探索しない。
+- Shotごとの構図はCinemachineCamera側で調整する。
+- Lens、Focus、Noiseの独自制御は初期版へ含めない。
 
-- 焦点距離、フォーカス距離、絞り、Dutch の既定値と許容範囲を保存する。
-- Dolly と Zoom の組み合わせはプリセット化できる。
-- Focus Target が無効な場合は定義済み距離を保持する。
-- 物理カメラ設定の有無を Shot ごとに曖昧にせず、プロジェクト方針で統一する。
-- 手動 Zoom / Focus からの復帰は画面上の急変を起こさない。
+## 8. Pattern Asset
 
-## 10. 手動トリム
+初期版ではPattern用ScriptableObjectを作らず、Shotの設定をSceneまたはPrefabへ直接保持する。
 
-Pattern の出力を基準値とし、[spec-operation.md](spec-operation.md) のモードで手動値を合成する。トリムは原則として Shot アセットそのものを書き換えず、本番セッション状態として保持する。
+同じ移動設定を複数Shotへ複製する実害が確認できた時点で、再利用可能なPattern Assetを設計する。その際も、最初に実際に使われた設定だけをデータ化する。
 
-Shot を再選択したときにトリムを Reset、Resume、セッション保持のどれにするかをチャンネル別に指定できる。初期既定は、Rail Hold と方向は Reset、画角トリムは滑らかに Reset とする。
+## 9. AI生成
 
-## 11. AI 生成契約
+AIによるCamera Pattern生成は将来構想とする。初期版ではスキーマ、Importer、生成metadata、承認状態を実装しない。
 
-AI は Camera Shot または Motion Pattern のデータ候補を生成する。生成物は次を満たすまで本番利用可能にしない。
+Pattern Assetの形式が人の手作業で安定した後に、AIが同じ形式を生成できるようにする。AI専用のRuntimeコードは作らない。
 
-1. スキーマ、範囲、必須参照の静的検証を通る。
-2. Lane の開始、終了、Loop 連続性を検証する。
-3. 対象別の Preview Scene で衝突、遮蔽、構図、速度を確認する。
-4. 作者、生成モデルまたは生成経路、Seed、バージョンを記録する。
-5. 人が承認済み状態へ変更する。
+## 10. 初期受け入れ条件
 
-AI に固有 MonoBehaviour や専用 Runtime 分岐を量産させない。表現できない動きは、まず共通プリミティブとして設計・検証し、その後にデータ生成へ開放する。
-
-## 12. ライフサイクル
-
-- Standby は再生位置と必要最小限の論理状態だけを保持する。
-- Preview 選択時にターゲット、Spline、Lens、必要な Renderer を Prewarm する。
-- Take 時に Preview と異なる初期化結果を出さない。
-- Program から外れた Shot は Exit / Hold / Suspend の設定に従う。
-- アセットの Hot Reload は Editor 開発用とし、本番 Player では不完全な差し替えを許可しない。
-
-## 13. 受け入れ条件
-
-1. Fixed を含むすべての Shot が共通 Lane モデルで動作する。
-2. Take 直後、操作なしでも定義された画と運動が成立する。
-3. Entry、Loop、Exit、Reverse、Hold、Resume で不連続がない。
-4. Preview と同一条件の Take で、開始位置、構図、レンズが再現される。
-5. ターゲット消失時に無関係な方向へカメラが飛ばない。
-6. AI 生成を含むパターンをコード追加なしで検証・登録できる。
+1. Fixed ShotはSplineなしで正しくCutできる。
+2. Spline Shotは選択後に既定速度で動き続ける。
+3. Speed、Reverse、Hold、Resumeで位置が飛ばない。
+4. Loop境界で目立つ停止や位置飛びがない。
+5. TargetやSpline参照が無効でもProgram全体が停止しない。
+6. Pattern Assetや独自Solverなど、初期版に不要な仕組みが追加されていない。

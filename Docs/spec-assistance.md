@@ -1,133 +1,79 @@
-# カメラ支援・半自動化仕様
+# カメラ支援仕様
 
 ## 1. 目的
 
-本仕様は、人の判断を残したまま、切り替えだけでプロ水準の画を成立させる支援と、その上に追加する段階的な半自動化を定義する。
+初期版の支援は、オペレーターが選んだShotをCinemachine 3で安定して成立させることに限定する。システムが次のShotを判断したり、独自計算で構図を作り直したりしない。
 
-支援はオペレーターの代わりに演出を決める機能ではない。意図した Shot を、対象の移動やフレーム変動があっても安定して成立させる機能である。
+## 2. 初期版で行う支援
 
-## 2. 切り替え時に自動実行する支援
+- CinemachineCameraによる対象追従
+- Composerによる画面内構図
+- Dampingによる位置と回転の平滑化
+- Spline Dollyによるレーン移動
+- Speed、Reverse、Hold、Resume時の連続性維持
+- 無効参照時に現在のProgramを失わない処理
 
-Shot が Preview または Program に選ばれたとき、システムは次を一つの準備処理として行う。
+これらは可能な限りCinemachine 3標準機能を使用する。
 
-1. Shot とターゲット参照を解決する。
-2. Lane と Pattern の開始位置・時間源を決める。
-3. Framing、Aim、Damping、制限を初期化する。
-4. Lens、Focus、Dutch、Noise を適用する。
-5. Preview に必要な評価と描画を Prewarm する。
-6. Take 時は遷移を開始し、Tally を更新する。
-7. 操作 UI にパターン位相、使用中チャンネル、警告を表示する。
+## 3. 行わない支援
 
-したがって、オペレーターがカメラ番号を切り替えるだけでも、各 Shot は意図された動きと構図を継続する。
+初期版では次を実装しない。
 
-## 3. 支援レベル
+- 独自Assistance Solver
+- 自動的な遮蔽回避
+- 複数Targetの自動選択
+- LensやFocusの自動演出
+- Shotの自動推薦
+- 楽曲解析
+- 自動Take
+- 実行時AI
 
-### Level 1: Guided Manual
+設定不足を補うために、予測不能な自動探索や代替演出を行わない。
 
-初期製品の土台。人が Shot と Take を決め、システムが次を支援する。
+## 4. 切り替えだけで成立する条件
 
-- 対象追従と構図維持
-- Lane と Pattern の再生
-- Damping、角速度、距離、レンズの制限
-- 手動トリムの滑らかな合成と復帰
-- Program / Preview / Tally と状態表示
-- 値飛び防止、入力競合表示、エラー時 Hold
+各Shotは制作時に次を調整する。
 
-### Level 2: Cue Assisted Manual
+- 開始時の位置と向き
+- Tracking Target
+- 画面内の対象位置
+- Damping
+- Spline速度と方向
+- Loopの有無
+- Fixed Shotとして保持するか
 
-Pattern や楽曲キューを呼び出し、人が強さとタイミングを演奏する。
+Programへ選択した後、追加操作がなくてもその設定で画が成立することを、ShotごとにGame Viewで確認する。
 
-- Entry / Main / Exit の Cue Trigger
-- 速度、方向、時間、振幅のライブ調整
-- Hold / Resume / Reverse
-- Timeline、BPM、拍位置との同期
-- パターン再生中の構図・レンズトリム
-- 次 Cue の Preview と事前準備
+## 5. 手動操作との関係
 
-### Level 3: Recommendation
+- Speed、Reverse、Hold、ResumeはSpline進行だけを変更する。
+- Hold中もCinemachineのTrackingと構図補正は継続できる。
+- 手動操作のための汎用チャンネル合成機構は作らない。
+- Pan、Tilt、Zoomを追加するときに、実際の競合を見て合成方法を決める。
 
-システムが次の Shot 候補を Preview へ提示する。Program への Take は人が行う。
+## 6. 異常時
 
-- 現在の出演者、楽曲セクション、過去 Shot を考慮する。
-- 直前と同種の構図・方向・対象の過剰反復を避ける。
-- 候補理由と予測される開始画を表示する。
-- 人の選択履歴を改善材料にできるが、学習機能は明示的に有効化する。
+- 無効なShotはProgramへ選択しない。
+- 選択処理に失敗した場合は現在のProgramを維持する。
+- Targetが欠落した場合はCinemachineCameraの現在状態を維持し、警告を1回表示する。
+- Splineが欠落したSpline Shotは無効として扱う。
+- 異常時に別Targetや別Shotへ自動切り替えしない。
 
-### Level 4: Bounded Semi-Auto
+## 7. 将来の支援
 
-ユーザーが明示的に許可した区間と規則の中で Cue または Take を支援する将来段階。常に Manual Override、Master Hold、Program 固定へ即時復帰できることを前提とする。
+初期版とProgram / Preview運用が安定した後、必要性を確認して次を検討する。
 
-## 4. チャンネル別支援
+1. Pan、Tilt、Zoomの手動トリム
+2. Pattern CueとTimeline / BPM同期
+3. 次Shot候補のPreview提示
+4. 明示的に許可された範囲での半自動化
 
-支援の有効・無効と強度は次のチャンネルごとに扱う。
+これは現在の実装契約ではない。将来機能のためのinterfaceや空設定を先に追加しない。
 
-- Lane Position / Speed
-- Position Offset
-- Aim / Framing
-- Rotation / Dutch
-- Lens / Zoom
-- Focus
-- Noise / Impulse
-- Transition
+## 8. 初期受け入れ条件
 
-たとえば Lane は Pattern に任せたまま Aim だけ手動 Override にする、Zoom を手動操作しながら Focus は支援に任せる、といった構成を可能にする。全体を一つの「Manual / Auto」フラグで切り替えない。
-
-## 5. 構図支援
-
-構図支援は Shot が指定した対象、画面位置、余白、サイズ、Look Room を目標とする。
-
-- 対象の急移動へ過剰反応せず、Shot Character に応じた Damping を適用する。
-- 画面端、極端な角速度、最小 / 最大距離、Lens 範囲を制限する。
-- 複数対象は Shot の優先順位または Group Center 規則に従う。
-- 遮蔽回避は画を大きく変更するため、初期版では勝手に別位置へ移動せず警告を基本とする。
-- 安全制限に到達した場合は、隠れて補正を続けず UI に状態を表示する。
-
-## 6. ターゲット消失と異常時
-
-ターゲットが見つからない場合は次の順で処理する。
-
-1. Shot に明示された代替ターゲットを解決する。
-2. 短時間は最後の有効 Aim と Camera State を Hold する。
-3. 規定時間を超えたら Shot を Degraded として表示する。
-4. Program は現在の安全な画を保持し、無関係な対象へ自動転換しない。
-
-Spline、Lens、Pattern が無効な場合も同様に、直前の安全な状態を保持して原因を表示する。異常を隠すための予測不能な自動演出を行わない。
-
-## 7. 推薦の制約
-
-推薦機能は、少なくとも次を入力として利用できる設計にする。
-
-- 現在と直前の Shot、Framing、対象、移動方向
-- 出演者の可視性と役割
-- 楽曲セクション、拍、Cue
-- Shot の利用可能状態と Prewarm 状態
-- ユーザーが設定した禁止 Shot、優先 Shot、最短再利用時間
-
-推薦結果は Preview 候補であり、初期段階では Program を変更しない。信頼度だけでなく候補理由と除外理由を確認可能にする。
-
-## 8. AI の利用範囲
-
-初期の AI 利用は制作時の Pattern 生成・分類・Variation 作成に限定する。本番 Runtime で生成 AI の応答を待たない。
-
-将来 AI を推薦へ利用する場合も、利用可能 Shot と許可された操作の範囲内で結果を返し、決定的な規則による検証を通す。モデルの不応答や遅延が Program 出力へ影響しない構成とする。
-
-## 9. 説明可能性と可視化
-
-運用 UI は次を表示できる。
-
-- 現在の支援レベル
-- チャンネルごとの Pattern / Assist / Manual の寄与
-- 制限到達、Pickup 待ち、ターゲット消失
-- Pattern の位相と次の Cue
-- Recommendation の候補理由
-
-支援が画を変えた理由を本番中に短く把握でき、詳細はログで追跡できることを目標とする。
-
-## 10. 受け入れ条件
-
-1. Level 1 では操作なしでも対象追従と Shot 固有の画が成立する。
-2. 手動介入中も未操作チャンネルの支援が継続する。
-3. 制限やターゲット消失でカメラが予測不能に飛ばない。
-4. 支援の状態と手動介入箇所を UI で識別できる。
-5. Level 3 までは推薦が自動で Program を変更しない。
-6. AI や外部サービスが利用不能でも Level 1 と Level 2 の運用を継続できる。
+1. 操作なしでも各Shotの構図と動きが成立する。
+2. Dampingによって追従が滑らかである。
+3. Hold中も必要なTrackingが継続する。
+4. TargetやSpline欠落でカメラが無関係な方向へ飛ばない。
+5. 独自Solverや自動推薦が実装されていない。

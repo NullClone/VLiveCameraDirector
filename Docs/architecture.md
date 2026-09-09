@@ -1,126 +1,92 @@
-# アーキテクチャ仕様
+# 初期アーキテクチャ仕様
 
 ## 1. 目的
 
-この文書は、VLiveCameraUnit の責務、データの流れ、依存方向、所有権を定義する。クラス名は設計上の役割を示す仮称を含み、実装開始時に既存アセットとの互換性を調査して確定する。
+この文書は、最初の動作版に必要な構成だけを定義する。将来のMIDI、AI、推薦、完全自動化を想定した抽象層は含めない。
 
-## 2. 基本構成
+## 2. 初期構成
 
 ```text
-Keyboard / Mouse / MIDI
-          |
-     Input Adapter
-          |
-   Operation Commands <--- UI / Timeline / Future Cue Assist
-          |
-    Control Router
-       /       \
-Shot Selection  Live Control Channels
-       \       /
-   Camera State Coordinator
-          |
- Pattern Player + Assistance + Manual Trim
-          |
- Cinemachine 3 Camera Rigs
-          |
- Program / Preview Brains and Transition Output
+VLiveCameraKeyboardInput
+           |
+           v
+VLiveCameraSwitcher ------> VLiveCameraShot
+           |                       |
+           v                       v
+   CinemachineBrain        CinemachineCamera
+                                  + Spline
 ```
 
-入力デバイス、ショット選択、運動計算、Cinemachine、送出状態を分離する。デバイス追加や半自動化によって、カメラロジックそのものを分岐させない。
+初期実装で新たに必要な主要型は3つとする。
 
-## 3. 論理モジュール
+| 型 | 責務 |
+| --- | --- |
+| `VLiveCameraShot` | 1つのShot、CinemachineCamera参照、移動設定、速度、方向、Hold状態を管理する |
+| `VLiveCameraSwitcher` | Shot一覧、現在のProgram、番号指定Cutを管理する |
+| `VLiveCameraKeyboardInput` | キーボード入力を読み、Switcherまたは現在のShotの公開メソッドを呼ぶ |
 
-| モジュール | 責務 | 持たない責務 |
-| --- | --- | --- |
-| Input Adapter | 物理入力を共通操作コマンドへ変換 | カメラ選択、Transform 更新 |
-| Operation Command Bus | フレーム内の操作を順序付きで伝達 | デバイス固有状態 |
-| Camera Registry / Bank | ショット ID、Bank、表示順、可用性の管理 | Program の確定 |
-| Switcher State | Program、Preview、Tally、Take 状態の唯一の所有 | カメラ運動の生成 |
-| Pattern Player | Entry / Main / Exit、レーン進行、時間同期 | 入力デバイス判定 |
-| Assistance Solver | 追従、構図、制限、補間の支援値を生成 | 無断で Program を切り替える判断 |
-| Manual Trim Mixer | 操作チャンネルごとに人の介入を合成 | ベースパターンの破壊的変更 |
-| Cinemachine Rig Adapter | 論理状態を Cinemachine 3 へ適用 | ショット選択 UI |
-| Transition Output | Cinemachine Blend と映像遷移を実行 | Camera Bank 管理 |
-| Operator UI | Multiview、状態、警告、入力可視化 | Runtime 状態の重複所有 |
+最初の段階ではinterface、Command Bus、Registry、Coordinator、独自Solver、Adapter階層を作らない。
 
-## 4. 状態の所有権
+## 3. VLiveCameraShot
 
-### 4.1 一つの状態に一人の所有者
+`VLiveCameraShot`はScene上のShotを表すMonoBehaviourとする。
 
-- Program / Preview / Tally は `Switcher State` だけが確定する。
-- パターンの再生位置は `Pattern Player` だけが進める。
-- 手動入力の保持値は `Manual Trim Mixer` だけが管理する。
-- 最終的な論理 Camera State は `Camera State Coordinator` が 1 回だけ合成する。
-- Cinemachine への書き込みは `Cinemachine Rig Adapter` に集約する。
+最初に必要な設定:
 
-同じ Transform、Lens、Spline Position へ複数コンポーネントが独立に書き込む構成は禁止する。
+- Shot名
+- CinemachineCamera参照
+- FixedまたはSpline移動
+- Spline参照
+- 初期速度
+- Loopの有無
+- 初期方向
 
-### 4.2 フレーム更新順序
+最初に必要な操作:
 
-標準順序は次のとおり。
+- 再生開始
+- 速度変更
+- Reverse
+- Hold
+- Resume
 
-1. 入力を読み、操作コマンドへ変換する。
-2. Bank 選択、Preview、Take などの離散状態を更新する。
-3. 使用する時間源を決定し、パターン再生位置を更新する。
-4. ターゲットと構図支援を評価する。
-5. 手動トリムと支援値をチャンネル単位で合成する。
-6. Cinemachine 3 のリグ状態へ反映する。
-7. Program / Preview の遷移と Tally を確定する。
-8. UI と診断情報へ読み取り専用スナップショットを公開する。
+Fixed ShotにはSplineを要求せず、TransformとCinemachine設定をそのまま使用する。移動ShotだけがCinemachine 3のSpline Dollyを使用する。
 
-具体的な Unity の更新フェーズは、Cinemachine Brain と入力システムの評価順を実機検証して決める。
+## 4. VLiveCameraSwitcher
 
-## 5. Cinemachine 3 構成
+`VLiveCameraSwitcher`はScene上のShotリストと現在のProgram Shotを保持する。
 
-- ショットの基本単位は `CinemachineCamera` とする。
-- レーン移動には `Spline Dolly` 系コンポーネントを使用する。
-- 注視・構図には Tracking Target と Position / Rotation Composer 系を使用する。
-- 手持ち感や衝撃は Noise / Impulse 系を用途別に使用する。
-- Program は原則として 1 台の Unity Camera と Cinemachine Brain から出力する。
-- Preview は Program と独立した Brain または Output Channel で評価し、Program 状態を変更しない。
-- Cinemachine Blend は仮想カメラ状態の補間であり、RenderTexture を用いた映像クロスフェード、フェード、ワイプとは別機能として扱う。
+- 番号からShotを選択する。
+- 無効な番号や参照欠落では、現在のProgramを維持する。
+- Cut時は対象のCinemachineCameraを有効なProgram状態にする。
+- 選択後、対象Shotの自動移動を継続する。
+- 同じShotを再選択しても、既定では再生位置をResetしない。
+- Shot数を9に固定しない。ただし初期UIにBankは作らない。
 
-Cinemachine の詳細 API は Unity 6.3 対応バージョンを固定した時点で確定し、旧 Cinemachine 2 API を新規設計へ持ち込まない。
+Program出力は1台のUnity CameraとCinemachine Brainを使用する。既存実装のようにUnity CameraのTransformやLensを毎フレームコピーしない。
 
-## 6. Program / Preview / Standby の評価
+## 5. VLiveCameraKeyboardInput
 
-| 状態 | 用途 | 評価方針 |
-| --- | --- | --- |
-| Program | 現在の送出 | 完全なカメラ、支援、ポスト処理を評価 |
-| Preview | 次の候補確認 | Take と同等の構図・タイミングを事前評価 |
-| Standby | Bank 内のその他 | 必要最小限の状態保持。高コスト描画は行わない |
-| Multiview | 一覧監視 | 低解像度、低頻度など品質を段階化 |
+初期入力はUnity標準のキーボード入力で実装する。使用する入力APIは、Unity 6.3のプロジェクト設定を確認して決定する。
 
-論理上の登録台数と同時に高品質描画する台数を分離する。64 台以上の登録を目標にするが、同時描画性能は実ステージで測定して上限を決める。
+- 数字キー: ShotをCut
+- 増減キー: 現在のShotの速度を変更
+- Reverseキー: 進行方向を反転
+- Holdキー: 押下またはToggleで停止
+- Resumeキー: 再開
 
-## 7. 時間モデル
+キー割り当てはInspectorから設定可能にしてよいが、汎用Input Mappingアセットはまだ作らない。
 
-パターンは次の時間源を選択できる。
+## 6. 更新と所有権
 
-- Shot Local Time: Take または選択からの経過時間
-- Show Time: ライブ全体で共有する時間
-- Beat Time: BPM と拍位置に同期した時間
-- External Time: Timeline または将来のキューシステム
+- `VLiveCameraKeyboardInput`だけがキー入力を読む。
+- `VLiveCameraSwitcher`だけがProgram Shotを変更する。
+- 各`VLiveCameraShot`だけが自身のSpline進行状態を変更する。
+- Cameraの最終評価はCinemachineへ任せる。
+- 同じSpline位置やLensへ複数コンポーネントから書き込まない。
 
-時間源の切り替え、Seek、Pause、再開、フレーム落ちで飛躍が起きた場合の方針を明示する。乱数を使うパターンは Seed を保存し、Preview と Program で再現可能にする。
+具体的な`Update`、`LateUpdate`、Cinemachine更新順は最小試作で確認し、必要になった設定だけを採用する。
 
-## 8. 入力抽象化
-
-すべての入力は [spec-operation.md](spec-operation.md) の操作コマンドへ変換する。Keyboard Adapter と将来の MIDI Adapter は同時利用でき、同じコマンドに対する優先順位と合成規則を `Control Router` が決める。
-
-絶対値フェーダーは Pickup、相対エンコーダーは差分入力として扱い、デバイス接続時や Bank 切り替え時の値飛びを防ぐ。
-
-## 9. データと Runtime の境界
-
-- Camera Shot、Motion Pattern、Transition Preset、Input Mapping は ScriptableObject 等のシリアライズ可能なデータとする。
-- Runtime はデータを解釈する少数の共通プリミティブで構成する。
-- AI 生成物も手作業の生成物も同じスキーマ、検証、プレビューを通す。
-- Scene 固有参照と再利用可能なパターンを分離する。パターンアセットが Scene オブジェクトを直接恒久参照しない。
-- 保存形式の変更では GUID、SerializedProperty 名、移行処理を検討し、既存 Prefab と Scene を無断で破壊しない。
-
-## 10. namespace と assembly
-
-目標構成は次のとおり。
+## 7. namespaceとassembly
 
 ```text
 Runtime/  -> toshi.VLiveKit.Camera
@@ -128,10 +94,36 @@ Editor/   -> toshi.VLiveKit.Camera.Editor
 Tests/    -> toshi.VLiveKit.Camera.Tests
 ```
 
-必要に応じて Runtime、Editor、Tests の asmdef を分離し、Runtime から Editor API を参照しない。外部公開 API は最小化し、内部実装は `internal` を優先する。
+RuntimeとEditorのasmdefは分離する。最初の動作版に不要な追加assemblyは作らない。
 
-## 11. エラーと診断
+## 8. 互換性
 
-ターゲット消失、無効なレーン、未ロードのショット、遷移不能、入力競合は、例外で送出を停止させる前に安全な Hold と明確な状態表示へ移行する。エラー時の具体的な画の扱いは各機能仕様で定義する。
+旧バージョンとのコード、Prefab、Scene、SerializedFieldの互換性は保持しない。
 
-診断スナップショットには少なくとも Program、Preview、現在 Bank、パターン位相、時間源、手動介入中のチャンネル、Pickup 待ち、遷移状態、警告理由を含める。
+- 旧型を新namespaceへ転送しない。
+- 旧SerializedFieldの移行処理を作らない。
+- 旧API wrapperを残さない。
+- 新しい基準SceneまたはPrefabを作り直してよい。
+
+既存コードを削除するときは、実装タスクに対象パスを明記する。互換性不要を理由に、タスク外のファイルまで一括削除しない。
+
+## 9. 抽出の条件
+
+次のいずれかが実際に発生した場合だけ、責務の分割や共通化を検討する。
+
+- 同じ処理が2つ以上の型に重複した。
+- 1つの型が独立して検証すべき複数の状態を持ち、修正が干渉した。
+- MIDI追加時に、キーボードと共通の操作入口が必要になった。
+- Pattern Asset追加時に、Scene設定の複製が実害になった。
+- Profilerまたは不具合調査で、現在の構成が問題だと確認できた。
+
+「将来使うかもしれない」は抽出理由にしない。
+
+## 10. 初期受け入れ条件
+
+1. Unity 6.3とCinemachine 3でCompileできる。
+2. Fixed ShotとSpline Shotを同じSwitcherからCutできる。
+3. Spline ShotはProgram選択後も滑らかに動き続ける。
+4. 速度、Reverse、Hold、Resumeが現在のProgram Shotへ作用する。
+5. 無効な選択でProgramが失われない。
+6. 主要型が本仕様にない抽象層へ分割されていない。

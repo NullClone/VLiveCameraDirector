@@ -1,101 +1,120 @@
-# 開発・検証ワークフロー
+# 開発・実装委譲ワークフロー
 
-## 1. 目的
+## 1. 役割分担
 
-この文書は、VLiveCameraUnit の仕様、コード、Unity アセットを安全に変更し、検証結果を正確に報告する手順を定義する。
+- ユーザー: 製品判断、実装範囲の承認、最終的な操作感の確認
+- 仕様担当Codex: 現状調査、仕様整理、実装タスク作成、diffと仕様のReview
+- Antigravity Gemini Flash 3.8 high: 指定された小さな実装タスクの実行
 
-## 2. 変更前
+実装エージェントに製品仕様の決定を委ねない。仕様に不足があり、選択によって挙動が変わる場合は実装を止めて確認する。
 
-1. ユーザーの依頼範囲と、変更してはいけない範囲を確認する。
-2. [README.md](README.md) から担当仕様書を一つ選ぶ。
-3. [phases.md](phases.md) で現状と前提フェーズを確認する。
-4. `git status --short` で既存変更を確認し、無関係な変更を記録する。
-5. 対象型、参照、Prefab、Scene、Timeline、UnityEvent を検索する。
-6. SerializedProperty、GUID、公開 API に影響する場合は移行方針を先に決める。
+## 2. 実装タスクの単位
 
-調査だけを求められた場合は、コード、アセット、設定、文書を変更しない。
+一度に依頼するのは、独立して確認できる1つの縦切りタスクとする。`Step 1を全部実装`のような大きな依頼を避ける。
 
-## 3. 仕様変更
+各タスクには次を必ず含める。
 
-- 製品仕様を変える場合は、ユーザーの承認後に担当仕様書を更新する。
-- 同じ規則を複数文書へコピーせず、正本からリンクする。
-- 目標仕様と現在実装の差分は [phases.md](phases.md) に記録する。
-- 未決定事項は断定せず、決定が必要なフェーズと条件を書く。
-- 実装都合で挙動を変更する場合も、仕様変更として扱う。
-- 文書は自然で簡潔な日本語を使い、制約、数値、受け入れ条件を省略しない。
+```text
+目的:
+実装する挙動:
+変更してよいファイル:
+追加してよいファイル:
+対象外:
+禁止する抽象化・変更:
+完了条件:
+実施する検証:
+判断できない場合の停止条件:
+```
 
-## 4. 実装
+実装エージェントへ渡す文書は、原則として次の3つだけにする。
 
-- Runtime、Editor、Tests の依存方向を守る。
-- 入力源、Switcher State、Pattern、支援、Cinemachine Writer の責務を混ぜない。
-- 新しい Shot のためだけの Runtime 分岐を増やさず、共通プリミティブとデータで表現する。
-- namespace と命名は [AGENTS.md](../AGENTS.md) に従う。
-- Unity のファイルを追加・移動・削除する場合は `.meta` と GUID を同時に扱う。
-- 既存の SerializedField 名を変更する場合は `FormerlySerializedAs` 等を検討する。
-- Scene、Prefab、Sample を機械的に一括更新する前に、対象パスを明示して承認範囲を確認する。
-- 無関係な dirty tree の変更を編集、削除、ステージしない。
+1. [AGENTS.md](../AGENTS.md)
+2. 今回に関係する仕様書1つ
+3. 今回の実装タスク
 
-## 5. 検証の層
+全仕様書から実装範囲を推測させない。
 
-検証結果は次を分けて記録する。一つの成功を別の証拠として代用しない。
+## 3. 最初の実装タスク分割
 
-| 層 | 確認内容 | 代表手段 |
-| --- | --- | --- |
-| Text / Static | diff、リンク、命名、参照、シリアライズ契約 | `rg`、`git diff --check`、Review |
-| C# Compile | assembly と API の整合 | Unity が生成した project、Editor compile |
-| Unity Import | `.meta`、GUID、Package、Domain Reload | Unity Editor Import、Editor.log |
-| Automated Test | 決定的な状態遷移、計算、異常処理 | EditMode / PlayMode Test |
-| Scene / Game View | 構図、動き、遷移、UI | 基準 Scene の目視と録画 |
-| Operation | 入力応答、誤操作、Pickup、復旧 | 操作シナリオと実デバイス |
-| Performance | CPU、GPU、GC、Memory、長時間安定性 | Profiler、Frame Debugger、実機 Player |
+[phases.md](phases.md)のStep 1は、少なくとも次の順へ分割する。
 
-文書だけの変更では Static 検証までを行い、Unity Import や画面品質を検証済みとは記載しない。
+1. Unity 6.3 / Cinemachine 3のpackage設定と最小Compile
+2. 新namespaceと最小asmdefの確定
+3. Fixed ShotとSpline Shotを表す`VLiveCameraShot`
+4. 2〜3台をCutする`VLiveCameraSwitcher`
+5. 数字キーだけを扱う`VLiveCameraKeyboardInput`
+6. Speed、Reverse、Hold、Resume
+7. Cut成功時のProgram Shot名ログ
+8. 動作確認Sceneと反復操作
 
-## 6. 主要シナリオ
+各タスク完了後にdiffとUnity結果を確認し、次のタスク内容を調整する。
 
-実装フェーズに応じ、最低限次を反復確認する。
+## 4. 実装エージェントの規則
 
-1. Fixed Shot を Preview し Take する。
-2. Moving Shot を Take し、Entry から Main へ遷移する。
-3. Rail Hold、Reverse、Resume を実行する。
-4. Pan / Tilt / Zoom を操作し、解放後の復帰を確認する。
-5. Program と同じ Shot を再選択する。
-6. 無効 Shot、欠落 Target、未準備 Preview への Take を試す。
-7. Bank を跨いで Program / Preview / Tally を確認する。
-8. 入力中にフォーカス喪失または MIDI 切断を発生させる。
-9. Cut、Cinemachine Blend、Video Transition を個別に確認する。
-10. Multiview の品質段階を変え、Program の性能を測る。
+- 依頼された範囲だけを変更する。
+- 仕様にないinterface、基底クラス、Manager、Service、Command Busを追加しない。
+- 将来のMIDI、AI、Preview、Patternのためのコードを追加しない。
+- ついでのリファクタリングやフォルダー再編を行わない。
+- 旧版互換のためのwrapper、属性、移行処理を追加しない。
+- 既存コードを削除する場合は、タスクに明記されたパスだけを対象にする。
+- [AGENTS.md](../AGENTS.md)のコードスタイルに従う。
+- 完了時に変更ファイル、検証結果、未確認事項を報告する。
 
-## 7. Review 観点
+## 5. 変更前の確認
 
-- 仕様の担当範囲と実装が一致しているか。
-- Program を失う失敗経路がないか。
-- 同じ状態への複数 Writer がないか。
-- Preview が Program 状態を変更していないか。
-- 手動介入の開始・解放で不連続がないか。
-- 時間源、Seed、再選択時の動作が決定的か。
-- ターゲットや参照の欠落を黙って別挙動へ置換していないか。
-- 論理登録台数と同時描画台数を混同していないか。
-- AI 生成データが人の承認と共通検証を迂回していないか。
+1. `git status --short`で既存変更を確認する。
+2. 今回の変更可能ファイルを列挙する。
+3. 参照元を`rg`で検索する。
+4. 使用するUnityとCinemachineの実APIを現在のpackageで確認する。
+5. 削除対象と残す対象を区別する。
+
+旧実装の互換性調査は不要だが、現在の変更がタスク外ファイルを壊していないかは確認する。
+
+## 6. Review
+
+仕様担当は実装後に次を確認する。
+
+- タスクの完了条件を満たしているか。
+- 対象外の変更が含まれていないか。
+- 将来用の抽象化が追加されていないか。
+- 1つの値へ複数箇所から書き込んでいないか。
+- `Update`経路に不要な検索やAllocationがないか。
+- 無効参照でProgramが失われないか。
+- Unity上で未確認の内容を確認済みと報告していないか。
+
+問題がある場合は大規模な再設計を依頼せず、問題箇所だけを修正するタスクへ分ける。
+
+## 7. 検証の層
+
+| 層 | 確認内容 |
+| --- | --- |
+| Static | diff、namespace、参照、末尾空白、不要な抽象化 |
+| Compile | C#とCinemachine APIの整合 |
+| Unity Import | asmdef、`.meta`、GUID、Domain Reload |
+| Play Mode | Cut、移動、入力、無効参照 |
+| Game View | 構図、動き、ジャンプ、操作感 |
+| Long Run | 入力残留、例外、GC、状態破損 |
+| Performance | CPU、GPU、GC、Memory |
+
+Compile成功だけでGame Viewの正しさを証明したことにしない。初期タスクでは必要な層だけを指定し、毎回すべての検証を要求しない。
 
 ## 8. Git
 
-- 作業前後に `git status --short` と diff を確認する。
+- 作業前後に`git status --short`とdiffを確認する。
 - 許可されたファイルだけを明示的にステージする。
-- 生成物、Library、Temp、無関係なユーザー変更をコミットしない。
-- Commit message は `<type>: <変更内容>` を基本とする。
-- Codex がコミットした場合は、実際に使用した Codex 名を `Co-Authored-By` trailer に記録する。
-- Branch 作成、Push、Pull Request はユーザーの明示依頼がある場合だけ行う。
+- ユーザーの無関係な変更を編集・ステージしない。
+- Commit messageは`<type>: <変更内容>`とする。
+- Codexがコミットする場合は使用したCodex名を`Co-Authored-By`へ記録する。
+- Branch、Push、Pull Requestはユーザーの明示依頼がある場合だけ行う。
+- 別エージェントと連携する場合は、同じファイルを同時に編集しない。
 
 ## 9. 完了報告
 
-完了時は、次を簡潔に分けて報告する。
+- 実装した挙動
+- 変更したファイル
+- 実施した検証
+- Unity上で未確認の内容
+- 対象外として残した内容
+- Commitした場合はCommit ID
 
-- 変更した内容と正本ファイル
-- 実施した検証と結果
-- Unity 上で未確認の内容
-- 性能・長時間運用で未測定の内容
-- 保持した無関係な既存変更
-- Commit を行った場合は Commit ID
-
-「Compile 成功」「Unity Import 成功」「Game View で正しい」「本番負荷を満たす」は、それぞれ別の結論として扱う。
+推測や将来対応を、完了した実装として報告しない。
