@@ -1,108 +1,68 @@
-# 次作業エージェント向けプロンプト
+# 次作業エージェント向け実装プロンプト
 
 以下をそのままAntigravityのGemini Flash 3.8 highへ渡す。
 
 ---
 
-あなたはUnityパッケージ`VLiveCameraUnit`の実装前監査を担当します。今回はコード、文書、package、Prefab、Scene、`.meta`を一切変更しないでください。調査結果だけを報告してください。
+Unityパッケージ`VLiveCameraUnit`のA/Bカメラ最小版を、調査、旧コード整理、実装、Unity検証、コミットまで一度で完成させてください。途中の細かな判断でユーザー確認を挟まず、仕様内で最も単純な方法を選んでください。
 
 ## 作業場所
 
 `E:\Unity\Project\MMD\Assets\toshi.VLiveKit\VLiveCameraUnit`
 
-## 最初に読む文書
+## 仕様
 
-1. `AGENTS.md`
-2. `Docs/architecture.md`
-3. `Docs/phases.md`
+最初に`AGENTS.md`と、`Docs/architecture.md`、`Docs/spec-camera.md`、`Docs/spec-operation.md`、`Docs/spec-switching.md`、`Docs/phases.md`を読んでください。このプロンプトが今回の範囲であり、文書中の将来構想は実装しません。
 
-他の仕様書は、調査対象の確認に必要な箇所だけ読んでください。文書中の将来構想を今回の実装範囲として扱わないでください。
+プロジェクト本体はUnity `6000.3.19f1`、Cinemachine `3.1.7`です。パッケージ側にはUnity 2022.3 / Cinemachine 2.9.7指定と旧API依存コードが残っています。旧版とのAPI、SerializedField、Prefab、Scene互換性は不要です。
 
-## 背景
+## 完成条件
 
-目標環境はUnity 6.3以上、Cinemachine 3です。旧バージョンとのAPI、SerializedField、Prefab、Scene互換性は保持しません。ただし、互換性不要を理由に、範囲未確認のコードやアセットを削除してはいけません。
+- 出力は1台のUnity CameraとCinemachine Brainを使用する。
+- Shot AとShot Bは、別々のCinemachineCameraを持つ。
+- Aは正面ミドルを想定した安定したFixed Shotとする。
+- BはSpline始点から終点へ移動し、減速して終点でHoldする。
+- キー1 / 2でA/BをCinemachineのCutとして切り替える。
+- AがLiveの間にBを始点へ準備し、BへCutした後に移動を開始する。
+- Live中のBはResetせず、Aへ戻ってから次の使用へ向けて始点へ戻す。
+- BのSpeed Up / Down、Reverse、Hold、Resumeを操作できる。
+- 同じShotの再選択は何もせず、無効な参照や入力でも現在のProgramを維持する。
+- Cut成功時にProgram Shot名を1回だけLogする。
 
-最初に実装する完成形は次です。
+主要なRuntime型は原則`VLiveCameraShot`、`VLiveCameraSwitcher`、`VLiveCameraKeyboardInput`の3つとし、`toshi.VLiveKit.Camera` namespaceへ置いてください。正確なCinemachine API、フィールド構成、更新方法は、インストール済みPackage sourceを確認して決めて構いません。
 
-- 出力用Unity CameraとCinemachine Brainは1台
-- Shot AとShot Bは別々のCinemachineCameraを持つ
-- Aは安定したFixed Shot
-- BはSplineの始点から終点へ動き、終点でHoldするShot
-- キー1 / 2でA/BをCinemachineのCutとして切り替える
-- Live中の同じCinemachineCameraへ別ShotのTransform、Spline、Lens、Targetを上書きしない
-- A/Bを汎用Slotとして動的に再構成しない
+## 旧コードの整理
 
-## 今回の目的
+Cinemachine 2へ依存する旧カメラRuntime、専用Editor、専用Test、直接依存するDevelop試作コードは、A/B最小版に不要なら削除または置換して構いません。`package.json`をUnity 6.3 / Cinemachine 3.1.7へ合わせ、Runtime / Editor asmdefも必要な参照とplatformへ整理してください。
 
-現在のCinemachine 2.9.7依存をCinemachine 3へ置き換える前に、次の実装タスクで変更・削除を許可すべき正確なファイル一覧を作成してください。
+削除前にGUIDと参照を確認し、PrefabへMissing Scriptを残さないでください。不要な試作Prefabは依存確認後に一緒に削除して構いません。`.meta`も対応させてください。
 
-## 調査内容
+次は今回変更しません。
 
-1. `package.json`、asmdef、Runtime、Editor、Testsから、Cinemachine 2 APIへ依存するファイルを列挙する。
-2. 各ファイルを次のいずれかへ分類する。
-   - A/B最小実装で置き換える
-   - Cinemachine 3へ小さく移植する
-   - 今回は削除候補
-   - Cinemachineと無関係なので保持する
-3. Cinemachine 2から3で変更される型、namespace、主要APIを、現在利用可能なUnity公式ドキュメントまたはインストール済みPackage sourceで確認する。
-4. 現在のRuntime / Editor asmdef参照を調べ、package更新後にCompileを妨げる箇所を特定する。
-5. Prefab、Scene、Timeline、UnityEventから旧カメラ型が参照されている箇所を検索する。互換対応は不要だが、破損対象を把握する。
-6. A/B最小実装のために、新規作成が必要なファイルを最大5個まで提案する。
-7. 実装を1回で大きく行わず、Compile可能な小タスクへ分割する。
+- `Runtime/LivePerformer/`
+- `Runtime/LiveTimeline/`
+- `Runtime/MirrorCamera/`
+- `Runtime/SplitLines/`
+- `Runtime/LetterBox/`
+- `Develop/`内の無関係な素材、モデル、マテリアル、コード
+- 既存の本番Scene
 
-## 禁止事項
+新しいSwitcherは既存の`Runtime/Switching/`へ置いてください。今回保持するコードのnamespace統一や、タスク外のリファクタリングは行いません。
 
-- ファイルの作成、編集、削除、移動、改名
-- `package.json`やasmdefの変更
-- Unity SceneやPrefabの保存
-- Import、Reimport、アップグレード処理の実行
-- 自動修正、formatter、migration toolの実行
-- Branch作成、Commit、Push
-- Command Bus、Manager階層、DI、独自Solver等の提案
-- Preview、Bank、MIDI、AI、Pattern Assetの実装提案
-- 旧版互換レイヤーの提案
+## 確認用Scene
 
-読み取り専用の`rg`、`git status`、`git diff`、ファイル閲覧は使用できます。現在の作業ツリーに既存変更がある場合は、内容を変更せず最初に報告してください。
+既存Sceneを変更せず、`Tests/`配下へA/B確認用Sceneを作成してください。A/Bの構図差を明確にし、Cut、Bの始点から終点までの移動、終点Hold、Speed、Reverse、Hold、ResumeをPlay ModeとGame Viewで確認できる状態にしてください。必要なTargetや床はPrimitiveで構いません。
 
-## 報告形式
+## 非目標
 
-### 1. 現在状態
+同じCinemachineCameraへの別Shot設定の上書き、A/B汎用Slot、Preview、Take、Tally、Bank、Multiview、MIDI、AI、Recommendation、Pattern Asset、独自Solver、Command Bus、DI、互換wrapper、将来用interfaceは実装しません。
 
-- Unity指定バージョン
-- Cinemachine指定バージョン
-- asmdef構成
-- 作業ツリー状態
+## 検証と完了
 
-### 2. Cinemachine 2依存一覧
+`git diff --check`、旧Cinemachine 2 APIの残存、Missing Script、Unity Import、Domain Reload、Runtime / Editor Compile、Play Mode、Game Viewを確認してください。A/B Cut、Bの一連の移動、手動操作、同一Shot再選択、無効参照時の安全性を実際に確認してください。長時間確認を行わない場合は未確認と明記してください。
 
-| ファイル | 使用中の旧API | 分類 | 次タスクでの扱い | 理由 |
-| --- | --- | --- | --- | --- |
+既存の作業ツリー変更を上書きせず、今回の変更だけをステージしてください。検証後、`feat: A/Bカメラ切り替え基盤を実装`でコミットし、Branch作成とPushは行わないでください。
 
-### 3. 参照が壊れるアセット
-
-Prefab、Scene、Timeline、UnityEventごとに正確なパスを列挙してください。見つからない場合は、検索範囲と「未検出」を明記してください。
-
-### 4. A/B最小実装の新規ファイル
-
-最大5個。各ファイルの責務を1文で説明してください。
-
-### 5. 推奨実装順序
-
-各タスクについて、変更可能パス、対象外、完了条件、検証方法を記載してください。
-
-### 6. ユーザー判断が必要な点
-
-削除候補、既存アセット破損、複数の実装方法がある箇所だけを記載してください。判断不要なら「なし」としてください。
-
-### 7. 検証境界
-
-今回確認した内容と、Unity Import、Compile、Play Mode、Game Viewで未確認の内容を分けてください。
-
-## 完了条件
-
-- 変更が1件もない。
-- Cinemachine 2依存ファイルと参照アセットが正確なパスで示されている。
-- 次の実装タスクで許可する変更・削除範囲をユーザーが判断できる。
-- 初期A/B以外の将来設計を追加していない。
+完了報告には、実装した挙動、変更・削除ファイル、検証結果、未確認事項、Commit IDを記載してください。仕様内で解決できない重大な障害がある場合だけ、変更を最小限に保って原因と必要な判断を報告してください。
 
 ---
