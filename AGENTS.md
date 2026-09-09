@@ -82,9 +82,21 @@ VLiveCameraUnit は、事前に用意した多数のカメラをライブ中に�
 - 半自動化やMIDIのためだけに、現在のキーボード実装を複雑にしない。
 - 仕様にない機能を「ついでに」実装しない。
 
+## Agent Skills
+
+Unityプロジェクト直下の`E:\Unity\Project\MMD\.agents\skills`を、このプロジェクトで利用できるAgent Skillsの正本とする。
+
+- メインエージェントとすべてのサブエージェントは、作業開始前に依頼内容へ適用できるSkillがあるか確認する。
+- ユーザーがSkill名を指定した場合、または作業がSkillのdescriptionに一致する場合は、対象の`SKILL.md`を受任したエージェント自身が全文読んでから作業する。
+- 親エージェントがSkillを読んだことを、サブエージェント側の確認の代わりにしない。さらに委譲する場合も同じ規則を引き継ぐ。
+- 使用するのは今回の作業に必要な最小限のSkillだけとし、インストール済みという理由だけで無関係なSkillを適用しない。
+- Unity CLI、Editor接続、Scene、Prefab、Asset、Build、Testを扱う場合は`unity-cli`を使用する。Scene、Prefab、Assetを変更する前に、同Skillの手順に従って`unity status --project-path "E:\Unity\Project\MMD" --format json`で接続状態を確認する。0件でもプロセス確認権限に関するwarningがある場合は未接続と断定せず、`unity pipeline list --format json`でも確認する。
+- Package Managerの追加、削除、更新を外部から行う場合は`unity-package-management`を使用する。
+- Skillを利用できない場合や手順どおり検証できない場合は、別手段で確認済みと扱わず、理由と未確認範囲を報告する。
+
 ## 実装エージェントへの委譲
 
-実装は主にAntigravityのGemini Flash 3.8 highへ委譲する。エージェントには、この文書、担当仕様書、今回の短い実装タスクだけを渡す。
+実装は主にAntigravityのGemini Flash 3.8 highへ委譲する。エージェントには、この文書、担当仕様書、今回の短い実装タスク、使用が必要なSkill名だけをチャット経由で渡す。実装タスクのプロンプト自体は仕様書として`Docs/`へ保存しない。
 
 - 一度に1つの縦切りタスクだけを依頼する。
 - 変更可能ファイル、対象外、完了条件をタスクに明記する。
