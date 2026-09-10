@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace toshi.VLiveKit.Camera
+namespace VLiveKit.Camera
 {
     /// <summary>
     /// カメラの構図および移動軌道の初期設定を保持するScriptableObject。

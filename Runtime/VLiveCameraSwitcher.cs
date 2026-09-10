@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
-namespace toshi.VLiveKit.Camera
+namespace VLiveKit.Camera
 {
     /// <summary>
     /// 登録された複数のShotを管理し、番号指定または直接指定でCut切り替えを行うスイッチャー。

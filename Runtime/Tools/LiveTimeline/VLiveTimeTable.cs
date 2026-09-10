@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
 
-namespace toshi.VLiveKit
+namespace VLiveKit.Camera.Tools
 {
     /// <summary>
     /// ライブ用の MasterTimeline と、そこに紐づく各セクション Timeline を管理するタイムテーブル。

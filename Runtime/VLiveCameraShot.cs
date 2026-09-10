@@ -2,7 +2,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Splines;
 
-namespace toshi.VLiveKit.Camera
+namespace VLiveKit.Camera
 {
     /// <summary>
     /// 単一のカメラショットの構図と再生状態を管理するコンポーネント。

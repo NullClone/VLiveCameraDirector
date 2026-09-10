@@ -2,7 +2,7 @@ using Unity.Cinemachine;
 using UnityEditor;
 using UnityEngine;
 
-namespace toshi.VLiveKit.Camera.Editor
+namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraShot用のカスタムインスペクター。

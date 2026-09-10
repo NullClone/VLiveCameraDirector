@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace toshi.VLiveKit.Camera.Editor
+namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraSwitcher用のカスタムインスペクター。

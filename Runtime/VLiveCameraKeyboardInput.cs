@@ -1,9 +1,7 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 
-namespace toshi.VLiveKit.Camera
+namespace VLiveKit.Camera
 {
     /// <summary>
     /// キーボード入力を受け付け、VLiveCameraSwitcherへのCutおよび手動操作命令を発行するコンポーネント。

@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using System.IO;
 using Unity.Cinemachine;
 using Unity.Mathematics;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Splines;
-using toshi.VLiveKit.Camera;
 
-namespace toshi.VLiveKit.Camera.Editor
+namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraUnitのRig構築およびショット構成のセットアップを行うエディタウィンドウ。
@@ -58,7 +58,7 @@ namespace toshi.VLiveKit.Camera.Editor
         private void AutoDetectSceneState()
         {
             // 既存RigからTarget、Camera、登録Presetを検出
-            var switcher = Object.FindFirstObjectByType<VLiveCameraSwitcher>(FindObjectsInactive.Include);
+            var switcher = FindFirstObjectByType<VLiveCameraSwitcher>(FindObjectsInactive.Include);
             if (switcher != null)
             {
                 if (_outputCamera == null && switcher.CinemachineBrain != null)
@@ -259,6 +259,7 @@ namespace toshi.VLiveKit.Camera.Editor
                     _palettePresets[i - 1] = temp;
                     GUIUtility.ExitGUI();
                 }
+
                 EditorGUI.EndDisabledGroup();
 
                 EditorGUI.BeginDisabledGroup(i == count - 1);
@@ -269,6 +270,7 @@ namespace toshi.VLiveKit.Camera.Editor
                     _palettePresets[i + 1] = temp;
                     GUIUtility.ExitGUI();
                 }
+
                 EditorGUI.EndDisabledGroup();
 
                 if (GUILayout.Button("✕", GUILayout.Width(24)))
@@ -288,6 +290,7 @@ namespace toshi.VLiveKit.Camera.Editor
             {
                 _palettePresets.Add(null);
             }
+
             EditorGUI.EndDisabledGroup();
 
             if (GUILayout.Button("Load Default 6 Presets", GUILayout.Height(24)))
@@ -295,6 +298,7 @@ namespace toshi.VLiveKit.Camera.Editor
                 VLiveCameraPresetAssetCreator.CreateOrUpdateDefaultPresets();
                 LoadDefaultPalette();
             }
+
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.EndVertical();
@@ -334,7 +338,7 @@ namespace toshi.VLiveKit.Camera.Editor
 
             // 既存Rigの存在確認（非アクティブも含めて安全に判定）
             GameObject existingRig = null;
-            var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var activeScene = SceneManager.GetActiveScene();
             foreach (var root in activeScene.GetRootGameObjects())
             {
                 if (root.name == RigGameObjectName)
@@ -346,7 +350,7 @@ namespace toshi.VLiveKit.Camera.Editor
 
             if (existingRig == null)
             {
-                var existingSwitcher = Object.FindFirstObjectByType<VLiveCameraSwitcher>(FindObjectsInactive.Include);
+                var existingSwitcher = FindFirstObjectByType<VLiveCameraSwitcher>(FindObjectsInactive.Include);
                 if (existingSwitcher != null)
                 {
                     existingRig = existingSwitcher.gameObject;
@@ -385,7 +389,7 @@ namespace toshi.VLiveKit.Camera.Editor
 
             // 1. Root Rig GameObject（非アクティブを含めて重複生成を防止）
             GameObject rigGo = null;
-            var currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var currentScene = SceneManager.GetActiveScene();
             foreach (var root in currentScene.GetRootGameObjects())
             {
                 if (root.name == RigGameObjectName)
@@ -397,7 +401,7 @@ namespace toshi.VLiveKit.Camera.Editor
 
             if (rigGo == null)
             {
-                var existingSwitcher = Object.FindFirstObjectByType<VLiveCameraSwitcher>(FindObjectsInactive.Include);
+                var existingSwitcher = FindFirstObjectByType<VLiveCameraSwitcher>(FindObjectsInactive.Include);
                 if (existingSwitcher != null)
                 {
                     rigGo = existingSwitcher.gameObject;
@@ -470,6 +474,7 @@ namespace toshi.VLiveKit.Camera.Editor
             {
                 Undo.RecordObject(brain, "Update CinemachineBrain");
             }
+
             brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
             EditorUtility.SetDirty(brain);
 
@@ -626,6 +631,7 @@ namespace toshi.VLiveKit.Camera.Editor
                 shotsProp.InsertArrayElementAtIndex(i);
                 shotsProp.GetArrayElementAtIndex(i).objectReferenceValue = updatedShots[i];
             }
+
             soSwitcher.ApplyModifiedProperties();
 
             // 7. KeyboardInput参照を反映
@@ -634,7 +640,7 @@ namespace toshi.VLiveKit.Camera.Editor
             soInput.ApplyModifiedProperties();
 
             Undo.CollapseUndoOperations(undoGroup);
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(currentScene);
+            EditorSceneManager.MarkSceneDirty(currentScene);
 
             Selection.activeGameObject = rigGo;
             EditorGUIUtility.PingObject(rigGo);

@@ -2,7 +2,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace toshi.VLiveKit.Camera.Editor
+namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// 初期Motion Palette用Preset AssetをUnity Editor経由で生成・管理するエディタユーティリティ。
