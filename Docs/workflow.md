@@ -30,8 +30,9 @@
 
 1. [AGENTS.md](../AGENTS.md)
 2. 今回に関係する仕様書
-3. チャットで渡す今回の実装タスク
-4. 今回使用するAgent Skill名
+3. C#またはEditorを変更する場合は[code-style.md](code-style.md)
+4. チャットで渡す今回の実装タスク
+5. 今回使用するAgent Skill名
 
 プロンプトに完成条件と対象外を明記し、将来構想から実装範囲を推測させない。
 実装用プロンプトはユーザーへチャット経由で提示し、`Docs/`へ現在のタスクとして保存しない。繰り返し適用する製品判断や開発規則だけを仕様書へ反映する。
@@ -76,7 +77,7 @@ Unity CLI、Editor接続、Scene、Prefab、Asset、Build、Testを扱う作業�
 - ついでのリファクタリングやフォルダー再編を行わない。
 - 旧版互換のためのwrapper、属性、移行処理を追加しない。
 - 既存コードを削除する場合は、タスクに明記されたパスだけを対象にする。
-- [AGENTS.md](../AGENTS.md)のコードスタイルに従う。
+- [code-style.md](code-style.md)のコードとInspectorスタイルに従う。
 - [AGENTS.md](../AGENTS.md)のAgent Skills規則に従い、サブエージェントにも適用する。
 - 完了時に変更ファイル、検証結果、未確認事項を報告する。
 
@@ -99,6 +100,7 @@ Unity CLI、Editor接続、Scene、Prefab、Asset、Build、Testを扱う作業�
 - 将来用の抽象化が追加されていないか。
 - 1つの値へ複数箇所から書き込んでいないか。
 - `Update`経路に不要な検索やAllocationがないか。
+- 表示されるSerializedFieldにTooltipがあり、ユーザー向けMonoBehaviourに有用なCustomEditorがあるか。
 - 無効参照でProgramが失われないか。
 - Unity上で未確認の内容を確認済みと報告していないか。
 

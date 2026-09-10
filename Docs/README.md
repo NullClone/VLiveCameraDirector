@@ -18,7 +18,8 @@
 開発手順:
 
 - [workflow.md](workflow.md) — Antigravityへの実装委譲、Review、検証
-- [AGENTS.md](../AGENTS.md) — コードスタイルと過剰設計防止規則
+- [code-style.md](code-style.md) — C#、Tooltip、コメント、Custom Inspectorの規則
+- [AGENTS.md](../AGENTS.md) — エージェント向け入口と変更境界
 
 実装エージェントは全仕様書を読む必要はない。`AGENTS.md`、今回の担当仕様書、チャットで渡された短い実装タスク、該当するAgent Skillだけを使用する。実装用プロンプトは一時的な依頼であり、仕様書としてこのディレクトリへ保存しない。
 

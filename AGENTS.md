@@ -1,116 +1,69 @@
-# VLiveCameraUnit 開発ガイド
+# VLiveCameraUnit
 
-## 製品の目的
+VLiveCameraUnit is a Unity 6.3+ / Cinemachine 3 package for performing prepared
+live-camera shots with operator control and reliable composition assistance. The
+current goal is the manual A/B core: one output Camera and Brain, a stable fixed
+shot, and an independently moving spline shot. MIDI, recommendation, and
+automation come after this workflow is proven.
 
-VLiveCameraUnit は、事前に用意した多数のカメラをライブ中に演奏するように切り替え、Cinemachine による追従・構図・補間で操作を支援する Unity 完結型のカメラシステムである。
+## Read first
 
-最初に作るのはA/B手動運用の核である。1台のUnity CameraとCinemachine Brainに対し、AとBがそれぞれ独立したCinemachineCameraを持つ。Aは安定した戻り先、BはSpline移動Shotとし、必要なときだけ速度、方向、Holdへ介入する。MIDI、AI、推薦、完全自動化は、この核が実際に成立してから扱う。
+Use this priority when instructions conflict:
 
-## 仕様の優先順位
+1. The user's instruction for the current task.
+2. This file.
+3. The relevant document under `Docs/`.
+4. The current implementation.
 
-判断が衝突した場合は、次の順に優先する。
-
-1. その作業に対するユーザーの明示指示
-2. このファイル
-3. 担当仕様書
-4. 現在のコードの実際の状態
-
-`Docs/` は目標を定義するが、現在実装との差分は [Docs/phases.md](Docs/phases.md) で確認する。将来構想は現在の実装要求ではない。
-
-## 文書の読み分け
-
-| 内容 | 正本 |
+| Task | Source |
 | --- | --- |
-| 製品コンセプトと現在の優先事項 | [Docs/overview.md](Docs/overview.md) |
-| 初期実装の型、責務、依存関係 | [Docs/architecture.md](Docs/architecture.md) |
-| キーボード操作と将来のMIDI | [Docs/spec-operation.md](Docs/spec-operation.md) |
-| Shot、Spline、カメラの動き | [Docs/spec-camera.md](Docs/spec-camera.md) |
-| Cinemachineによる操作支援 | [Docs/spec-assistance.md](Docs/spec-assistance.md) |
-| Cut、Program / Preview、Bank | [Docs/spec-switching.md](Docs/spec-switching.md) |
-| 現在地と実装順序 | [Docs/phases.md](Docs/phases.md) |
-| 実装委譲、検証、Git | [Docs/workflow.md](Docs/workflow.md) |
+| Product direction | `Docs/overview.md` |
+| Runtime design and camera behaviour | `Docs/architecture.md`, `Docs/spec-camera.md` |
+| Input and switching | `Docs/spec-operation.md`, `Docs/spec-switching.md` |
+| Assistance rules | `Docs/spec-assistance.md` |
+| Current implementation phase | `Docs/phases.md` |
+| C# and Inspector style | `Docs/code-style.md` |
+| Delegation, verification, and Git | `Docs/workflow.md` |
 
-同じ規則を複数文書へ複製しない。コード内コメントには局所的な理由だけを記載する。
+Read only what the task needs. Code comments own local reasons; `Docs/` owns
+cross-file contracts and product decisions; commit messages own why a change was
+made. Do not duplicate the same explanation.
 
-## 開発中の互換性
+## Boundaries
 
-- 初回安定版までは、旧バージョンとの API、SerializedField、Prefab、Scene、Timeline の互換性を保証しない。
-- 旧実装は有用な挙動を確認する参考資料であり、構造を維持する対象ではない。
-- 移行用 Adapter、旧 API wrapper、`MovedFrom`、`FormerlySerializedAs` は原則として追加しない。
-- 新仕様に不要な旧コードは、実装タスクの範囲を確認したうえで置き換えまたは削除できる。
-- 互換性不要であっても、無関係なユーザー変更やタスク外のアセットを無断で変更しない。
+- Use `toshi.VLiveKit.Camera`, `.Editor`, and `.Tests` namespaces.
+- Keep one CinemachineCamera per shot. Never reconfigure a live camera as another
+  shot.
+- Keep the first release manual-first. Do not add MIDI, AI, generic slots,
+  compatibility wrappers, or speculative extension layers.
+- Before the first stable release, preserve old APIs and serialized assets only
+  when the current task explicitly requires it.
+- Do not edit the package-root `README.md` unless the user explicitly asks.
 
-初回安定版を定義するときに、以後の互換性方針を改めて決める。
+## Working rules
 
-## 技術方針
+- Inspect `git status --short` first and preserve unrelated work.
+- Deliver implementation prompts through chat; do not store them in `Docs/`.
+- Make routine code and Inspector choices autonomously using the smallest useful
+  solution. Ask only when a decision changes product behaviour, data ownership,
+  public API, or destructive scope.
+- Do not add unused abstractions or refactor unrelated legacy code.
 
-- Unity 6.3 以上、Cinemachine 3 を対象とする。
-- Runtime のルート namespace は `toshi.VLiveKit.Camera` とする。
-- Editor の namespace は `toshi.VLiveKit.Camera.Editor` とする。
-- Tests の namespace は `toshi.VLiveKit.Camera.Tests` とする。
-- 最初の実装は [Docs/architecture.md](Docs/architecture.md) の最小構成だけを作る。
-- 固定ShotへSplineを強制しない。移動ShotだけがSplineを使用する。
-- Program出力は1台のUnity CameraとCinemachine Brainを基本とする。
-- 初期版のAとBは別々のCinemachineCameraとし、Live中の同じCinemachineCameraへ別Shotの位置、Spline、Lens、Targetを上書きしない。
-- A/Bを汎用Slotとして使い回す仕組みは作らない。将来も原則として1 Shotにつき1つのCinemachineCameraを使用する。
-- Shotごとの個別コードを量産せず、同じ実装で設定値を変える。
+Project skills live at `E:\Unity\Project\MMD\.agents\skills`. Every agent and
+sub-agent must select applicable skills and read each `SKILL.md` in full for
+itself; a parent's review is not inherited. Use `unity-cli` for Editor and Unity
+asset work, and `unity-package-management` for external UPM changes. Report any
+verification that the environment prevents instead of claiming it passed.
 
-## C#コードスタイル
+## Code and completion
 
-- 4スペースでインデントし、波括弧を省略しない。
-- 原則として1ファイルに1つの主要型を置き、ファイル名と型名を一致させる。
-- 型、メソッド、プロパティ、公開メンバーは `PascalCase` とする。
-- privateフィールドは `_camelCase` とする。
-- Inspectorへ出すフィールドは原則 `[SerializeField] private` とし、publicフィールドを使わない。
-- 不変にできるフィールドは `readonly`、定数は `const` とする。
-- `var` は右辺から型が明白な場合だけ使用する。
-- Runtime assemblyから`UnityEditor`を参照しない。
-- Editorから値を変更するときは`SerializedObject`、`SerializedProperty`、Undoを使用する。
-- `Update`など毎フレームの経路で`Find`、LINQ、不要な配列生成、文字列生成を行わない。
-- Unity Objectのnull判定を通常のC#参照と同一視しない。
-- Logは異常の原因と対象を含め、毎フレーム出力しない。
-- コメントはコードの言い換えではなく、制約や判断理由を書く。
-- 公開APIは現在必要なものだけを追加する。
+Follow `Docs/code-style.md` for all new or touched C# and Editor code. Match the
+layout of `Assets/PrismLipSync/Runtime/PrismLipSync.cs`: explicit member
+sections, deliberate spacing, concise Japanese XML summaries, and Tooltips on
+all visible serialized fields. Every user-facing MonoBehaviour requires a useful
+CustomEditor before it is production-ready.
 
-## 過剰設計を避ける規則
-
-- 利用箇所が1つしかない処理のためにinterface、抽象基底クラス、Factoryを作らない。
-- 実際の要求がないCommand Bus、Service Locator、DI Container、独自Event Busを導入しない。
-- 将来用の空クラス、未使用設定、互換レイヤーを追加しない。
-- 同じ処理が複数箇所で必要になってから共通化を検討する。
-- 新しい抽象化を追加する場合は、現在解決する重複または不具合を説明できなければならない。
-- 半自動化やMIDIのためだけに、現在のキーボード実装を複雑にしない。
-- 仕様にない機能を「ついでに」実装しない。
-
-## Agent Skills
-
-Unityプロジェクト直下の`E:\Unity\Project\MMD\.agents\skills`を、このプロジェクトで利用できるAgent Skillsの正本とする。
-
-- メインエージェントとすべてのサブエージェントは、作業開始前に依頼内容へ適用できるSkillがあるか確認する。
-- ユーザーがSkill名を指定した場合、または作業がSkillのdescriptionに一致する場合は、対象の`SKILL.md`を受任したエージェント自身が全文読んでから作業する。
-- 親エージェントがSkillを読んだことを、サブエージェント側の確認の代わりにしない。さらに委譲する場合も同じ規則を引き継ぐ。
-- 使用するのは今回の作業に必要な最小限のSkillだけとし、インストール済みという理由だけで無関係なSkillを適用しない。
-- Unity CLI、Editor接続、Scene、Prefab、Asset、Build、Testを扱う場合は`unity-cli`を使用する。Scene、Prefab、Assetを変更する前に、同Skillの手順に従って`unity status --project-path "E:\Unity\Project\MMD" --format json`で接続状態を確認する。0件でもプロセス確認権限に関するwarningがある場合は未接続と断定せず、`unity pipeline list --format json`でも確認する。
-- Package Managerの追加、削除、更新を外部から行う場合は`unity-package-management`を使用する。
-- Skillを利用できない場合や手順どおり検証できない場合は、別手段で確認済みと扱わず、理由と未確認範囲を報告する。
-
-## 実装エージェントへの委譲
-
-実装は主にAntigravityのGemini Flash 3.8 highへ委譲する。エージェントには、この文書、担当仕様書、今回の短い実装タスク、使用が必要なSkill名だけをチャット経由で渡す。実装タスクのプロンプト自体は仕様書として`Docs/`へ保存しない。
-
-- 一度に1つの縦切りタスクだけを依頼する。
-- 変更可能ファイル、対象外、完了条件をタスクに明記する。
-- エージェントは仕様を独自に拡張せず、不明点が実装結果を変える場合は停止して確認する。
-- 依頼されていないリファクタリング、抽象化、将来機能を追加しない。
-- 実装後はdiff、Compile、指定された動作確認の結果を返す。
-- 複数エージェントが同じファイルを同時編集しない。
-
-詳細は [Docs/workflow.md](Docs/workflow.md) に従う。
-
-## 変更の原則
-
-- 調査だけを依頼された場合は変更しない。
-- 仕様変更はユーザーの承認を得てから行う。
-- 無関係な既存変更を保持し、許可された範囲だけを編集・ステージする。
-- Compile、Unity Import、Play Mode、見た目、性能を別の検証結果として報告する。
-- 作業開始前と完了前に [Docs/workflow.md](Docs/workflow.md) を確認する。
+Validate only relevant layers and distinguish static review, compile, Unity
+import, Play Mode, Game View, long-run, and performance evidence. Stage only
+approved paths. Do not branch, push, or open a pull request unless explicitly
+asked. Report changed files, checks, unchecked boundaries, and the commit ID.
