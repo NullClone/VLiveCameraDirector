@@ -1,34 +1,63 @@
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
 namespace toshi.VLiveKit.Camera
 {
+    /// <summary>
+    /// 登録された複数のShotを管理し、番号指定または直接指定でCut切り替えを行うスイッチャー。
+    /// </summary>
+    [DisallowMultipleComponent]
     public class VLiveCameraSwitcher : MonoBehaviour
     {
+        // Fields
+
         private const int ActivePriority = 10;
         private const int InactivePriority = 0;
 
+        [Header("Cinemachine Output (出力設定)")]
+        [Tooltip("Program出力を行うCinemachineBrain。")]
         [SerializeField]
         private CinemachineBrain _cinemachineBrain;
 
+        [Header("Shot List (ショット一覧)")]
+        [Tooltip("管理対象のショット一覧。インデックス0（1番目）がキー1に対応します。")]
         [SerializeField]
-        private VLiveCameraShot _shotA;
-
-        [SerializeField]
-        private VLiveCameraShot _shotB;
+        private List<VLiveCameraShot> _shots = new List<VLiveCameraShot>();
 
         private VLiveCameraShot _currentProgramShot;
 
+
+        // Properties
+
+        /// <summary>
+        /// 出力用のCinemachineBrainを取得します。
+        /// </summary>
         public CinemachineBrain CinemachineBrain => _cinemachineBrain;
-        public VLiveCameraShot ShotA => _shotA;
-        public VLiveCameraShot ShotB => _shotB;
+
+        /// <summary>
+        /// 登録されているショット一覧を取得します。
+        /// </summary>
+        public IReadOnlyList<VLiveCameraShot> Shots => _shots;
+
+        /// <summary>
+        /// 登録されているショット数を取得します。
+        /// </summary>
+        public int ShotCount => _shots != null ? _shots.Count : 0;
+
+        /// <summary>
+        /// 現在ProgramとしてLive出力中のShotを取得します。
+        /// </summary>
         public VLiveCameraShot CurrentProgramShot => _currentProgramShot;
+
+
+        // Methods
 
         private void Awake()
         {
             if (_cinemachineBrain == null)
             {
-                _cinemachineBrain = FindFirstObjectByType<CinemachineBrain>();
+                _cinemachineBrain = FindFirstObjectByType<CinemachineBrain>(FindObjectsInactive.Include);
             }
         }
 
@@ -39,68 +68,73 @@ namespace toshi.VLiveKit.Camera
                 _cinemachineBrain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
             }
 
-            // Initialize Program with Shot A as default
-            if (_shotA != null && _shotA.CinemachineCamera != null)
+            VLiveCameraShot initialShot = null;
+            if (_shots != null)
             {
-                _shotA.CinemachineCamera.Priority = ActivePriority;
-                _shotA.CinemachineCamera.Prioritize();
-                _currentProgramShot = _shotA;
-                _shotA.OnEnterProgram();
-
-                if (_shotB != null)
+                for (int i = 0; i < _shots.Count; i++)
                 {
-                    if (_shotB.CinemachineCamera != null)
+                    if (_shots[i] != null && _shots[i].IsValid)
                     {
-                        _shotB.CinemachineCamera.Priority = InactivePriority;
+                        initialShot = _shots[i];
+                        break;
                     }
-
-                    _shotB.PrepareStart();
                 }
 
-                Debug.Log($"[VLiveCameraSwitcher] Program: {_shotA.ShotName}");
+                for (int i = 0; i < _shots.Count; i++)
+                {
+                    VLiveCameraShot shot = _shots[i];
+                    if (shot != null)
+                    {
+                        if (shot.CinemachineCamera != null)
+                        {
+                            shot.CinemachineCamera.Priority = InactivePriority;
+                        }
+
+                        shot.PrepareStart();
+                    }
+                }
             }
-            else if (_shotB != null && _shotB.CinemachineCamera != null)
+
+            if (initialShot != null)
             {
-                _shotB.CinemachineCamera.Priority = ActivePriority;
-                _shotB.CinemachineCamera.Prioritize();
-                _currentProgramShot = _shotB;
-                _shotB.OnEnterProgram();
+                initialShot.CinemachineCamera.Priority = ActivePriority;
+                initialShot.CinemachineCamera.Prioritize();
+                _currentProgramShot = initialShot;
+                initialShot.OnEnterProgram();
 
-                Debug.Log($"[VLiveCameraSwitcher] Program: {_shotB.ShotName}");
+                Debug.Log($"[VLiveCameraSwitcher] Program: {initialShot.ShotName}");
             }
         }
 
-        public void CutToA()
+        /// <summary>
+        /// 指定されたショット番号（1〜9、1始まり）へ直接Cutします。
+        /// 無効な番号や未設定スロットの場合は現在のProgramを維持します。
+        /// </summary>
+        /// <param name="shotNumber">1〜9のショット番号。</param>
+        public void CutToShot(int shotNumber)
         {
-            CutTo(_shotA);
-        }
-
-        public void CutToB()
-        {
-            CutTo(_shotB);
-        }
-
-        public void CutToShot(int shotIndex)
-        {
-            if (shotIndex == 1)
-            {
-                CutToA();
-            }
-            else if (shotIndex == 2)
-            {
-                CutToB();
-            }
-            // Invalid indices are ignored; current Program is maintained.
-        }
-
-        private void CutTo(VLiveCameraShot nextShot)
-        {
-            if (nextShot == null || nextShot == _currentProgramShot)
+            if (_shots == null)
             {
                 return;
             }
 
-            if (nextShot.CinemachineCamera == null)
+            int index = shotNumber - 1;
+            if (index < 0 || index >= _shots.Count)
+            {
+                return;
+            }
+
+            CutTo(_shots[index]);
+        }
+
+        /// <summary>
+        /// 指定されたShotへ直接Cutします。
+        /// 現在のProgramと同一のShotである場合や無効な参照の場合は何もしません。
+        /// </summary>
+        /// <param name="nextShot">切り替え先のShot。</param>
+        public void CutTo(VLiveCameraShot nextShot)
+        {
+            if (nextShot == null || nextShot == _currentProgramShot || !nextShot.IsValid)
             {
                 return;
             }
@@ -127,6 +161,9 @@ namespace toshi.VLiveKit.Camera
             Debug.Log($"[VLiveCameraSwitcher] Program: {nextShot.ShotName}");
         }
 
+        /// <summary>
+        /// 現在のProgram ShotのSpline進行速度を1段階上げます。
+        /// </summary>
         public void SpeedUp()
         {
             if (_currentProgramShot != null)
@@ -135,6 +172,9 @@ namespace toshi.VLiveKit.Camera
             }
         }
 
+        /// <summary>
+        /// 現在のProgram ShotのSpline進行速度を1段階下げます。
+        /// </summary>
         public void SpeedDown()
         {
             if (_currentProgramShot != null)
@@ -143,6 +183,9 @@ namespace toshi.VLiveKit.Camera
             }
         }
 
+        /// <summary>
+        /// 現在のProgram Shotの進行方向を反転します。
+        /// </summary>
         public void Reverse()
         {
             if (_currentProgramShot != null)
@@ -151,6 +194,9 @@ namespace toshi.VLiveKit.Camera
             }
         }
 
+        /// <summary>
+        /// 現在のProgram Shotの進行を一時停止します。
+        /// </summary>
         public void Hold()
         {
             if (_currentProgramShot != null)
@@ -159,12 +205,31 @@ namespace toshi.VLiveKit.Camera
             }
         }
 
+        /// <summary>
+        /// 一時停止中のProgram Shotの進行を再開します。
+        /// </summary>
         public void Resume()
         {
             if (_currentProgramShot != null)
             {
                 _currentProgramShot.Resume();
             }
+        }
+
+        /// <summary>
+        /// ショット一覧を設定します。
+        /// </summary>
+        public void SetShots(List<VLiveCameraShot> shots)
+        {
+            _shots = shots;
+        }
+
+        /// <summary>
+        /// CinemachineBrain参照を設定します。
+        /// </summary>
+        public void SetCinemachineBrain(CinemachineBrain brain)
+        {
+            _cinemachineBrain = brain;
         }
     }
 }

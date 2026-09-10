@@ -5,34 +5,81 @@ using UnityEngine.InputSystem;
 
 namespace toshi.VLiveKit.Camera
 {
+    /// <summary>
+    /// キーボード入力を受け付け、VLiveCameraSwitcherへのCutおよび手動操作命令を発行するコンポーネント。
+    /// </summary>
+    [DisallowMultipleComponent]
     public class VLiveCameraKeyboardInput : MonoBehaviour
     {
+        // Fields
+
+        [Header("Target Switcher (制御対象)")]
+        [Tooltip("切り替え命令を送信するVLiveCameraSwitcher。")]
         [SerializeField]
         private VLiveCameraSwitcher _switcher;
 
 #if ENABLE_INPUT_SYSTEM
-        [Header("Keyboard Bindings (Input System)")]
-        [SerializeField]
-        private Key _cutAKey = Key.Digit1;
+        private static readonly Key[] NumpadCutKeys = new Key[]
+        {
+            Key.Numpad1,
+            Key.Numpad2,
+            Key.Numpad3,
+            Key.Numpad4,
+            Key.Numpad5,
+            Key.Numpad6,
+            Key.Numpad7,
+            Key.Numpad8,
+            Key.Numpad9
+        };
 
+        [Header("Keyboard Bindings - Shot Cut (ショット切り替えキー)")]
+        [Tooltip("ショット1〜9へ直接Cutするためのキー割り当て一覧。")]
         [SerializeField]
-        private Key _cutBKey = Key.Digit2;
+        private Key[] _cutKeys = new Key[]
+        {
+            Key.Digit1,
+            Key.Digit2,
+            Key.Digit3,
+            Key.Digit4,
+            Key.Digit5,
+            Key.Digit6,
+            Key.Digit7,
+            Key.Digit8,
+            Key.Digit9
+        };
 
+        [Header("Keyboard Bindings - Motion Control (移動制御キー)")]
+        [Tooltip("Spline進行速度を上げるキー。")]
         [SerializeField]
         private Key _speedUpKey = Key.UpArrow;
 
+        [Tooltip("Spline進行速度を下げるキー。")]
         [SerializeField]
         private Key _speedDownKey = Key.DownArrow;
 
+        [Tooltip("Spline進行方向を反転するキー。")]
         [SerializeField]
         private Key _reverseKey = Key.R;
 
+        [Tooltip("Spline進行を一時停止するキー。")]
         [SerializeField]
         private Key _holdKey = Key.H;
 
+        [Tooltip("Spline進行を再開するキー。")]
         [SerializeField]
         private Key _resumeKey = Key.Space;
 #endif
+
+
+        // Properties
+
+        /// <summary>
+        /// 制御対象のスイッチャーを取得します。
+        /// </summary>
+        public VLiveCameraSwitcher Switcher => _switcher;
+
+
+        // Methods
 
         private void Awake()
         {
@@ -68,14 +115,16 @@ namespace toshi.VLiveKit.Camera
                 return;
             }
 
-            // Cut selection (deterministic priority if both pressed in same frame)
-            if (IsPressed(keyboard, _cutAKey) || IsPressed(keyboard, Key.Numpad1))
+            // Cut selection (1 to 9, deterministic priority: lowest number wins)
+            for (int i = 0; i < 9; i++)
             {
-                _switcher.CutToA();
-            }
-            else if (IsPressed(keyboard, _cutBKey) || IsPressed(keyboard, Key.Numpad2))
-            {
-                _switcher.CutToB();
+                bool mainPressed = _cutKeys != null && i < _cutKeys.Length && IsPressed(keyboard, _cutKeys[i]);
+                bool numpadPressed = i < NumpadCutKeys.Length && IsPressed(keyboard, NumpadCutKeys[i]);
+                if (mainPressed || numpadPressed)
+                {
+                    _switcher.CutToShot(i + 1);
+                    break;
+                }
             }
 
             // Speed adjustment
@@ -104,13 +153,15 @@ namespace toshi.VLiveKit.Camera
                 _switcher.Resume();
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+            for (int i = 0; i < 9; i++)
             {
-                _switcher.CutToA();
-            }
-            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
-            {
-                _switcher.CutToB();
+                KeyCode alphaKey = KeyCode.Alpha1 + i;
+                KeyCode keypadKey = KeyCode.Keypad1 + i;
+                if (Input.GetKeyDown(alphaKey) || Input.GetKeyDown(keypadKey))
+                {
+                    _switcher.CutToShot(i + 1);
+                    break;
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
@@ -136,6 +187,14 @@ namespace toshi.VLiveKit.Camera
                 _switcher.Resume();
             }
 #endif
+        }
+
+        /// <summary>
+        /// 制御対象のスイッチャー参照を設定します。
+        /// </summary>
+        public void SetSwitcher(VLiveCameraSwitcher switcher)
+        {
+            _switcher = switcher;
         }
     }
 }
