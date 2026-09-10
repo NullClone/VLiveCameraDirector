@@ -1,11 +1,15 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraKeyboardInput用のカスタムインスペクター。
-    /// 入力割り当ての確認と操作ガイドを提供します。
+    /// 入力割り当ての確認、キー重複・競合の検証警告、操作ガイドを提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraKeyboardInput))]
     [CanEditMultipleObjects]
@@ -98,7 +102,7 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.LabelField("Key Bindings (キー設定)", EditorStyles.boldLabel);
 
 #if ENABLE_INPUT_SYSTEM
-            EditorGUILayout.PropertyField(_cutKeysProp, new GUIContent("Shot Cut Keys (1〜9)"), true);
+            EditorGUILayout.PropertyField(_cutKeysProp, new GUIContent("Shot Cut Keys"), true);
             EditorGUILayout.Space(4);
 
             EditorGUILayout.LabelField("Motion Control Keys:", EditorStyles.miniBoldLabel);
@@ -107,12 +111,91 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.PropertyField(_reverseKeyProp);
             EditorGUILayout.PropertyField(_holdKeyProp);
             EditorGUILayout.PropertyField(_resumeKeyProp);
+
+            ValidateKeyConflicts();
 #else
             EditorGUILayout.LabelField("Legacy Input Manager が有効です (Alpha1-9, Arrow Keys, R, H, Space)。");
 #endif
 
             EditorGUILayout.EndVertical();
         }
+
+#if ENABLE_INPUT_SYSTEM
+        private void ValidateKeyConflicts()
+        {
+            if (_cutKeysProp == null)
+            {
+                return;
+            }
+
+            var warnings = new List<string>();
+
+            // 1. Cut Keys内の重複チェック
+            var seenCutKeys = new HashSet<int>();
+            var duplicateCutKeys = new HashSet<int>();
+
+            for (int i = 0; i < _cutKeysProp.arraySize; i++)
+            {
+                int keyVal = _cutKeysProp.GetArrayElementAtIndex(i).intValue;
+                if (keyVal != (int)Key.None)
+                {
+                    if (!seenCutKeys.Add(keyVal))
+                    {
+                        duplicateCutKeys.Add(keyVal);
+                    }
+                }
+            }
+
+            foreach (int dupKey in duplicateCutKeys)
+            {
+                string keyName = ((Key)dupKey).ToString();
+                warnings.Add($"Shot Cut Keys 内でキー '{keyName}' が重複して割り当てられています。");
+            }
+
+            // 2. Motion Control Keysの収集と重複チェック
+            var motionKeys = new Dictionary<string, int>
+            {
+                { "Speed Up", _speedUpKeyProp.intValue },
+                { "Speed Down", _speedDownKeyProp.intValue },
+                { "Reverse", _reverseKeyProp.intValue },
+                { "Hold", _holdKeyProp.intValue },
+                { "Resume", _resumeKeyProp.intValue }
+            };
+
+            var seenMotionKeys = new Dictionary<int, string>();
+            foreach (var kvp in motionKeys)
+            {
+                if (kvp.Value != (int)Key.None)
+                {
+                    if (seenMotionKeys.TryGetValue(kvp.Value, out string existingAction))
+                    {
+                        string keyName = ((Key)kvp.Value).ToString();
+                        warnings.Add($"移動制御キー '{keyName}' が '{existingAction}' と '{kvp.Key}' で重複しています。");
+                    }
+                    else
+                    {
+                        seenMotionKeys[kvp.Value] = kvp.Key;
+                    }
+                }
+            }
+
+            // 3. Cut KeysとMotion Control Keysの競合チェック
+            foreach (var kvp in seenMotionKeys)
+            {
+                if (seenCutKeys.Contains(kvp.Key))
+                {
+                    string keyName = ((Key)kvp.Key).ToString();
+                    warnings.Add($"Cut キーと移動制御キー '{kvp.Value}' で同じキー '{keyName}' が競合しています。");
+                }
+            }
+
+            if (warnings.Count > 0)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox(string.Join("\n", warnings), MessageType.Warning);
+            }
+        }
+#endif
 
         private void DrawGuideSection()
         {
@@ -121,7 +204,7 @@ namespace VLiveKit.Camera.Editor
 
             string guideText =
                 "【キーボード操作一覧】\n" +
-                "・ 数字キー 1〜9: 対応番号のShotへ直接Cut（テンキー対応）\n" +
+                "・ 数字キー 1〜N: 対応番号のShotへ直接Cut（テンキー対応）\n" +
                 "・ ↑ / ＝ / ＋: Spline進行速度アップ\n" +
                 "・ ↓ / －: Spline進行速度ダウン\n" +
                 "・ R: 進行方向の反転 (Reverse)\n" +

@@ -15,9 +15,9 @@ MonoBehaviour:
   _displayName: Push In
   _shotType: 1
   _fieldOfView: 45
-  _targetOffset: {x: 0, y: 1.2, z: 0}
+  _targetOffset: {x: 0, y: 0, z: 0}
   _controlPoints:
-  - {x: 0, y: 1.3, z: -4.5}
-  - {x: 0, y: 1.3, z: -1.8}
+  - {x: 0, y: 1.3, z: 4.5}
+  - {x: 0, y: 1.3, z: 1.8}
   _initialSpeed: 0.25
   _decelerationDistance: 0.3

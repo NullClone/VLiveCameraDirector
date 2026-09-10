@@ -5,23 +5,21 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraSwitcher用のカスタムインスペクター。
-    /// ショット一覧の確認・検証および実行中のProgram切り替えと手動操作を提供します。
+    /// Rig参照の確認および実行中のProgram切り替えと手動操作を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraSwitcher))]
     public class VLiveCameraSwitcherEditor : UnityEditor.Editor
     {
         // Fields
 
-        private SerializedProperty _cinemachineBrainProp;
-        private SerializedProperty _shotsProp;
+        private SerializedProperty _rigProp;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _cinemachineBrainProp = serializedObject.FindProperty("_cinemachineBrain");
-            _shotsProp = serializedObject.FindProperty("_shots");
+            _rigProp = serializedObject.FindProperty("_rig");
         }
 
         public override bool RequiresConstantRepaint()
@@ -38,10 +36,10 @@ namespace VLiveKit.Camera.Editor
             DrawHeader(switcher);
             EditorGUILayout.Space(6);
 
-            DrawOutputSection();
+            DrawRigSection(switcher);
             EditorGUILayout.Space(6);
 
-            DrawShotsSection();
+            DrawShotsSection(switcher);
             EditorGUILayout.Space(6);
 
             DrawRuntimeSection(switcher);
@@ -70,47 +68,51 @@ namespace VLiveKit.Camera.Editor
             });
         }
 
-        private void DrawOutputSection()
+        private void DrawRigSection(VLiveCameraSwitcher switcher)
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Cinemachine Output (出力設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Target Rig (参照リグ)", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_cinemachineBrainProp);
+            EditorGUILayout.PropertyField(_rigProp);
 
-            if (_cinemachineBrainProp.objectReferenceValue == null)
+            if (_rigProp.objectReferenceValue == null)
             {
-                EditorGUILayout.HelpBox("CinemachineBrain が未設定です。Program映像出力が行えません。", MessageType.Warning);
+                EditorGUILayout.HelpBox("VLiveCameraRig が未設定です。Shot構成およびProgram出力はRigから取得されます。", MessageType.Warning);
+            }
+            else if (switcher.Rig != null)
+            {
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    EditorGUILayout.ObjectField("Program Camera", switcher.Rig.ProgramCamera, typeof(UnityEngine.Camera), true);
+                    EditorGUILayout.ObjectField("Cinemachine Brain", switcher.CinemachineBrain, typeof(Unity.Cinemachine.CinemachineBrain), true);
+                }
             }
 
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawShotsSection()
+        private void DrawShotsSection(VLiveCameraSwitcher switcher)
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Registered Shots (登録ショット一覧)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Registered Shots (Rigのショット構成)", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_shotsProp, true);
-
-            if (_shotsProp.arraySize == 0)
+            if (switcher.Rig == null || switcher.Rig.Slots == null || switcher.Rig.Slots.Count == 0)
             {
-                EditorGUILayout.HelpBox("ショットが登録されていません。'Tools/VLive Camera/VLive Camera Setup' から設定してください。", MessageType.Info);
+                EditorGUILayout.HelpBox("ショットが登録されていません。VLiveCameraRig の Inspector で Shot Slots を設定してください。", MessageType.Info);
             }
             else
             {
-                bool hasNull = false;
-                for (int i = 0; i < _shotsProp.arraySize; i++)
+                int count = switcher.Rig.Slots.Count;
+                for (int i = 0; i < count; i++)
                 {
-                    if (_shotsProp.GetArrayElementAtIndex(i).objectReferenceValue == null)
-                    {
-                        hasNull = true;
-                        break;
-                    }
-                }
+                    var slot = switcher.Rig.Slots[i];
+                    string presetName = (slot != null && slot.Preset != null) ? slot.Preset.DisplayName : "(No Preset)";
+                    string shotName = (slot != null && slot.Shot != null) ? slot.Shot.ShotName : "(No Shot)";
 
-                if (hasNull)
-                {
-                    EditorGUILayout.HelpBox("ショット一覧に未割り当てのスロットが含まれています。", MessageType.Warning);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField($"Shot {i + 1} (Key {i + 1})", GUILayout.Width(100));
+                    EditorGUILayout.LabelField($"[{presetName}]  ->  {shotName}");
+                    EditorGUILayout.EndHorizontal();
                 }
             }
 
@@ -149,7 +151,8 @@ namespace VLiveKit.Camera.Editor
                             int index = i + col;
                             if (index < shotCount)
                             {
-                                var shot = switcher.Shots[index];
+                                var slot = switcher.Slots != null && index < switcher.Slots.Count ? switcher.Slots[index] : null;
+                                var shot = slot != null ? slot.Shot : null;
                                 string label = shot != null ? $"{index + 1}: {shot.ShotName}" : $"{index + 1}: (Null)";
                                 bool isCurrent = shot != null && shot == switcher.CurrentProgramShot;
 

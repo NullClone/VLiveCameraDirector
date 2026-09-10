@@ -1,0 +1,444 @@
+using UnityEditor;
+using UnityEngine;
+
+namespace VLiveKit.Camera.Editor
+{
+    /// <summary>
+    /// VLiveCameraRig用のカスタムインスペクター。
+    /// Target設定、正面基準、スケール、順序付きShot Slotsの編集、同期・再構築操作を提供します。
+    /// </summary>
+    [CustomEditor(typeof(VLiveCameraRig))]
+    public class VLiveCameraRigEditor : UnityEditor.Editor
+    {
+        // Fields
+
+        private SerializedProperty _performerTargetProp;
+        private SerializedProperty _programCameraProp;
+        private SerializedProperty _forwardReferenceModeProp;
+        private SerializedProperty _customReferenceProp;
+        private SerializedProperty _targetHeightProp;
+        private SerializedProperty _distanceScaleProp;
+        private SerializedProperty _motionScaleProp;
+        private SerializedProperty _slotsProp;
+
+
+        // Methods
+
+        private void OnEnable()
+        {
+            _performerTargetProp = serializedObject.FindProperty("_performerTarget");
+            _programCameraProp = serializedObject.FindProperty("_programCamera");
+            _forwardReferenceModeProp = serializedObject.FindProperty("_forwardReferenceMode");
+            _customReferenceProp = serializedObject.FindProperty("_customReference");
+            _targetHeightProp = serializedObject.FindProperty("_targetHeight");
+            _distanceScaleProp = serializedObject.FindProperty("_distanceScale");
+            _motionScaleProp = serializedObject.FindProperty("_motionScale");
+            _slotsProp = serializedObject.FindProperty("_slots");
+        }
+
+        public override bool RequiresConstantRepaint()
+        {
+            return Application.isPlaying;
+        }
+
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+
+            var rig = (VLiveCameraRig)target;
+
+            DrawHeader(rig);
+            EditorGUILayout.Space(6);
+
+            DrawSetupAndFramingSection(rig);
+            EditorGUILayout.Space(6);
+
+            DrawShotSlotsSection(rig);
+            EditorGUILayout.Space(6);
+
+            DrawOperationsSection(rig);
+            EditorGUILayout.Space(6);
+
+            DrawRuntimeSection(rig);
+
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        private void DrawHeader(VLiveCameraRig rig)
+        {
+            var rect = GUILayoutUtility.GetRect(0, 48, GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(rect, new Color(0.08f, 0.09f, 0.13f));
+
+            var titleRect = new Rect(rect.x + 12, rect.y + 6, rect.width - 24, 20);
+            var subRect = new Rect(rect.x + 12, rect.y + 26, rect.width - 24, 16);
+
+            EditorGUI.LabelField(titleRect, "VLIVE CAMERA RIG", new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 13,
+                normal = { textColor = Color.white }
+            });
+
+            string targetName = rig.PerformerTarget != null ? rig.PerformerTarget.name : "None";
+            EditorGUI.LabelField(subRect, $"Target: {targetName}  |  Slots: {rig.SlotCount}  |  Mode: {rig.ForwardMode}", new GUIStyle(EditorStyles.miniLabel)
+            {
+                normal = { textColor = new Color(0.65f, 0.85f, 1f) }
+            });
+        }
+
+        private void DrawSetupAndFramingSection(VLiveCameraRig rig)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Setup & Framing (対象・正面・スケール設定)", EditorStyles.boldLabel);
+
+            EditorGUILayout.PropertyField(_performerTargetProp);
+            EditorGUILayout.PropertyField(_programCameraProp);
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.PropertyField(_forwardReferenceModeProp);
+
+            if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.CustomReference)
+            {
+                EditorGUILayout.PropertyField(_customReferenceProp);
+            }
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.PropertyField(_targetHeightProp);
+            EditorGUILayout.PropertyField(_distanceScaleProp);
+            EditorGUILayout.PropertyField(_motionScaleProp);
+
+            // 検証メッセージ
+            if (_performerTargetProp.objectReferenceValue == null)
+            {
+                EditorGUILayout.HelpBox("Performer Target が未設定です。Apply / Sync には演者Transformの指定が必須です。", MessageType.Warning);
+            }
+            else if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.TargetForward)
+            {
+                var targetTransform = (Transform)_performerTargetProp.objectReferenceValue;
+                if (targetTransform != null)
+                {
+                    Vector3 fwdXZ = Vector3.ProjectOnPlane(targetTransform.forward, Vector3.up);
+                    if (fwdXZ.sqrMagnitude < 0.0001f)
+                    {
+                        EditorGUILayout.HelpBox("Target の forward を XZ 平面に射影した長さがほぼ 0 です。正面方向として World +Z を代用します。", MessageType.Warning);
+                    }
+                }
+            }
+
+            if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.CustomReference)
+            {
+                if (_customReferenceProp.objectReferenceValue == null)
+                {
+                    EditorGUILayout.HelpBox("Custom Reference が未設定です。指定Transformの正面方向（XZ射影）が使用されます。", MessageType.Warning);
+                }
+                else
+                {
+                    var customTransform = (Transform)_customReferenceProp.objectReferenceValue;
+                    Vector3 fwdXZ = Vector3.ProjectOnPlane(customTransform.forward, Vector3.up);
+                    if (fwdXZ.sqrMagnitude < 0.0001f)
+                    {
+                        EditorGUILayout.HelpBox("Custom Reference の forward を XZ 平面に射影した長さがほぼ 0 です。正面方向として World +Z を代用します。", MessageType.Warning);
+                    }
+                }
+            }
+
+            if (_distanceScaleProp.floatValue <= 0f || _motionScaleProp.floatValue <= 0f)
+            {
+                EditorGUILayout.HelpBox("Distance Scale および Motion Scale は 0 より大きい値を指定してください。", MessageType.Warning);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawShotSlotsSection(VLiveCameraRig rig)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Shot Slots (ショットスロット構成)", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Rigが所有するショット構成の正本です。スロット順がショット番号（キー1〜N）となります。", MessageType.None);
+
+            int slotCount = _slotsProp.arraySize;
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                SerializedProperty slotElem = _slotsProp.GetArrayElementAtIndex(i);
+                SerializedProperty presetProp = slotElem.FindPropertyRelative("_preset");
+                SerializedProperty shotProp = slotElem.FindPropertyRelative("_shot");
+
+                EditorGUILayout.BeginVertical("helpBox");
+
+                // スロットヘッダー（移動・除外ボタン）
+                EditorGUILayout.BeginHorizontal();
+                string slotTitle = $"Slot {i + 1} (Key {i + 1})";
+                EditorGUILayout.LabelField(slotTitle, EditorStyles.boldLabel, GUILayout.Width(110));
+
+                GUILayout.FlexibleSpace();
+
+                EditorGUI.BeginDisabledGroup(i == 0 || Application.isPlaying);
+                if (GUILayout.Button("▲", GUILayout.Width(22), GUILayout.Height(18)))
+                {
+                    _slotsProp.MoveArrayElement(i, i - 1);
+                    serializedObject.ApplyModifiedProperties();
+                    GUIUtility.ExitGUI();
+                }
+
+                EditorGUI.EndDisabledGroup();
+
+                EditorGUI.BeginDisabledGroup(i == slotCount - 1 || Application.isPlaying);
+                if (GUILayout.Button("▼", GUILayout.Width(22), GUILayout.Height(18)))
+                {
+                    _slotsProp.MoveArrayElement(i, i + 1);
+                    serializedObject.ApplyModifiedProperties();
+                    GUIUtility.ExitGUI();
+                }
+
+                EditorGUI.EndDisabledGroup();
+
+                EditorGUI.BeginDisabledGroup(Application.isPlaying);
+                if (GUILayout.Button("✕", GUILayout.Width(22), GUILayout.Height(18)))
+                {
+                    int prevCount = _slotsProp.arraySize;
+                    _slotsProp.DeleteArrayElementAtIndex(i);
+                    if (_slotsProp.arraySize == prevCount)
+                    {
+                        _slotsProp.DeleteArrayElementAtIndex(i);
+                    }
+
+                    serializedObject.ApplyModifiedProperties();
+                    GUIUtility.ExitGUI();
+                }
+
+                EditorGUI.EndDisabledGroup();
+
+                EditorGUILayout.EndHorizontal();
+
+                // PresetとShot参照
+                EditorGUILayout.PropertyField(presetProp, new GUIContent("Preset"));
+
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PropertyField(shotProp, new GUIContent("Shot"));
+
+                if (shotProp.objectReferenceValue != null)
+                {
+                    EditorGUI.BeginDisabledGroup(Application.isPlaying);
+                    if (GUILayout.Button("Rebuild", GUILayout.Width(62), GUILayout.Height(18)))
+                    {
+                        if (EditorUtility.DisplayDialog(
+                            "Rebuild Shot From Preset",
+                            $"Slot {i + 1} のカメラ位置、Lens、Aim、Spline、移動設定を Preset 初期値から再構築します。\n手動調整は上書きされます。続行しますか？",
+                            "Rebuild",
+                            "Cancel"))
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            VLiveCameraRigBuilder.RebuildShotFromPreset(rig, i);
+                            serializedObject.Update();
+                            GUIUtility.ExitGUI();
+                        }
+                    }
+
+                    if (GUILayout.Button("Delete", GUILayout.Width(52), GUILayout.Height(18)))
+                    {
+                        var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
+                        string shotName = shotObj != null ? shotObj.name : $"Shot {i + 1}";
+                        if (EditorUtility.DisplayDialog(
+                            "Delete Shot GameObject",
+                            $"Shot GameObject '{shotName}' および Spline を Scene から削除しますか？\n（Undo 可能です）",
+                            "Delete",
+                            "Cancel"))
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            VLiveCameraRigBuilder.DeleteShotGameObject(rig, i);
+                            serializedObject.Update();
+                            GUIUtility.ExitGUI();
+                        }
+                    }
+
+                    EditorGUI.EndDisabledGroup();
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(2);
+            }
+
+            EditorGUILayout.Space(4);
+
+            EditorGUI.BeginDisabledGroup(Application.isPlaying);
+            if (GUILayout.Button("+ Add Shot Slot", GUILayout.Height(24)))
+            {
+                _slotsProp.InsertArrayElementAtIndex(_slotsProp.arraySize);
+                SerializedProperty newElem = _slotsProp.GetArrayElementAtIndex(_slotsProp.arraySize - 1);
+                newElem.FindPropertyRelative("_preset").objectReferenceValue = null;
+                newElem.FindPropertyRelative("_shot").objectReferenceValue = null;
+                serializedObject.ApplyModifiedProperties();
+                GUIUtility.ExitGUI();
+            }
+
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawOperationsSection(VLiveCameraRig rig)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Operations (リグ操作)", EditorStyles.boldLabel);
+
+            if (Application.isPlaying)
+            {
+                EditorGUILayout.HelpBox("Play Mode 中は Rig の生成・同期・再構築・削除は無効化されます。", MessageType.Info);
+            }
+
+            bool hasTarget = _performerTargetProp.objectReferenceValue != null;
+            bool canApply = !Application.isPlaying && hasTarget;
+
+            EditorGUI.BeginDisabledGroup(!canApply);
+            var prevColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.2f, 0.7f, 0.35f);
+            if (GUILayout.Button("Apply / Sync", GUILayout.Height(34)))
+            {
+                serializedObject.ApplyModifiedProperties();
+                VLiveCameraRigBuilder.ApplySync(rig);
+                serializedObject.Update();
+                GUIUtility.ExitGUI();
+            }
+
+            GUI.backgroundColor = prevColor;
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space(4);
+
+            bool canRebuild = !Application.isPlaying && hasTarget && _slotsProp.arraySize > 0;
+            EditorGUI.BeginDisabledGroup(!canRebuild);
+            if (GUILayout.Button("Rebuild All From Presets", GUILayout.Height(24)))
+            {
+                if (EditorUtility.DisplayDialog(
+                    "Rebuild All Shots From Presets",
+                    "すべての Shot のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
+                    "Rebuild All",
+                    "Cancel"))
+                {
+                    serializedObject.ApplyModifiedProperties();
+                    VLiveCameraRigBuilder.RebuildAllShotsFromPreset(rig);
+                    serializedObject.Update();
+                    GUIUtility.ExitGUI();
+                }
+            }
+
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.HelpBox(
+                "・ Apply / Sync: 不足Shotの生成と参照・順序の修復を行います（既存カメラのTransform, Lens, Spline, 速度の手動調整は維持されます）。\n" +
+                "・ Rebuild: 手動調整を上書きし、Preset初期値と現在のRigスケールから再構築します（確認ダイアログ・Undo対応）。\n" +
+                "・ ✕ボタン: Slotから外す操作（GameObjectは削除されません）。\n" +
+                "・ Deleteボタン: 生成済みGameObjectとSplineをSceneから明示的に削除します。",
+                MessageType.None
+            );
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawRuntimeSection(VLiveCameraRig rig)
+        {
+            var switcher = rig.GetComponent<VLiveCameraSwitcher>();
+            if (switcher == null)
+            {
+                return;
+            }
+
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Program Monitor & Control (Live制御)", EditorStyles.boldLabel);
+
+            string liveShotName = switcher.CurrentProgramShot != null ? switcher.CurrentProgramShot.ShotName : "未選択";
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("Current Program:", GUILayout.Width(110));
+                var style = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    normal = { textColor = switcher.CurrentProgramShot != null ? new Color(1f, 0.35f, 0.35f) : Color.gray }
+                };
+                EditorGUILayout.LabelField(liveShotName, style);
+            }
+
+            if (Application.isPlaying)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField("Direct Cut (ショット切り替え):", EditorStyles.miniBoldLabel);
+
+                int slotCount = rig.SlotCount;
+                int columns = 3;
+                for (int i = 0; i < slotCount; i += columns)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        for (int col = 0; col < columns; col++)
+                        {
+                            int index = i + col;
+                            if (index < slotCount)
+                            {
+                                var slot = rig.Slots[index];
+                                string label = (slot != null && slot.Shot != null) ? $"{index + 1}: {slot.Shot.ShotName}" : $"{index + 1}: (None)";
+                                bool isCurrent = slot != null && slot.Shot != null && slot.Shot == switcher.CurrentProgramShot;
+
+                                var prevBg = GUI.backgroundColor;
+                                if (isCurrent)
+                                {
+                                    GUI.backgroundColor = new Color(0.9f, 0.25f, 0.25f);
+                                }
+
+                                if (GUILayout.Button(label, GUILayout.Height(26)))
+                                {
+                                    switcher.CutToShot(index + 1);
+                                }
+
+                                GUI.backgroundColor = prevBg;
+                            }
+                        }
+                    }
+                }
+
+                EditorGUILayout.Space(6);
+                EditorGUILayout.LabelField("Motion Control (現在のLive Shot操作):", EditorStyles.miniBoldLabel);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Speed -"))
+                    {
+                        switcher.SpeedDown();
+                    }
+
+                    if (GUILayout.Button("Speed +"))
+                    {
+                        switcher.SpeedUp();
+                    }
+
+                    if (GUILayout.Button("Reverse"))
+                    {
+                        switcher.Reverse();
+                    }
+
+                    if (switcher.CurrentProgramShot != null && switcher.CurrentProgramShot.IsHolding)
+                    {
+                        if (GUILayout.Button("Resume"))
+                        {
+                            switcher.Resume();
+                        }
+                    }
+                    else
+                    {
+                        if (GUILayout.Button("Hold"))
+                        {
+                            switcher.Hold();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("Play Mode 中に直接Cutボタンおよび手動操作ボタンが表示されます。", MessageType.None);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+    }
+}

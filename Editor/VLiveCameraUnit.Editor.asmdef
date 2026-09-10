@@ -5,6 +5,7 @@
         "Unity.Cinemachine",
         "Unity.Splines",
         "Unity.Mathematics",
+        "Unity.InputSystem",
         "VLiveCameraUnit.Runtime"
     ],
     "includePlatforms": [

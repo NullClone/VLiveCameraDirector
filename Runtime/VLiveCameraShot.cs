@@ -27,10 +27,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private string _shotName = "Shot";
 
-        [Tooltip("生成元となったMotion Presetへの参照（任意）。")]
-        [SerializeField]
-        private VLiveCameraMotionPreset _preset = null;
-
         [Header("Camera References (カメラ参照)")]
         [Tooltip("このショット専用のCinemachineCamera。")]
         [SerializeField]
@@ -99,11 +95,6 @@ namespace VLiveKit.Camera
         /// ショットの識別名を取得します。
         /// </summary>
         public string ShotName => _shotName;
-
-        /// <summary>
-        /// 生成元となったMotion Presetを取得します。
-        /// </summary>
-        public VLiveCameraMotionPreset Preset => _preset;
 
         /// <summary>
         /// このショット専用のCinemachineCameraを取得します。
@@ -424,7 +415,6 @@ namespace VLiveKit.Camera
         /// </summary>
         public void Configure(
             string shotName,
-            VLiveCameraMotionPreset preset,
             CinemachineCamera cmCam,
             ShotType shotType,
             CinemachineSplineDolly splineDolly,
@@ -432,7 +422,6 @@ namespace VLiveKit.Camera
             float decelerationDistance)
         {
             _shotName = shotName;
-            _preset = preset;
             _cinemachineCamera = cmCam;
             _shotType = shotType;
             _splineDolly = splineDolly;

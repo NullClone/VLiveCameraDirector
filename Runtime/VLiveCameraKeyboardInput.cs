@@ -83,7 +83,11 @@ namespace VLiveKit.Camera
         {
             if (_switcher == null)
             {
-                _switcher = FindFirstObjectByType<VLiveCameraSwitcher>();
+                _switcher = GetComponent<VLiveCameraSwitcher>();
+                if (_switcher == null)
+                {
+                    _switcher = GetComponentInParent<VLiveCameraSwitcher>();
+                }
             }
         }
 
@@ -113,11 +117,15 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            // Cut selection (1 to 9, deterministic priority: lowest number wins)
-            for (int i = 0; i < 9; i++)
+            // Cut selection (deterministic priority: lowest number wins, bounded by cut keys and shot count)
+            int shotCount = _switcher.ShotCount;
+            int cutKeyCount = _cutKeys != null ? _cutKeys.Length : 0;
+            int maxSlots = Mathf.Min(cutKeyCount, shotCount);
+
+            for (int i = 0; i < maxSlots; i++)
             {
-                bool mainPressed = _cutKeys != null && i < _cutKeys.Length && IsPressed(keyboard, _cutKeys[i]);
-                bool numpadPressed = i < NumpadCutKeys.Length && IsPressed(keyboard, NumpadCutKeys[i]);
+                bool mainPressed = IsPressed(keyboard, _cutKeys[i]);
+                bool numpadPressed = (i < NumpadCutKeys.Length) && IsPressed(keyboard, NumpadCutKeys[i]);
                 if (mainPressed || numpadPressed)
                 {
                     _switcher.CutToShot(i + 1);
@@ -151,7 +159,9 @@ namespace VLiveKit.Camera
                 _switcher.Resume();
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            for (int i = 0; i < 9; i++)
+            int shotCount = _switcher.ShotCount;
+            int maxCut = Mathf.Min(9, shotCount);
+            for (int i = 0; i < maxCut; i++)
             {
                 KeyCode alphaKey = KeyCode.Alpha1 + i;
                 KeyCode keypadKey = KeyCode.Keypad1 + i;

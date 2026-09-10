@@ -15,7 +15,6 @@ namespace VLiveKit.Camera.Editor
         // Fields
 
         private SerializedProperty _shotNameProp;
-        private SerializedProperty _presetProp;
         private SerializedProperty _cinemachineCameraProp;
         private SerializedProperty _shotTypeProp;
         private SerializedProperty _splineDollyProp;
@@ -34,7 +33,6 @@ namespace VLiveKit.Camera.Editor
         private void OnEnable()
         {
             _shotNameProp = serializedObject.FindProperty("_shotName");
-            _presetProp = serializedObject.FindProperty("_preset");
             _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
             _shotTypeProp = serializedObject.FindProperty("_shotType");
             _splineDollyProp = serializedObject.FindProperty("_splineDolly");
@@ -103,7 +101,6 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.LabelField("Shot Identification (ショット識別)", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_shotNameProp);
-            EditorGUILayout.PropertyField(_presetProp);
 
             EditorGUILayout.EndVertical();
         }

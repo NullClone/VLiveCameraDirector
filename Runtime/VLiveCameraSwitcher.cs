@@ -5,7 +5,8 @@ using UnityEngine;
 namespace VLiveKit.Camera
 {
     /// <summary>
-    /// 登録された複数のShotを管理し、番号指定または直接指定でCut切り替えを行うスイッチャー。
+    /// VLiveCameraRigを参照し、番号指定または直接指定でCut切り替えを行うスイッチャー。
+    /// Program切り替えと再生状態の伝達のみを担当します。
     /// </summary>
     [DisallowMultipleComponent]
     public class VLiveCameraSwitcher : MonoBehaviour
@@ -15,15 +16,10 @@ namespace VLiveKit.Camera
         private const int ActivePriority = 10;
         private const int InactivePriority = 0;
 
-        [Header("Cinemachine Output (出力設定)")]
-        [Tooltip("Program出力を行うCinemachineBrain。")]
+        [Header("Target Rig (対象リグ)")]
+        [Tooltip("管理対象のVLiveCameraRig参照。Shotスロット一覧およびProgram CameraはRigから取得します。")]
         [SerializeField]
-        private CinemachineBrain _cinemachineBrain;
-
-        [Header("Shot List (ショット一覧)")]
-        [Tooltip("管理対象のショット一覧。インデックス0（1番目）がキー1に対応します。")]
-        [SerializeField]
-        private List<VLiveCameraShot> _shots = new List<VLiveCameraShot>();
+        private VLiveCameraRig _rig;
 
         private VLiveCameraShot _currentProgramShot;
 
@@ -31,19 +27,24 @@ namespace VLiveKit.Camera
         // Properties
 
         /// <summary>
+        /// 参照しているVLiveCameraRigを取得します。
+        /// </summary>
+        public VLiveCameraRig Rig => _rig;
+
+        /// <summary>
         /// 出力用のCinemachineBrainを取得します。
         /// </summary>
-        public CinemachineBrain CinemachineBrain => _cinemachineBrain;
+        public CinemachineBrain CinemachineBrain => _rig != null ? _rig.CinemachineBrain : null;
 
         /// <summary>
-        /// 登録されているショット一覧を取得します。
+        /// Rigに登録されているショットスロット一覧を取得します。
         /// </summary>
-        public IReadOnlyList<VLiveCameraShot> Shots => _shots;
+        public IReadOnlyList<VLiveCameraShotSlot> Slots => _rig != null ? _rig.Slots : null;
 
         /// <summary>
-        /// 登録されているショット数を取得します。
+        /// Rigに登録されているショットスロット数を取得します。
         /// </summary>
-        public int ShotCount => _shots != null ? _shots.Count : 0;
+        public int ShotCount => (_rig != null && _rig.Slots != null) ? _rig.Slots.Count : 0;
 
         /// <summary>
         /// 現在ProgramとしてLive出力中のShotを取得します。
@@ -55,36 +56,43 @@ namespace VLiveKit.Camera
 
         private void Awake()
         {
-            if (_cinemachineBrain == null)
+            if (_rig == null)
             {
-                _cinemachineBrain = FindFirstObjectByType<CinemachineBrain>(FindObjectsInactive.Include);
+                _rig = GetComponent<VLiveCameraRig>();
+                if (_rig == null)
+                {
+                    _rig = GetComponentInParent<VLiveCameraRig>();
+                }
             }
         }
 
         private void Start()
         {
-            if (_cinemachineBrain != null)
+            CinemachineBrain brain = CinemachineBrain;
+            if (brain != null)
             {
-                _cinemachineBrain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
+                brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
             }
 
             VLiveCameraShot initialShot = null;
-            if (_shots != null)
+            if (_rig != null && _rig.Slots != null)
             {
-                for (int i = 0; i < _shots.Count; i++)
+                for (int i = 0; i < _rig.Slots.Count; i++)
                 {
-                    if (_shots[i] != null && _shots[i].IsValid)
+                    VLiveCameraShotSlot slot = _rig.Slots[i];
+                    if (slot != null && slot.Shot != null && slot.Shot.IsValid)
                     {
-                        initialShot = _shots[i];
+                        initialShot = slot.Shot;
                         break;
                     }
                 }
 
-                for (int i = 0; i < _shots.Count; i++)
+                for (int i = 0; i < _rig.Slots.Count; i++)
                 {
-                    VLiveCameraShot shot = _shots[i];
-                    if (shot != null)
+                    VLiveCameraShotSlot slot = _rig.Slots[i];
+                    if (slot != null && slot.Shot != null)
                     {
+                        VLiveCameraShot shot = slot.Shot;
                         if (shot.CinemachineCamera != null)
                         {
                             shot.CinemachineCamera.Priority = InactivePriority;
@@ -107,24 +115,30 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
-        /// 指定されたショット番号（1〜9、1始まり）へ直接Cutします。
+        /// 指定されたショット番号（1始まり）へ直接Cutします。
         /// 無効な番号や未設定スロットの場合は現在のProgramを維持します。
         /// </summary>
-        /// <param name="shotNumber">1〜9のショット番号。</param>
+        /// <param name="shotNumber">1始まりのショット番号。</param>
         public void CutToShot(int shotNumber)
         {
-            if (_shots == null)
+            if (_rig == null || _rig.Slots == null)
             {
                 return;
             }
 
             int index = shotNumber - 1;
-            if (index < 0 || index >= _shots.Count)
+            if (index < 0 || index >= _rig.Slots.Count)
             {
                 return;
             }
 
-            CutTo(_shots[index]);
+            VLiveCameraShotSlot slot = _rig.Slots[index];
+            if (slot == null || slot.Shot == null)
+            {
+                return;
+            }
+
+            CutTo(slot.Shot);
         }
 
         /// <summary>
@@ -217,19 +231,12 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
-        /// ショット一覧を設定します。
+        /// 管理対象のVLiveCameraRig参照を設定します。
         /// </summary>
-        public void SetShots(List<VLiveCameraShot> shots)
+        /// <param name="rig">設定するVLiveCameraRig。</param>
+        public void SetRig(VLiveCameraRig rig)
         {
-            _shots = shots;
-        }
-
-        /// <summary>
-        /// CinemachineBrain参照を設定します。
-        /// </summary>
-        public void SetCinemachineBrain(CinemachineBrain brain)
-        {
-            _cinemachineBrain = brain;
+            _rig = rig;
         }
     }
 }
