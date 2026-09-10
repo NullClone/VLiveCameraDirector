@@ -5,14 +5,14 @@
 初めて読む場合:
 
 1. [overview.md](overview.md) — 製品コンセプトと最初に作る体験
-2. [architecture.md](architecture.md) — 初期版の最小構成
+2. [architecture.md](architecture.md) — Rig、Switcher、Shot、Input、Editor Builderの責務と所有権
 3. [phases.md](phases.md) — 現在地と次の実装
 
 機能別仕様:
 
 - [spec-operation.md](spec-operation.md) — キーボード操作と将来のMIDI
 - [spec-camera.md](spec-camera.md) — Shot、Motion Preset、初期Palette
-- [spec-setup.md](spec-setup.md) — Setup WindowとScene生成
+- [spec-setup.md](spec-setup.md) — Rig作成、Inspector Authoring、Scene同期
 - [spec-assistance.md](spec-assistance.md) — Cinemachineによる初期支援
 - [spec-switching.md](spec-switching.md) — 複数ShotのDirect Cut
 

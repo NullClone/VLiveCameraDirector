@@ -3,10 +3,10 @@
 VLiveCameraUnit is a Unity 6.3+ / Cinemachine 3 package for performing prepared
 live-camera shots with operator control and reliable composition assistance.
 
-The current goal is a practical manual baseline: one-click setup for one
-performer, a small motion-preset palette, and multiple independent shot cameras
-selected from the keyboard. MIDI, recommendation, and automation come after this
-workflow is proven.
+The current goal is a practical manual baseline: create one rig with one action,
+then author one performer and an ordered motion-preset palette from the rig
+Inspector. Multiple independent shot cameras are selected from the keyboard.
+MIDI, recommendation, and automation come after this workflow is proven.
 
 ## Read first
 
@@ -21,7 +21,7 @@ Use this priority when instructions conflict:
 | --- | --- |
 | Product direction | `Docs/overview.md` |
 | Runtime design and camera behaviour | `Docs/architecture.md`, `Docs/spec-camera.md` |
-| Setup Window | `Docs/spec-setup.md` |
+| Rig creation and Inspector authoring | `Docs/spec-setup.md` |
 | Input and switching | `Docs/spec-operation.md`, `Docs/spec-switching.md` |
 | Assistance rules | `Docs/spec-assistance.md` |
 | Current implementation phase | `Docs/phases.md` |
@@ -34,11 +34,15 @@ made. Do not duplicate the same explanation.
 
 ## Boundaries
 
-- Use `toshi.VLiveKit.Camera`, `.Editor`, and `.Tests` namespaces.
+- Use `VLiveKit.Camera`, `VLiveKit.Camera.Editor`, and
+  `VLiveKit.Camera.Tests` namespaces.
 - Keep one CinemachineCamera per shot. Never reconfigure a live camera as another
   shot.
 - Keep the first release manual-first. Do not add MIDI, runtime AI, Preview,
-  generic slots, compatibility wrappers, or speculative extension layers.
+  compatibility wrappers, or speculative extension layers.
+- Keep rig authoring, Program switching, shot playback, and input in separate
+  concrete responsibilities. Do not use this rule to add unused interfaces,
+  services, registries, or factories.
 - Before the first stable release, preserve old APIs and serialized assets only
   when the current task explicitly requires it.
 - Do not edit the package-root `README.md` unless the user explicitly asks.

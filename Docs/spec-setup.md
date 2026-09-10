@@ -1,82 +1,118 @@
-# Setup Window仕様
+# Rig作成とInspector Authoring仕様
 
 ## 1. 目的
 
-`VLive Camera Setup`は、ユーザーの現在のSceneへVLiveCameraUnitを導入する唯一の初期セットアップ画面とする。HierarchyとComponentを手作業で組み立てなくても、1つのWindowと1回の実行で開始できる状態を作る。
+HierarchyとComponentを手作業で組み立てなくても、1回の操作でVLiveCameraUnitを現在のSceneへ導入できるようにする。初期作成後の日常的な編集は`VLiveCameraRig`のInspectorで完結させる。
 
 ## 2. 開き方
 
-Unityの`Tools/VLive Camera/VLive Camera Setup`からEditorWindowを開く。
+次の入口を提供する。
 
-## 3. 入力
+- `GameObject/VLiveKit/Camera Rig`: 現在のSceneへ新しいRigを作成する。
+- `Tools/VLive Camera/VLive Camera Setup`: 初期Rig作成だけを行う小さなWindowを開く。
 
-最初のWindowに必要な入力は次だけとする。
+どちらも同じ`VLiveCameraRigBuilder`の作成処理を呼び、生成結果に差を作らない。WindowにTarget、Preset、スケールの編集状態を保持しない。
 
-- Performer Target
-- 使用する既存Output Camera、または新規作成
-- 使用するMotion Presetの選択と順序
+## 3. 初期作成
 
-Targetは必須とする。初期状態では6つの標準Presetを選択済みにしてよい。
+初期作成では次をUndo可能な1操作で作る。
 
-## 4. Palette
-
-Windowは利用可能な`VLiveCameraMotionPreset`を名前で一覧表示する。
-
-- 使用するPresetを選択できる。
-- Shot番号となる順序を確認できる。
-- 最初は検索、カテゴリ、画像サムネイルを実装しない。
-- Preset編集専用の大規模ツールは作らない。
-
-PaletteはAssetの一覧であり、Runtime中にShotを動的再構成する仕組みではない。
-
-## 5. Create / Update
-
-`Create / Update Camera Rig`を押すと、現在のSceneへ次を作成または更新する。
-
-- 1台のProgram CameraとCinemachine Brain
+- `VLive Camera Rig` Rootと`VLiveCameraRig`
 - `VLiveCameraSwitcher`
 - `VLiveCameraKeyboardInput`
-- 選択Presetごとの`VLiveCameraShot`
-- Shotごとの専用CinemachineCamera
-- Spline Shotごとの専用Spline
-- Target、Preset、Shot一覧、キー順序の参照
+- Program CameraとCinemachine Brain
+- 6つの標準Presetを参照するShot Slot
+- ShotとSplineを配置する子Container
 
-生成RootはWindowが識別できる固定名または専用Componentを持つ。既存Rootがある場合は重複生成せず、Windowが所有する範囲だけを更新する。
+作成後はRigを選択し、ユーザーがInspectorでTargetを割り当てて`Apply / Sync`できる状態にする。新しいProgram Cameraへ`MainCamera`タグを付けるのはSceneに既存のMain Cameraがない場合だけとする。既存CameraやSwitcherを自動探索して変更しない。
 
-- 初回CreateではPresetの初期値からCameraとSplineを作る。
-- Updateでは参照、Target、Shot順を更新し、不足するShotだけを追加する。
-- 既存Shotへユーザーが加えた構図、Lens、Spline調整は上書きしない。
-- 既存Shotの削除やPreset初期値へのResetは、初期Windowへ含めない。
+## 4. Rig Inspector
 
-## 6. 安全性
+Inspectorは次の3区分を持つ。
+
+### Setup and Framing
+
+- Performer Target
+- Program Camera参照
+- 正面基準Mode
+- Custom Reference
+- Target Height
+- Distance Scale
+- Motion Scale
+
+### Shot Slots
+
+- Slot番号
+- Motion Preset参照
+- 対応する生成済みShot参照
+- 追加、並び替え、Slotからの除外
+
+同じPresetを複数Slotへ設定できる。Slot順をShot番号とする。Slotの並び替えで生成済みShotを交換、再生成、初期化しない。Slotが無効でも後続Slotの番号を詰めない。
+
+### Operations
+
+- `Apply / Sync`
+- `Rebuild Selected From Preset`
+- `Rebuild All From Presets`
+- 生成済みShotの明示的な削除
+
+Inspectorは不足参照、無効なScale、キー不足などを簡潔に表示する。検索、カテゴリ、画像サムネイル、Preset専用管理画面は現在作らない。
+
+## 5. Apply / Sync
+
+`Apply / Sync`は次だけを行う。
+
+- Slotに不足するShotと専用CinemachineCameraを生成する。
+- Spline Shotに不足する専用Splineを生成する。
+- Target、Program出力、SlotとShot間の参照を修復する。
+- 新規生成物だけへPreset初期値、正面基準、スケールを適用する。
+
+既存ShotのTransform、Lens、Spline形状、速度設定を上書きしない。Slotから外れたShotを自動削除しない。Inspectorの値変更、`OnValidate`、Selection変更、Domain ReloadだけではScene構成を変更しない。
+
+## 6. Rebuildと削除
+
+`Rebuild From Preset`は、対象ShotのCamera位置、Lens、Aim、Spline、Preset由来の移動設定を現在のRig設定とPresetから再適用する破壊的操作である。
+
+- 対象と失われる手動調整を実行前に表示する。
+- SelectedとAllを分ける。
+- Undo可能な1操作として実行する。
+- Live中およびPlay Mode中は実行しない。
+
+Slotから外す操作とSceneオブジェクトの削除を分ける。生成済みShotやSplineを削除する場合は対象を明示し、確認とUndoを必須とする。
+
+## 7. 安全性
 
 - すべてのScene変更をUndoできる。
-- 既存Cameraを選択した場合は、必要なComponentと設定だけを変更する。
-- Windowが作成していない無関係なGameObjectやComponentを削除しない。
+- 既存Cameraを使用する場合は、ユーザーがInspectorで明示的に割り当てる。
+- Builderが所有していないGameObjectやComponentを変更、削除しない。
 - Sceneを自動保存しない。
-- 必須参照がない場合は生成せず、Window内に理由を表示する。
+- 必須参照がない場合は同期せず、Inspectorに理由を表示する。
 - 再実行で同じShotやCameraを増殖させない。
 - 再実行でユーザー調整値をPreset初期値へ戻さない。
 - Prefab Instanceを編集する場合はPrefab Overrideを正しく記録する。
 
-## 7. Inspectorとの関係
+## 8. 所有権
 
-Windowは初期導入を担当し、生成後の細かな値調整は各CustomEditorで行う。WindowとCustomEditorが別々の設定値を所有しない。
+Windowとメニューは初期導入、Rig Inspectorは設定、BuilderはScene変更を担当する。設定の正本は`VLiveCameraRig`だけとし、Window、CustomEditor、Builderが設定値のコピーを保持しない。
 
-## 8. Agent確認
+生成物の識別にはSlot内のShot参照とRigの親子関係を使用する。Preset参照、GameObject名、Scene内で最初に見つかったSwitcherだけを識別根拠にしない。
+
+## 9. Agent確認
 
 実装エージェントは次だけを既定確認とする。
 
-- WindowがCompileされ、Menuから開ける。
+- Windowと作成MenuがCompileされる。
 - SerializedProperty、Undo、参照設定に明白な問題がない。
 - 差分全体に不要な生成、削除、抽象化がない。
 
-専用テストSceneの作成、ユーザーSceneの保存、Game Viewでの構図評価、長時間試験は行わない。実際のCreate / Update結果とカメラワークはユーザーが作業用Sceneで確認する。
+専用テストSceneの作成、ユーザーSceneの保存、Game Viewでの構図評価、長時間試験は行わない。実際のRig作成、Apply、Rebuild結果とカメラワークはユーザーが作業用Sceneで確認する。
 
-## 9. 受け入れ条件
+## 10. 受け入れ条件
 
-1. 1つのWindowでTarget、Output Camera、Presetを指定できる。
-2. 1回の操作で必要なRigと複数Shotを作成できる。
-3. 再実行しても重複生成しない。
-4. Undoでき、Sceneを自動保存しない。
-5. 初期PaletteのShotをキーで切り替えられる状態になる。
+1. 1回の操作で初期Rigを作成できる。
+2. Target、正面、スケール、Shot SlotsをRig Inspectorで編集できる。
+3. `Apply / Sync`で不足Shotだけを生成し、通常の同期で手動調整を失わない。
+4. 同じPresetを複数Slotで使用してもShot参照が混線しない。
+5. Rebuildと削除が明示操作で、Undoできる。
+6. Inspector編集だけではSceneオブジェクトを生成、削除、再配置しない。
+7. Sceneを自動保存せず、初期PaletteのShotをキーで切り替えられる。

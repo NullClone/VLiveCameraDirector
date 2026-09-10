@@ -8,21 +8,25 @@
 
 Switcherが持つ状態は次だけとする。
 
-- 順序付きShot一覧
+- 使用する`VLiveCameraRig`参照
 - 現在のProgram Shot
-- Program出力に使うCinemachine Brain参照
 
 Preview、Selected、Transitioning、Tally、Bankは追加しない。
+
+Program Camera参照はRigが所有し、Cinemachine BrainはそのCameraのComponentから取得する。Switcherへ同じCameraまたはBrain参照を重複保存しない。
+
+順序付きShot SlotはRigだけが所有する。Switcherへ別のPreset一覧やShot一覧を正本として持たせず、番号指定時にRigのSlot順から対象Shotを取得する。Slotがnullまたは無効でも後続番号を詰めない。
 
 ## 3. 直接Cut
 
 1. Shot番号を受け取る。
-2. 対象Shotと専用CinemachineCameraが有効か確認する。
-3. 現在と異なるCinemachineCameraをProgramにする。
-4. Cinemachine BrainのCutとして切り替える。
-5. Program Shot参照を更新する。
-6. 移動Shotの自動再生を開始する。
-7. Cut成功時だけProgram Shot名を1回Logする。
+2. Rigの同じ番号のSlotから対象Shotを取得する。
+3. 対象Shotと専用CinemachineCameraが有効か確認する。
+4. 現在と異なるCinemachineCameraをProgramにする。
+5. Cinemachine BrainのCutとして切り替える。
+6. Program Shot参照を更新する。
+7. 移動Shotの自動再生を開始する。
+8. Cut成功時だけProgram Shot名を1回Logする。
 
 無効な番号や参照では現在のProgramを維持する。
 
@@ -54,7 +58,7 @@ Cut成功時のConsole LogとCustom Inspectorの読み取り専用状態で現�
 
 ## 8. 受け入れ条件
 
-1. キー番号と順序付きShot一覧が一致する。
+1. キー番号とRigの順序付きShot Slotが一致する。
 2. 各Shotが別々のCinemachineCameraとして明確にCutされる。
 3. 無効な選択で現在のProgramを失わない。
 4. 同一Shot選択で移動状態がResetされない。

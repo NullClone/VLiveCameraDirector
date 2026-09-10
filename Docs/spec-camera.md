@@ -18,9 +18,9 @@
 
 - 表示名
 - FixedまたはSpline
-- Targetローカル基準の相対制御点
+- +Zを被写体正面側とする基準空間の相対制御点
 - Field of View
-- Tracking Targetのオフセット
+- Rigの注視基準からの構図オフセット
 - 初期進行速度
 - 終端への減速距離または進行Curve
 
@@ -43,16 +43,62 @@
 
 ## 5. 座標と構図
 
-- 相対制御点はSetup実行時のTarget Transformを基準にScene座標へ変換する。
+Presetの制御点は次の基準空間で定義する。
+
+- 原点: Performer Targetの位置
+- +Z: 被写体の正面側、つまり正面カメラを置く側
+- +X: 正面を見たときの右側
+- +Y: World Up
+
+Rigは次の正面基準Modeを持つ。
+
+| Mode | 正面方向 |
+| --- | --- |
+| `TargetForward` | TargetのforwardをXZ平面へ射影した方向。既定値とする |
+| `WorldPlusZ` | World +Z |
+| `WorldMinusZ` | World -Z |
+| `CustomReference` | 指定TransformのforwardをXZ平面へ射影した方向 |
+
+Custom Referenceは位置ではなく向きだけを使用する。XZ射影した正面方向がほぼ0の場合はInspectorで警告し、勝手に別Targetを探索しない。
+
+Scene座標への変換にはTargetの位置と選択した正面方向を使用し、Target TransformのScaleを使用しない。非一様ScaleやAvatar Import Scaleによってカメラ距離とSpline形状が変化してはならない。
+
+### 5.1 Target Heightと構図Offset
+
+`Target Height`はTarget原点からWorld Up方向へ加える注視基準の高さとする。PresetのTarget Offsetはその注視基準からの構図上の追加差分とする。両方に同じ既定身長を重複保存しない。
+
+初期PresetではTarget Offsetの高さを0とし、既定の注視高さはRigのTarget Heightだけが所有する。
+
+### 5.2 Distance ScaleとMotion Scale
+
+最初の制御点を`p0`、後続点を`pi`とする。
+
+- `Distance Scale`は`p0`の水平成分X/Zに適用し、Targetからカメラ開始位置までの距離を変える。Yは変えない。
+- `Motion Scale`は`pi - p0`に適用し、開始位置を保ったまま移動幅を変える。
+- いずれも0より大きい値とし、既定値は1とする。
+
+この2つを同じ制御点全体へ重ねて乗算しない。Scale変更は明示的なRebuildで既存Shotへ適用し、Inspectorを動かしただけでは手動調整済みSplineを変更しない。
+
+### 5.3 Cinemachine
+
 - CinemachineCameraはTargetをTracking Targetとして使用する。
-- PresetのField of ViewとTarget offsetを初期構図として適用する。
+- PresetのField of View、RigのTarget Height、PresetのTarget Offsetを初期構図として適用する。
 - FixedはSplineを要求しない。
 - Spline移動にはCinemachine 3とUnity Splinesの標準機能を使用する。
 - 独自の経路Solverや遮蔽回避は作らない。
 
 Targetが大きく移動するライブへの追従方法は、初期PaletteをSceneで確認してから決める。
 
-## 6. 再生規則
+## 6. 初期Presetの更新
+
+6つの同梱Presetは、正面側が+Zとなる座標へ更新する。新規Presetを作るEditor処理も同じ値を使用する。
+
+- Package同梱の6 Assetだけを仕様変更として更新する。
+- ユーザーが複製または作成したPresetを自動更新しない。
+- Windowを開く、Domain Reloadする、Rigを選択するだけでPreset Assetを書き換えない。
+- 既存Assetを初期化する処理と、不足Assetを作成する処理を同じ暗黙動作にしない。
+
+## 7. 再生規則
 
 - 移動ShotはOff Air中に始点で準備する。
 - ProgramへCutされた後に自動再生を開始する。
@@ -63,7 +109,7 @@ Targetが大きく移動するライブへの追従方法は、初期PaletteをS
 
 Fixed Shotは選択後も設定された構図を維持する。
 
-## 7. 手動操作
+## 8. 手動操作
 
 ### Speed
 
@@ -79,14 +125,14 @@ Holdは現在位置でSpline進行だけを止める。Resumeは現在の方向�
 
 Fixed Shotへの移動操作は何も変更せず、安全に無視する。
 
-## 8. 異常時
+## 9. 異常時
 
 - TargetまたはSplineが無効でも例外を繰り返し発生させない。
 - 無効な移動ShotをProgramへ選択しない。
 - 設定不足を別Targetの自動探索で補わない。
 - 失敗時は現在のProgramを維持する。
 
-## 9. 受け入れ条件
+## 10. 受け入れ条件
 
 1. 6つのPreset AssetをPaletteから選択できる。
 2. 各生成Shotが専用CinemachineCameraを持つ。
@@ -94,3 +140,5 @@ Fixed Shotへの移動操作は何も変更せず、安全に無視する。
 4. Speed、Reverse、Hold、Resumeで位置が飛ばない。
 5. Fixed Shotが安全な戻り先になる。
 6. Presetに現在不要なAI用metadataや管理機能がない。
+7. TargetのTransform Scaleを変えても、同じRig Scale設定ならカメラ距離と軌道形状が変わらない。
+8. Distance Scaleが開始距離だけを、Motion Scaleが開始点からの移動幅だけを変更する。

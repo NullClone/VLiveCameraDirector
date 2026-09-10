@@ -101,7 +101,7 @@ fields inside nested serializable types.
 ## MonoBehaviour inspectors
 
 Every user-facing MonoBehaviour must have a companion CustomEditor in the Editor
-assembly and the `toshi.VLiveKit.Camera.Editor` namespace. A hidden internal
+assembly and the `VLiveKit.Camera.Editor` namespace. A hidden internal
 helper with no user-authored state may keep the default Inspector; the reason must
 be clear from its role.
 

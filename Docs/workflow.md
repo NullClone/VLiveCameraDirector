@@ -43,17 +43,18 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 
 ## 4. 現在の縦切り実装
 
-`Docs/phases.md`のStep 2は、次の内部順で一括実装できる。
+`Docs/phases.md`のStep 3は、次の内部順で一括実装できる。
 
-1. `git status --short`と現在のA/B実装を確認する。
+1. `git status --short`と現在のRig生成、Switcher、Shot、Inputを確認する。
 2. Cinemachine 3とUnity Splinesの実APIを確認する。
-3. `VLiveCameraMotionPreset`と6つの初期Presetを作る。
-4. SwitcherとKeyboard Inputを複数Shot、キー1〜9へ変更する。
-5. `VLiveCameraSetupWindow`でTarget、Output Camera、Paletteを扱う。
-6. Create / Update、Undo、重複生成防止、Scene非保存を実装する。
-7. 今回触るユーザー向けMonoBehaviourへCustomEditorを追加する。
-8. 旧A/B専用Scene BuilderとPlayMode Verifierが不要なら削除する。
-9. Import、Compile、Console、diffを簡易確認する。
+3. `VLiveCameraRig`とShot SlotをScene AuthoringとShot順の正本として追加する。
+4. SwitcherをProgram切り替え、Shotを再生状態、Inputをキー入力の責務に限定する。
+5. Editor専用BuilderへCreate、Apply / Sync、Rebuild、削除のScene変更処理を集約する。
+6. Setup Windowを初期作成だけへ簡略化し、GameObject Menuからも同じBuilderを呼ぶ。
+7. Rig InspectorへTarget、正面、Scale、Shot Slots、明示的な操作と検証表示を追加する。
+8. 6つの同梱Presetと新規生成値を+Z正面へ更新する。
+9. Keyboard Inputの9固定処理を外し、競合表示を追加する。
+10. Import、Compile、Console、diffを簡易確認する。
 
 途中で専用テストSceneや汎用Editor frameworkを追加しない。
 
@@ -64,7 +65,10 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 - 既存Tests Sceneを変更、削除、ステージしない。
 - 1 Shotにつき1つのCinemachineCameraを使用する。
 - Preset設定とShotのRuntime状態を二重管理しない。
+- Shot順とSlotの正本は`VLiveCameraRig`だけに置く。
 - Live中のCameraへ別Shot設定を上書きしない。
+- `OnValidate`やInspector変更だけでSceneオブジェクトを生成、削除、再配置しない。
+- 通常のApplyと、手動調整を上書きするRebuildを分ける。
 - interface、Manager、Registry、Command Bus、DIを現在の必要性なく追加しない。
 - Preview、MIDI、Runtime AI、検索、カテゴリ、サムネイルを先行実装しない。
 - `Docs/code-style.md`へ従う。
@@ -78,7 +82,7 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 - 末尾空白、namespace、asmdef、Tooltip、Editor分離の確認
 - Unity Import、Domain Reload、Compile
 - Consoleに新しいCompile Errorや明白な例外がないこと
-- Setup WindowがMenuから開けること
+- Rig作成Menuと簡略化されたSetup Windowが利用できること
 
 次はユーザーが明示しない限り行わない。
 
@@ -96,7 +100,10 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 
 - 完成条件に必要なファイルが揃っている。
 - 対象外の機能や抽象化が増えていない。
-- SetupがUndo対応で、重複生成と自動保存を行わない。
+- Rig作成とBuilder操作がUndo対応で、重複生成と自動保存を行わない。
+- Applyが既存のLens、Spline、Camera調整を上書きしない。
+- Rebuildと生成物削除が明示的で、対象外のSceneオブジェクトを変更しない。
+- 同じPresetを複数Slotで使用してもShot参照が混線しない。
 - 各Shotが専用CinemachineCameraを持つ。
 - PresetとRuntime状態の所有権が分かれている。
 - 表示されるSerializedFieldにTooltipがある。

@@ -8,17 +8,17 @@
 
 | 操作 | 対象 | 動作 |
 | --- | --- | --- |
-| キー1〜9 | 指定番号のShot | 対応する専用CinemachineCameraへCutする |
+| 設定済みCutキー | 指定番号のShot | 対応する専用CinemachineCameraへCutする |
 | Speed Up / Down | 現在の移動Shot | Spline進行速度を増減する |
 | Reverse | 現在の移動Shot | 現在位置を保って進行方向を反転する |
 | Hold | 現在の移動Shot | 現在位置でSpline進行を停止する |
 | Resume | 現在の移動Shot | 現在の方向と速度で再開する |
 
-初期Paletteではキー1〜6を使用する。7〜9はShotが追加された場合だけ有効になる。
+初期Paletteではキー1〜6を使用する。既定のCutキーは1〜9とし、Inspectorから可変長のキー一覧を確認、変更できる。
 
 ## 3. 基本フロー
 
-1. Setup Windowが選択Preset順にShot番号を割り当てる。
+1. Rig InspectorのShot Slot順をShot番号とする。
 2. オペレーターが数字キーを押す。
 3. Switcherが対応するShotへCutする。
 4. 移動Shotなら始点から自動再生する。
@@ -32,9 +32,14 @@
 - キー入力を読むのは`VLiveCameraKeyboardInput`だけとする。
 - InputはSwitcherの公開操作だけを呼ぶ。
 - ShotやCinemachineCameraの内部でキー入力を読まない。
-- Shot番号はSwitcherの順序付き一覧と一致させる。
+- Shot番号はRigの順序付きShot Slotと一致させる。
 - 同一フレームの複数Cut入力は小さい番号を優先するなど、結果を決定的にする。
 - キー割り当てはInspectorから確認・変更できる。
+- Cut判定は固定値9ではなく、キー一覧とShot Slot数の範囲で行う。
+- Numpad 1〜9は対応するShot番号への補助入力として維持できる。
+- キー重複と、Speed、Reverse、Hold、Resumeとの競合をInspectorで警告する。
+
+QWERTY、記号キー、テンキーをShot数に応じて自動割り当てしない。9を超えるShotへキーを割り当てる場合はユーザーが明示的に設定する。既存の割り当てを自動補完処理で上書きしない。
 
 汎用Input Mapping Asset、Command Bus、MIDI Adapterはまだ作らない。
 
@@ -62,3 +67,5 @@
 3. Speed、Reverse、Hold、Resumeは現在の移動Shotだけへ作用する。
 4. 同一Shot選択と無効番号で状態が壊れない。
 5. キーボード以外の入力基盤が先行実装されていない。
+6. 9固定のループに依存せず、設定されたキー数の範囲でCutできる。
+7. キー競合がInspectorで分かり、暗黙のQWERTY割り当てがない。
