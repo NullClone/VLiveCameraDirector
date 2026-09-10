@@ -1,36 +1,42 @@
-using UnityEngine;
-using UnityEngine.Animations;
-using UnityEngine.Serialization;
-using UnityEngine.Scripting.APIUpdating;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Scripting.APIUpdating;
+using UnityEngine.Serialization;
 
 [DefaultExecutionOrder(110)]
 [MovedFrom(false, sourceNamespace: null, sourceAssembly: null, sourceClassName: "BoneCollector")]
 public class VLiveLookTargetRig : MonoBehaviour
 {
     [Header("Performer Reference")]
-    [SerializeField] private VLivePerformer vLivePerformer;
+    [SerializeField]
+    private VLivePerformer vLivePerformer;
 
     [Header("Animator Fallback")]
     [FormerlySerializedAs("targetAnimator")]
-    [SerializeField] private Animator performerAnimator;
+    [SerializeField]
+    private Animator performerAnimator;
 
     [Header("Humanoid Support")]
     [FormerlySerializedAs("primaryHumanoidAvatar")]
-    [SerializeField] private Avatar fallbackHumanoidAvatar;
+    [SerializeField]
+    private Avatar fallbackHumanoidAvatar;
 
     [Header("Look Target Root")]
     [FormerlySerializedAs("parentTransform")]
-    [SerializeField] private Transform lookTargetRoot;
+    [SerializeField]
+    private Transform lookTargetRoot;
 
     [Header("Performer Naming")]
     [FormerlySerializedAs("characterName")]
-    [SerializeField] private string performerName = "Performer";
+    [SerializeField]
+    private string performerName = "Performer";
 
     [Header("Live Update")]
     [FormerlySerializedAs("updateWeightsEveryFrame")]
-    [SerializeField] private bool syncActiveStateEveryFrame = true;
+    [SerializeField]
+    private bool syncActiveStateEveryFrame = true;
 
     [Serializable]
     public struct LookTargetChannel
@@ -42,7 +48,8 @@ public class VLiveLookTargetRig : MonoBehaviour
 
     [Header("Debug View")]
     [FormerlySerializedAs("boneDataList")]
-    [SerializeField] private List<LookTargetChannel> lookTargetChannels = new();
+    [SerializeField]
+    private List<LookTargetChannel> lookTargetChannels = new();
 
     private readonly Dictionary<HumanBodyBones, Transform> _boneMap = new();
     private readonly Dictionary<HumanBodyBones, GameObject> _targetMap = new();
@@ -220,10 +227,10 @@ public class VLiveLookTargetRig : MonoBehaviour
 
 #if UNITY_EDITOR
             if (!Application.isPlaying)
-                GameObject.DestroyImmediate(c);
+                DestroyImmediate(c);
             else
 #endif
-                GameObject.Destroy(c);
+                Destroy(c);
         }
     }
 

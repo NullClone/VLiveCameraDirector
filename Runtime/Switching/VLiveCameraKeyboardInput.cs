@@ -7,17 +7,31 @@ namespace toshi.VLiveKit.Camera
 {
     public class VLiveCameraKeyboardInput : MonoBehaviour
     {
-        [SerializeField] private VLiveCameraSwitcher _switcher;
+        [SerializeField]
+        private VLiveCameraSwitcher _switcher;
 
 #if ENABLE_INPUT_SYSTEM
         [Header("Keyboard Bindings (Input System)")]
-        [SerializeField] private Key _cutAKey = Key.Digit1;
-        [SerializeField] private Key _cutBKey = Key.Digit2;
-        [SerializeField] private Key _speedUpKey = Key.UpArrow;
-        [SerializeField] private Key _speedDownKey = Key.DownArrow;
-        [SerializeField] private Key _reverseKey = Key.R;
-        [SerializeField] private Key _holdKey = Key.H;
-        [SerializeField] private Key _resumeKey = Key.Space;
+        [SerializeField]
+        private Key _cutAKey = Key.Digit1;
+
+        [SerializeField]
+        private Key _cutBKey = Key.Digit2;
+
+        [SerializeField]
+        private Key _speedUpKey = Key.UpArrow;
+
+        [SerializeField]
+        private Key _speedDownKey = Key.DownArrow;
+
+        [SerializeField]
+        private Key _reverseKey = Key.R;
+
+        [SerializeField]
+        private Key _holdKey = Key.H;
+
+        [SerializeField]
+        private Key _resumeKey = Key.Space;
 #endif
 
         private void Awake()
@@ -35,6 +49,7 @@ namespace toshi.VLiveKit.Camera
             {
                 return false;
             }
+
             return keyboard[key].wasPressedThisFrame;
         }
 #endif

@@ -27,17 +27,22 @@ namespace toshi.VLiveKit
         }
 
         [Header("Master")]
-        [SerializeField] private PlayableDirector masterTimeline;
+        [SerializeField]
+        private PlayableDirector masterTimeline;
 
         [Header("Section Timelines")]
-        [SerializeField] private List<VLiveTimelineSlot> sectionTimelines = new List<VLiveTimelineSlot>();
+        [SerializeField]
+        private List<VLiveTimelineSlot> sectionTimelines = new List<VLiveTimelineSlot>();
 
         [Header("Auto Find")]
-        [SerializeField] private bool autoFindOnAwake = true;
+        [SerializeField]
+        private bool autoFindOnAwake = true;
 
-        [SerializeField] private bool includeInactive = true;
+        [SerializeField]
+        private bool includeInactive = true;
 
         private static VLiveTimeTable cachedInstance;
+
         private readonly Dictionary<string, PlayableDirector> sectionMap =
             new Dictionary<string, PlayableDirector>(StringComparer.OrdinalIgnoreCase);
 

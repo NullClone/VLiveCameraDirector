@@ -3,10 +3,12 @@ using UnityEngine;
 public class VLivePerformer : MonoBehaviour
 {
     [Header("Performer Core")]
-    [SerializeField] private Animator performerAnimator;
+    [SerializeField]
+    private Animator performerAnimator;
 
     [Header("Display")]
-    [SerializeField] private string performerName = "Performer";
+    [SerializeField]
+    private string performerName = "Performer";
 
     public Animator PerformerAnimator => performerAnimator;
 

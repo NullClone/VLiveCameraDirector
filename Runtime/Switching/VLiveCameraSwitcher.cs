@@ -1,5 +1,5 @@
-using UnityEngine;
 using Unity.Cinemachine;
+using UnityEngine;
 
 namespace toshi.VLiveKit.Camera
 {
@@ -8,9 +8,14 @@ namespace toshi.VLiveKit.Camera
         private const int ActivePriority = 10;
         private const int InactivePriority = 0;
 
-        [SerializeField] private CinemachineBrain _cinemachineBrain;
-        [SerializeField] private VLiveCameraShot _shotA;
-        [SerializeField] private VLiveCameraShot _shotB;
+        [SerializeField]
+        private CinemachineBrain _cinemachineBrain;
+
+        [SerializeField]
+        private VLiveCameraShot _shotA;
+
+        [SerializeField]
+        private VLiveCameraShot _shotB;
 
         private VLiveCameraShot _currentProgramShot;
 
@@ -48,6 +53,7 @@ namespace toshi.VLiveKit.Camera
                     {
                         _shotB.CinemachineCamera.Priority = InactivePriority;
                     }
+
                     _shotB.PrepareStart();
                 }
 

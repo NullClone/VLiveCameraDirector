@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-
 
 public class MirrorCamera : MonoBehaviour
 {
@@ -16,10 +13,9 @@ public class MirrorCamera : MonoBehaviour
     {
         //y軸は-1をかけて逆側に配置する
         this.probe.transform.position = new Vector3(Camera.main.transform.position.x,
-                                                    Camera.main.transform.position.y * -1,
-                                                    Camera.main.transform.position.z);
+            Camera.main.transform.position.y * -1,
+            Camera.main.transform.position.z);
 
         probe.RenderProbe();
-
     }
 }

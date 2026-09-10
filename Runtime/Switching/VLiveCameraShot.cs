@@ -1,6 +1,5 @@
-using System;
-using UnityEngine;
 using Unity.Cinemachine;
+using UnityEngine;
 
 namespace toshi.VLiveKit.Camera
 {
@@ -12,18 +11,41 @@ namespace toshi.VLiveKit.Camera
             Spline
         }
 
-        [SerializeField] private string _shotName = "Shot";
-        [SerializeField] private CinemachineCamera _cinemachineCamera;
-        [SerializeField] private ShotType _shotType = ShotType.Fixed;
-        [SerializeField] private CinemachineSplineDolly _splineDolly;
-        [SerializeField] private float _initialSpeed = 0.2f;
-        [SerializeField] private float _minSpeed = 0.05f;
-        [SerializeField] private float _maxSpeed = 1.0f;
-        [SerializeField] private float _speedStep = 0.05f;
-        [SerializeField] private int _initialDirection = 1;
-        [SerializeField] private float _startPosition = 0f;
-        [SerializeField] private float _endPosition = 1f;
-        [SerializeField] private float _decelerationDistance = 0.25f;
+        [SerializeField]
+        private string _shotName = "Shot";
+
+        [SerializeField]
+        private CinemachineCamera _cinemachineCamera;
+
+        [SerializeField]
+        private ShotType _shotType = ShotType.Fixed;
+
+        [SerializeField]
+        private CinemachineSplineDolly _splineDolly;
+
+        [SerializeField]
+        private float _initialSpeed = 0.2f;
+
+        [SerializeField]
+        private float _minSpeed = 0.05f;
+
+        [SerializeField]
+        private float _maxSpeed = 1.0f;
+
+        [SerializeField]
+        private float _speedStep = 0.05f;
+
+        [SerializeField]
+        private int _initialDirection = 1;
+
+        [SerializeField]
+        private float _startPosition = 0f;
+
+        [SerializeField]
+        private float _endPosition = 1f;
+
+        [SerializeField]
+        private float _decelerationDistance = 0.25f;
 
         private float _currentSpeed;
         private int _currentDirection = 1;
@@ -51,6 +73,7 @@ namespace toshi.VLiveKit.Camera
                 {
                     return _splineDolly.CameraPosition;
                 }
+
                 return 0f;
             }
         }
@@ -91,6 +114,7 @@ namespace toshi.VLiveKit.Camera
                 _isPlaying = false;
                 return;
             }
+
             if (_currentDirection < 0 && currentPos <= _startPosition)
             {
                 _splineDolly.CameraPosition = _startPosition;
@@ -236,15 +260,18 @@ namespace toshi.VLiveKit.Camera
             {
                 _minSpeed = 0f;
             }
+
             if (_maxSpeed < _minSpeed)
             {
                 _maxSpeed = _minSpeed;
             }
+
             _initialSpeed = Mathf.Clamp(_initialSpeed, _minSpeed, _maxSpeed);
             if (_endPosition < _startPosition)
             {
                 _endPosition = _startPosition;
             }
+
             if (_decelerationDistance < 0f)
             {
                 _decelerationDistance = 0f;

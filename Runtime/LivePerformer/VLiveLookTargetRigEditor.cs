@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -139,6 +140,7 @@ public class VLiveLookTargetRigEditor : Editor
                 EditorGUIUtility.PingObject(rig.LookTargetRoot);
                 Selection.activeObject = rig.LookTargetRoot.gameObject;
             }
+
             GUI.enabled = true;
         }
 
@@ -222,9 +224,9 @@ public class VLiveLookTargetRigEditor : Editor
     {
         var method = targetObject.GetType().GetMethod(
             methodName,
-            System.Reflection.BindingFlags.Instance |
-            System.Reflection.BindingFlags.NonPublic |
-            System.Reflection.BindingFlags.Public);
+            BindingFlags.Instance |
+            BindingFlags.NonPublic |
+            BindingFlags.Public);
 
         if (method != null)
         {

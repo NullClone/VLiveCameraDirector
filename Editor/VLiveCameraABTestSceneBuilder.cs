@@ -1,10 +1,9 @@
+using Unity.Cinemachine;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Splines;
-using Unity.Mathematics;
-using Unity.Cinemachine;
-using toshi.VLiveKit.Camera;
 
 namespace toshi.VLiveKit.Camera.Editor
 {

@@ -3,7 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using toshi.VLiveKit.Camera;
+using Object = UnityEngine.Object;
 
 namespace toshi.VLiveKit.Camera.Editor
 {
@@ -31,6 +31,7 @@ namespace toshi.VLiveKit.Camera.Editor
                 File.AppendAllText(LogFile, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\n");
             }
             catch { }
+
             Debug.Log($"[PlayModeVerification] {message}");
         }
 
@@ -42,6 +43,7 @@ namespace toshi.VLiveKit.Camera.Editor
             {
                 File.Delete(FlagFile);
             }
+
             EditorApplication.isPlaying = false;
         }
 
@@ -73,11 +75,12 @@ namespace toshi.VLiveKit.Camera.Editor
                     WriteLog("Entering Play Mode...");
                     EditorApplication.isPlaying = true;
                 }
+
                 return;
             }
 
             // In Play Mode
-            var switcher = UnityEngine.Object.FindFirstObjectByType<VLiveCameraSwitcher>();
+            var switcher = Object.FindFirstObjectByType<VLiveCameraSwitcher>();
             if (switcher == null)
             {
                 return;
@@ -96,21 +99,25 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 0: Expected Shot A as Program, got {switcher.CurrentProgramShot?.ShotName}");
                             return;
                         }
+
                         if (switcher.ShotA.CinemachineCamera.Priority.Value != 10)
                         {
                             Fail($"Step 0: Expected Shot A priority 10, got {switcher.ShotA.CinemachineCamera.Priority.Value}");
                             return;
                         }
+
                         if (switcher.ShotB.CinemachineCamera.Priority.Value != 0)
                         {
                             Fail($"Step 0: Expected Shot B priority 0, got {switcher.ShotB.CinemachineCamera.Priority.Value}");
                             return;
                         }
+
                         if (switcher.ShotB.CurrentPosition != 0f)
                         {
                             Fail($"Step 0: Expected Shot B position 0, got {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         if (!switcher.ShotB.IsPrepared)
                         {
                             Fail("Step 0: Expected Shot B to be prepared at start.");
@@ -132,6 +139,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail("Step 0: Direct manipulation on off-air Shot B mutated its state.");
                             return;
                         }
+
                         WriteLog("Step 0 PASSED: Initial state verified; off-air Shot B correctly ignores direct operations.");
 
                         // Cut to B
@@ -139,6 +147,7 @@ namespace toshi.VLiveKit.Camera.Editor
                         s_StepTimer = 0f;
                         SessionState.SetInt(StateKey, 1);
                     }
+
                     break;
 
                 case 1: // Verify Cut to B
@@ -149,21 +158,25 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 1: Expected Shot B as Program, got {switcher.CurrentProgramShot?.ShotName}");
                             return;
                         }
+
                         if (switcher.ShotB.CinemachineCamera.Priority.Value != 10)
                         {
                             Fail($"Step 1: Expected Shot B priority 10, got {switcher.ShotB.CinemachineCamera.Priority.Value}");
                             return;
                         }
+
                         if (switcher.ShotA.CinemachineCamera.Priority.Value != 0)
                         {
                             Fail($"Step 1: Expected Shot A priority 0, got {switcher.ShotA.CinemachineCamera.Priority.Value}");
                             return;
                         }
+
                         if (!switcher.ShotB.IsPlaying)
                         {
                             Fail("Step 1: Shot B must be playing after Cut to B.");
                             return;
                         }
+
                         if (switcher.ShotB.IsPrepared)
                         {
                             Fail("Step 1: Shot B IsPrepared must be false while Live.");
@@ -177,11 +190,13 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail("Step 1: Calling PrepareStart on live Shot B improperly disrupted live playback.");
                             return;
                         }
+
                         WriteLog("Step 1 PASSED: Cut to B succeeded, Shot B is playing, Live PrepareStart protection verified.");
 
                         s_StepTimer = 0f;
                         SessionState.SetInt(StateKey, 2);
                     }
+
                     break;
 
                 case 2: // Verify Shot B movement & SpeedUp & Hold
@@ -192,6 +207,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 2: Expected Shot B position to advance > 0, got {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         WriteLog($"Step 2 PASSED: Shot B moved to position {switcher.ShotB.CurrentPosition:F4}.");
 
                         float prevSpeed = switcher.ShotB.CurrentSpeed;
@@ -201,6 +217,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 2: SpeedUp failed: {prevSpeed} -> {switcher.ShotB.CurrentSpeed}");
                             return;
                         }
+
                         WriteLog($"SpeedUp verified: {prevSpeed:F2} -> {switcher.ShotB.CurrentSpeed:F2}");
 
                         switcher.Hold();
@@ -208,6 +225,7 @@ namespace toshi.VLiveKit.Camera.Editor
                         s_StepTimer = 0f;
                         SessionState.SetInt(StateKey, 3);
                     }
+
                     break;
 
                 case 3: // Verify Hold stops movement & Resume restores movement
@@ -219,11 +237,13 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail("Step 3: Shot B must be holding.");
                             return;
                         }
+
                         if (!Mathf.Approximately(switcher.ShotB.CurrentPosition, posBeforeHold))
                         {
                             Fail($"Step 3: Position changed during hold: was {posBeforeHold}, now {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         WriteLog($"Step 3 PASSED: Hold verified at position {switcher.ShotB.CurrentPosition:F4}.");
 
                         switcher.Resume();
@@ -232,9 +252,11 @@ namespace toshi.VLiveKit.Camera.Editor
                         {
                             switcher.SpeedUp();
                         }
+
                         s_StepTimer = 0f;
                         SessionState.SetInt(StateKey, 4);
                     }
+
                     break;
 
                 case 4: // Verify full traversal to end (1.0), deceleration, and end hold
@@ -246,6 +268,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 4: Shot B stopped before reaching end: position {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         WriteLog($"Step 4 PASSED: Shot B reached end (position {switcher.ShotB.CurrentPosition:F4}) and stopped playing.");
 
                         // Record end position to verify hold across frames
@@ -258,6 +281,7 @@ namespace toshi.VLiveKit.Camera.Editor
                         Fail($"Step 4: Timed out waiting for Shot B to reach end: current pos {switcher.ShotB.CurrentPosition}");
                         return;
                     }
+
                     break;
 
                 case 5: // Verify end hold across subsequent frames (no loop, no teleport) & Reverse at end
@@ -269,6 +293,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 5: End hold violated; position drifted from {endPos} to {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         WriteLog("Step 5 PASSED: Shot B framing holds at end without looping or teleporting.");
 
                         // Reverse at end
@@ -279,16 +304,19 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 5: Reverse at end failed: {prevDir} -> {switcher.ShotB.CurrentDirection}");
                             return;
                         }
+
                         if (!switcher.ShotB.IsPlaying)
                         {
                             Fail("Step 5: Shot B should resume playing after Reverse at end.");
                             return;
                         }
+
                         WriteLog("Reverse at end verified: direction inverted to -1, playback resumed backwards.");
 
                         s_StepTimer = 0f;
                         SessionState.SetInt(StateKey, 6);
                     }
+
                     break;
 
                 case 6: // Verify moving backward & Cut back to A resets B & test safety guards
@@ -299,6 +327,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 6: Expected Shot B position to decrease after reverse, but position is {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         WriteLog($"Step 6 PASSED: Reverse motion verified, position moved back to {switcher.ShotB.CurrentPosition:F4}.");
 
                         // Cut back to A
@@ -308,26 +337,31 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail($"Step 6: Expected Program Shot A, got {switcher.CurrentProgramShot?.ShotName}");
                             return;
                         }
+
                         if (switcher.ShotA.CinemachineCamera.Priority.Value != 10)
                         {
                             Fail($"Step 6: Expected Shot A priority 10, got {switcher.ShotA.CinemachineCamera.Priority.Value}");
                             return;
                         }
+
                         if (switcher.ShotB.CinemachineCamera.Priority.Value != 0)
                         {
                             Fail($"Step 6: Expected Shot B priority 0, got {switcher.ShotB.CinemachineCamera.Priority.Value}");
                             return;
                         }
+
                         if (switcher.ShotB.CurrentPosition != 0f)
                         {
                             Fail($"Step 6: Shot B must reset to 0 after cut back to A, got {switcher.ShotB.CurrentPosition}");
                             return;
                         }
+
                         if (!switcher.ShotB.IsPrepared)
                         {
                             Fail("Step 6: Shot B must have IsPrepared == true after reset.");
                             return;
                         }
+
                         WriteLog("Step 6 PASSED: Cut back to A succeeded, Shot B reset to start (position 0, IsPrepared == true).");
 
                         // Reselection of same shot
@@ -337,6 +371,7 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail("Step 6: Reselection of Shot A altered Program.");
                             return;
                         }
+
                         WriteLog("Reselection of Shot A verified: safe no-op.");
 
                         // Invalid indices
@@ -346,12 +381,14 @@ namespace toshi.VLiveKit.Camera.Editor
                             Fail("Step 6: Invalid shot index altered Program.");
                             return;
                         }
+
                         switcher.CutToShot(-1);
                         if (switcher.CurrentProgramShot != switcher.ShotA)
                         {
                             Fail("Step 6: Negative shot index altered Program.");
                             return;
                         }
+
                         WriteLog("Invalid shot indices verified: safe no-op.");
 
                         // Manipulations on Fixed shot while A is live
@@ -370,8 +407,10 @@ namespace toshi.VLiveKit.Camera.Editor
                         {
                             File.Delete(FlagFile);
                         }
+
                         EditorApplication.isPlaying = false;
                     }
+
                     break;
             }
         }

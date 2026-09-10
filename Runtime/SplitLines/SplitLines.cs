@@ -3,17 +3,31 @@ using UnityEngine;
 [ExecuteAlways]
 public class SplitLines : MonoBehaviour
 {
-    [SerializeField] private SplitMode m_splitMode = SplitMode.Thirds;
-    [SerializeField] private bool m_isDraw = true;
-    [SerializeField] private Color m_lineColor = new Color(1.0f, 0.0f, 0.0f, 0.5f);
+    [SerializeField]
+    private SplitMode m_splitMode = SplitMode.Thirds;
+
+    [SerializeField]
+    private bool m_isDraw = true;
+
+    [SerializeField]
+    private Color m_lineColor = new Color(1.0f, 0.0f, 0.0f, 0.5f);
+
     // 線の透明度
     // [SerializeField] private float m_lineAlpha = 1.0f;
-    [SerializeField] [Range(0.0f, 10.0f)] private float m_lineWidth = 2.0f;
+    [SerializeField]
+    [Range(0.0f, 10.0f)]
+    private float m_lineWidth = 2.0f;
 
     // レターボックスの設定を追加
-    [SerializeField] private bool m_enableLetterbox = false;
-    [SerializeField] private Color m_letterboxColor = Color.black;
-    [SerializeField] [Range(0f, 0.5f)] private float m_letterboxRatio = 0.1f;
+    [SerializeField]
+    private bool m_enableLetterbox = false;
+
+    [SerializeField]
+    private Color m_letterboxColor = Color.black;
+
+    [SerializeField]
+    [Range(0f, 0.5f)]
+    private float m_letterboxRatio = 0.1f;
 
     // [SerializeField] private float m_lineHeight = 1.0f;
 
@@ -21,9 +35,10 @@ public class SplitLines : MonoBehaviour
     private enum SplitMode
     {
         Symmetrical, // 対称
-        Bisection,   // 二分割
-        Thirds,      // 三分割
-        Diagonal,    // 対角線
+        Bisection, // 二分割
+        Thirds, // 三分割
+        Diagonal, // 対角線
+
         // 分割線と対角線を組み合わせる
         ThirstAndDiagonal,
         CinemaScope, // シネマスコープ
@@ -37,7 +52,7 @@ public class SplitLines : MonoBehaviour
         if (m_enableLetterbox)
         {
             float boxHeight = Screen.height * m_letterboxRatio;
-            
+
             GUIStyle boxStyle = new GUIStyle();
             Texture2D boxTexture = new Texture2D(1, 1);
             boxTexture.SetPixel(0, 0, m_letterboxColor);
@@ -257,7 +272,6 @@ public class SplitLines : MonoBehaviour
             // }
 
             // Destroy(lineStyle);
-
         }
 
         if (m_splitMode == SplitMode.CinemaScope)
@@ -308,7 +322,5 @@ public class SplitLines : MonoBehaviour
             GUI.DrawTexture(new Rect(start.x, start.y - (width / 2), length, width), texture);
             GUI.matrix = matrix;
         }
-
-        
     }
 }
