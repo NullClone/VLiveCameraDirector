@@ -1,10 +1,12 @@
 # VLiveCameraUnit
 
 VLiveCameraUnit is a Unity 6.3+ / Cinemachine 3 package for performing prepared
-live-camera shots with operator control and reliable composition assistance. The
-current goal is the manual A/B core: one output Camera and Brain, a stable fixed
-shot, and an independently moving spline shot. MIDI, recommendation, and
-automation come after this workflow is proven.
+live-camera shots with operator control and reliable composition assistance.
+
+The current goal is a practical manual baseline: one-click setup for one
+performer, a small motion-preset palette, and multiple independent shot cameras
+selected from the keyboard. MIDI, recommendation, and automation come after this
+workflow is proven.
 
 ## Read first
 
@@ -19,6 +21,7 @@ Use this priority when instructions conflict:
 | --- | --- |
 | Product direction | `Docs/overview.md` |
 | Runtime design and camera behaviour | `Docs/architecture.md`, `Docs/spec-camera.md` |
+| Setup Window | `Docs/spec-setup.md` |
 | Input and switching | `Docs/spec-operation.md`, `Docs/spec-switching.md` |
 | Assistance rules | `Docs/spec-assistance.md` |
 | Current implementation phase | `Docs/phases.md` |
@@ -34,8 +37,8 @@ made. Do not duplicate the same explanation.
 - Use `toshi.VLiveKit.Camera`, `.Editor`, and `.Tests` namespaces.
 - Keep one CinemachineCamera per shot. Never reconfigure a live camera as another
   shot.
-- Keep the first release manual-first. Do not add MIDI, AI, generic slots,
-  compatibility wrappers, or speculative extension layers.
+- Keep the first release manual-first. Do not add MIDI, runtime AI, Preview,
+  generic slots, compatibility wrappers, or speculative extension layers.
 - Before the first stable release, preserve old APIs and serialized assets only
   when the current task explicitly requires it.
 - Do not edit the package-root `README.md` unless the user explicitly asks.
@@ -52,18 +55,19 @@ made. Do not duplicate the same explanation.
 Project skills live at `E:\Unity\Project\MMD\.agents\skills`. Every agent and
 sub-agent must select applicable skills and read each `SKILL.md` in full for
 itself; a parent's review is not inherited. Use `unity-cli` for Editor and Unity
-asset work, and `unity-package-management` for external UPM changes. Report any
-verification that the environment prevents instead of claiming it passed.
+asset work, and `unity-package-management` for external UPM changes.
 
 ## Code and completion
 
-Follow `Docs/code-style.md` for all new or touched C# and Editor code. Match the
-layout of `Assets/PrismLipSync/Runtime/PrismLipSync.cs`: explicit member
-sections, deliberate spacing, concise Japanese XML summaries, and Tooltips on
-all visible serialized fields. Every user-facing MonoBehaviour requires a useful
-CustomEditor before it is production-ready.
+Follow `Docs/code-style.md` for all new or touched C# and Editor code. Every
+visible serialized field requires a Tooltip, and every user-facing MonoBehaviour
+requires a useful CustomEditor before it is production-ready.
 
-Validate only relevant layers and distinguish static review, compile, Unity
-import, Play Mode, Game View, long-run, and performance evidence. Stage only
-approved paths. Do not branch, push, or open a pull request unless explicitly
-asked. Report changed files, checks, unchecked boundaries, and the commit ID.
+Default agent verification is a scoped diff review, Unity import and compile, and
+a quick Console check. Do not create a test Scene, run extended Play Mode tests,
+or judge camera composition unless the task explicitly requests it. The user
+performs visual and operational acceptance in their own Scene.
+
+Stage only approved paths. Do not branch, push, or open a pull request unless
+explicitly asked. Report changed files, checks, unchecked boundaries, and the
+commit ID.

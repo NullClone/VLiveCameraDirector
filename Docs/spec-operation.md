@@ -2,81 +2,63 @@
 
 ## 1. 目的
 
-この文書は、最初の動作版で必要なキーボード操作と、後から追加する操作を分けて定義する。
+この文書は、複数Shotをキーボードだけで切り替え、現在の移動Shotへ必要な介入を行う初期操作を定義する。
 
 ## 2. 初期操作
 
-初期版では、次の操作だけを実装する。
-
 | 操作 | 対象 | 動作 |
 | --- | --- | --- |
-| Cut A | Switcher | 独立したCinemachineCameraを持つ安定Shot AへCutする |
-| Cut B | Switcher | 独立したCinemachineCameraを持つ移動Shot BへCutする |
-| Speed Up / Down | Live中のB | Spline進行速度を増減する |
-| Reverse | Live中のB | 現在の進行方向を反転する |
-| Hold | Live中のB | 現在位置でSpline進行を停止する |
-| Resume | Live中のB | Holdを解除して進行を再開する |
+| キー1〜9 | 指定番号のShot | 対応する専用CinemachineCameraへCutする |
+| Speed Up / Down | 現在の移動Shot | Spline進行速度を増減する |
+| Reverse | 現在の移動Shot | 現在位置を保って進行方向を反転する |
+| Hold | 現在の移動Shot | 現在位置でSpline進行を停止する |
+| Resume | 現在の移動Shot | 現在の方向と速度で再開する |
 
-AがLiveの場合にSpeed、Reverse、Hold、Resumeを入力しても画を変更せず、例外を発生させない。
+初期Paletteではキー1〜6を使用する。7〜9はShotが追加された場合だけ有効になる。
 
 ## 3. 基本フロー
 
-1. AがLiveの間、BをSpline始点でStandbyさせる。
-2. オペレーターがキー2を押す。
-3. SwitcherがBのCinemachineCameraへCutする。
-4. Bが始点から終点へ移動し、終点でHoldする。
-5. 必要なときだけ速度、Reverse、Hold、Resumeを操作する。
-6. キー1でAへCutして安定構図へ戻る。
-7. BがOff Airになってから、次の使用に向けて始点へResetする。
+1. Setup Windowが選択Preset順にShot番号を割り当てる。
+2. オペレーターが数字キーを押す。
+3. Switcherが対応するShotへCutする。
+4. 移動Shotなら始点から自動再生する。
+5. 必要なときだけSpeed、Reverse、Hold、Resumeを操作する。
+6. 別ShotへCutすると、前の移動ShotはOff Airになってから次回用に準備される。
 
-同じShotを再選択しても、既定では状態を変更しない。Live中のBをResetして画面上で瞬間移動させない。
+切り替えだけで動きが成立することを基本とし、手動操作を必須にしない。
 
-## 4. キーボード実装
+## 4. 入力の責務
 
 - キー入力を読むのは`VLiveCameraKeyboardInput`だけとする。
-- `VLiveCameraKeyboardInput`は`VLiveCameraSwitcher`の公開メソッドを呼ぶ。
-- カメラ制御クラスの内部で直接キー入力を読まない。
-- キー割り当てはInspectorで変更可能にしてよい。
-- Game Viewのフォーカスを失ったとき、押下状態が残留しないことを確認する。
-- 同一フレームで複数Shotキーが押された場合の動作を決定的にする。
+- InputはSwitcherの公開操作だけを呼ぶ。
+- ShotやCinemachineCameraの内部でキー入力を読まない。
+- Shot番号はSwitcherの順序付き一覧と一致させる。
+- 同一フレームの複数Cut入力は小さい番号を優先するなど、結果を決定的にする。
+- キー割り当てはInspectorから確認・変更できる。
 
-初期キーの具体値はUnity EditorとOSのショートカット競合を確認して決める。
+汎用Input Mapping Asset、Command Bus、MIDI Adapterはまだ作らない。
 
-## 5. 応答と失敗時
+## 5. 失敗時
 
-- Cut、Reverse、Hold、Resumeは入力を受けたフレームで処理を開始する。
-- 存在しないShot番号を指定しても現在のProgramを維持する。
-- ShotまたはCinemachineCamera参照が無効な場合も現在のProgramを維持する。
-- 速度にはInspectorで設定する最小値と最大値を適用する。
-- 例外や警告を毎フレーム出し続けない。
+- 存在しないShot番号は無視し、現在のProgramを維持する。
+- 同一Shotの再選択では再生位置をResetしない。
+- Fixed Shotへの移動操作は無視する。
+- 参照欠落時も現在のProgramを維持する。
+- 警告を毎フレーム出さない。
 
 ## 6. 次の操作
 
-初期版の動作確認後、次の順で追加を検討する。
+初期PaletteがユーザーのSceneで成立した後、必要性を確認して次を検討する。
 
-1. Preview選択とTake
-2. Camera Bank
-3. Pan、Tilt、Zoom、Dutchなどのライブ調整
-4. Patternの強度や再生位置の操作
-5. MIDI
+1. Pan、Tilt、Zoomのライブトリム
+2. PreviewとTake
+3. Camera Bank
+4. MIDI
 
-これらのためのCommand Bus、Input Adapter階層、汎用Mapping Assetは初期版へ追加しない。
+## 7. 受け入れ条件
 
-## 7. MIDI方針
-
-MIDIはキーボード版が完成してから追加する。その時点で、既存の`VLiveCameraSwitcher`と`VLiveCameraShot`の公開操作を再利用する。
-
-- MIDIが未接続でも全操作を継続できる。
-- 絶対値Faderを使用する場合は値飛び防止を実装する。
-- 特定機種の処理をShotやSwitcherへ埋め込まない。
-- MIDIのための未使用コードを先に作らない。
-
-## 8. 初期受け入れ条件
-
-1. キーボードだけでA/Bを交互にCutできる。
-2. A/Bは別々のCinemachineCameraである。
-3. BはCut後に始点から終点へ移動し、終点でHoldする。
-4. Speed、Reverse、Hold、ResumeがLive中のBだけへ作用する。
-5. Aへの移動操作で例外が発生しない。
-6. Live中のBをResetしない。
-7. 無効な選択とフォーカス喪失で状態が壊れない。
+1. キー1〜6で初期Shotを直接Cutできる。
+2. 移動ShotはCut後に自動再生される。
+3. Speed、Reverse、Hold、Resumeは現在の移動Shotだけへ作用する。
+4. 同一Shot選択と無効番号で状態が壊れない。
+5. キーボード以外の入力基盤が先行実装されていない。

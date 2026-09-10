@@ -2,86 +2,72 @@
 
 ## 1. コンセプト
 
-VLiveCameraUnit は、事前に配置した多数のカメラをライブ中に演奏するように切り替え、Cinemachineによる追従・構図・補間でオペレーターを支援するUnity完結型のライブカメラシステムである。
+VLiveCameraUnitは、事前に用意した多数のカメラをライブ中に演奏するように切り替え、Cinemachineによる追従、構図、補間でオペレーターを支援するUnity完結型のライブカメラシステムである。
 
-カメラを選択した時点で、そのカメラ固有の動きが始まり、操作しなくてもライブ映像として意図のある画が続く。オペレーターは必要な場面だけ速度、方向、Hold、画角などへ介入する。
+カメラを選択した時点で、そのShot固有の動きが始まる。切り替えだけでも意図のある画が続き、必要な場面では速度、方向、Holdなどへ手動介入できる。
 
-## 2. 最初に実現する体験
+## 2. 現在作る体験
 
-最初の完成目標は次の操作である。
+1. `VLive Camera Setup` Windowを開く。
+2. Scene内のPerformer Targetを1人指定する。
+3. Motion Paletteから使用するPresetを選ぶ。
+4. `Create / Update Camera Rig`を押す。
+5. SceneにProgram Camera、Cinemachine Brain、Switcher、入力、複数のShotが作成される。
+6. キー1〜9でShotを直接Cutする。
+7. 移動ShotはCut後に自動で動き、必要なときだけSpeed、Reverse、Hold、Resumeを操作する。
 
-1. 1台のUnity CameraとCinemachine Brainを用意する。
-2. AとBに、別々のCinemachineCameraを割り当てる。
-3. Aは正面ミドル等の安定した固定Shotとする。
-4. BはSpline上を始点から終点まで移動し、終点でHoldする。
-5. キーでA/BをCutし、オペレーターはBの速度変更、Reverse、Hold、Resumeを行える。
-
-同じCinemachineCameraへA/Bの設定を上書きしない。AがLiveの間にBを始点へ準備し、BがLiveの間はAを安全な戻り先として維持する。この体験が実際に気持ちよく動くまでは、Preview、MIDI、AI、推薦、汎用Pattern基盤を実装しない。
+専用の確認Sceneは配布しない。実際の構図と操作感は、ユーザーが自身の作業用Sceneで確認する。
 
 ## 3. 製品原則
 
 ### 3.1 切り替えだけで成立する
 
-各Shotは、選ばれた後に操作がなくても意図した動きまたは固定画を維持する。無目的に揺れ続けることを要求しない。
+各Shotは、選ばれた後に追加操作がなくても意図した固定画または移動画を作る。Fixed Shotは安全な戻り先として残し、すべてのShotへ無目的な微動を加えない。
 
 ### 3.2 操作すると深化する
 
-手動操作は生のTransformを制御することではない。オペレーターはタイミングや強さを決め、追従、構図、補間はCinemachineへ任せる。
+手動操作は生のTransformを直接動かすことではない。オペレーターがタイミングや強さを決め、追従、構図、補間はCinemachineへ任せる。
 
-### 3.3 現在必要なものだけを作る
+### 3.3 Setupは1つのWindowで完結する
 
-最初から半自動化に適した汎用基盤を作らない。キーボード運用で実際に必要になった共通点だけを、後のフェーズで抽出する。
+導入時にHierarchyやComponentを手作業で組み立てさせない。WindowでTargetとPresetを選び、1回の操作で現在のSceneへ必要な構成を作る。
 
-### 3.4 旧版互換より完成度を優先する
+### 3.4 AIが作れるPaletteを先に整える
 
-開発中は旧バージョンとの互換性を保持しない。既存コードから有用な挙動は学ぶが、新仕様に不要な構造は引き継がない。
+Motion Presetは人とAIが同じ形式で作成できる単純なAssetとする。現在は人が選択して使用し、Runtime AIや自動推薦は実装しない。
 
-## 4. 対象環境
+### 3.5 現在必要なものだけを作る
 
-- Unity 6.3以上
-- Cinemachine 3
-- 初期入力はキーボードとマウス
-- 将来入力としてMIDIを検討する
+Pattern検索、カテゴリ、サムネイル、評価、生成履歴、Preview、MIDIなどは、少数Presetでの運用が成立してから追加する。
 
-## 5. 現在の対象
+## 4. 現在の対象
 
-- 独立したCinemachineCameraを持つA/Bの2 Shot
-- Aは固定の安定枠、BはSpline移動枠
+- Unity 6.3以上、Cinemachine 3
+- Targetは1人
 - 1台のProgram CameraとCinemachine Brain
-- キーボードによるA/Bの直接Cut
-- 移動速度、Reverse、Hold、Resume
-- Bの始点準備、終点への収束、終点Hold
-- 切り替え時に不自然な停止や値飛びがないこと
-- Cut成功時にProgram Shot名をConsoleへ1回表示
+- 1 Shotにつき1台の専用CinemachineCamera
+- Motion Preset AssetとWindow内の簡易Palette
+- Fixed、Push In、Pull Out、Truck Left、Truck Right、Arc Around
+- キー1〜9による直接Cut
+- Speed、Reverse、Hold、Resume
+- Off Air中の始点準備と終点Hold
+- Setup Windowによる生成と更新
 
-## 6. 次の対象
+## 5. 現在の対象外
 
-最初の体験が成立した後、必要性を確認しながら次を追加する。
+- Preview / Take / Tally
+- Camera BankとMultiview
+- Pan、Tilt、Zoomのライブトリム
+- MIDI
+- Runtime AI、推薦、自動Take
+- Pattern Importer、生成metadata、検索、カテゴリ、サムネイル
+- 独自構図Solver
 
-- Program / Preview / Take / Tally
-- Camera Bank
-- Pan、Tilt、Zoomなどのライブ調整
-- 再利用可能なMotion Pattern
-- MIDI入力とSoft Takeover
+## 6. 成功条件
 
-## 7. 将来構想
-
-以下は製品の方向性であり、現在の実装要求ではない。
-
-- AIによるCamera Patternの制作支援
-- 楽曲やTimelineに同期したCue
-- 次Shotの推薦
-- 明示的に許可された範囲での半自動Take
-- 大規模なPatternライブラリとMultiview
-
-将来構想のために、現在の実装へ空のinterface、未使用設定、拡張ポイントを先に追加しない。
-
-## 8. 最初の成功条件
-
-1. A/Bが別々のCinemachineCameraとして構成されている。
-2. AからB、BからAへ明確なCutとして安定して切り替えられる。
-3. Bは始点から滑らかに動き、終点で収束してHoldする。
-4. Forward、Reverse、Hold、Resumeで位置が飛ばない。
-5. Live中のCinemachineCameraへ別Shot設定を上書きしていない。
-6. 入力がない状態でもA/Bそれぞれの構図が成立する。
-7. 30分の反復操作で例外、入力残留、状態破損が起きない。
+1. ユーザーのSceneでWindowから一式を作成できる。
+2. 1人のTargetに対して複数Shotが構成される。
+3. キーだけで明確にCutでき、移動Shotは自動再生される。
+4. Speed、Reverse、Hold、Resumeで位置が飛ばない。
+5. 同じCinemachineCameraを別Shotとして使い回していない。
+6. 初期Presetを基に動きの良し悪しを反復調整できる。

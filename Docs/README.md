@@ -11,9 +11,10 @@
 機能別仕様:
 
 - [spec-operation.md](spec-operation.md) — キーボード操作と将来のMIDI
-- [spec-camera.md](spec-camera.md) — Fixed / Spline Shot
+- [spec-camera.md](spec-camera.md) — Shot、Motion Preset、初期Palette
+- [spec-setup.md](spec-setup.md) — Setup WindowとScene生成
 - [spec-assistance.md](spec-assistance.md) — Cinemachineによる初期支援
-- [spec-switching.md](spec-switching.md) — Direct Cutと将来のPreview
+- [spec-switching.md](spec-switching.md) — 複数ShotのDirect Cut
 
 開発手順:
 

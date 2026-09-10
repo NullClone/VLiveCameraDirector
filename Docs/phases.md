@@ -2,136 +2,127 @@
 
 ## 1. この文書の役割
 
-この文書は、現在実装との差分と、次に実装する1段階を管理する。将来フェーズの詳細設計は先に行わず、直前の段階で得られた結果を見て更新する。
+現在実装との差分と、次に完成させる1段階を管理する。将来フェーズの詳細は先に設計しない。
 
-## 2. 現在実装のスナップショット
+## 2. 現在の実装
 
-2026-09-09の確認時点では次の状態である。
+2026-09-10時点:
 
-- `package.json`はUnity 2022.3、Cinemachine 2.9.7を指定している。
-- RuntimeではCinemachine 2の`CinemachineVirtualCamera`などを使用している。
-- namespaceは`toshi.VLiveKit.Photography`、`toshi.VLiveKit`、`toshi.VLiveKit.VLiveCameraUnit`、global namespaceが混在している。
-- 既存`VLiveCamera`にはLook / Follow、Dolly、Lens、Noise、Presetなどの実装がある。
-- 既存`VLiveCameraSwitcher`はUnity CameraへTransformとLensを毎フレーム転記する。
-- 数字キーによる直接選択は最大9Shotである。
-- ランダムAuto Cutが既定で有効である。
-- Preview、Take、Bank、MIDIは未実装である。
+- `package.json`はUnity 6000.3、Cinemachine 3.1.7、Splines 2.0.0、Input System 1.19.0を指定している。
+- `VLiveCameraShot`、`VLiveCameraSwitcher`、`VLiveCameraKeyboardInput`がある。
+- A/Bは別々のCinemachineCameraを持ち、キー1 / 2でCutできる。
+- BはSpline移動、Speed、Reverse、Hold、Resumeを持つ。
+- A/B用の試作Scene Builder、Verifier、Tests Sceneが残っている。
+- Setup Window、Motion Preset Asset、複数Shot一覧、専用CustomEditorは未実装である。
 
-旧実装との互換性は保持しない。有用な挙動は参考にできるが、旧型、旧SerializedField、旧Prefabを維持するためのコードは追加しない。
+次の実装では既存Tests Sceneを変更、削除、ステージしない。ユーザーは自身の作業用Sceneで受け入れ確認を行う。
 
-## 3. Step 0 — 仕様の簡素化
+## 3. Step 0 — 仕様整理
 
-状態: 完了。コード変更とUnity実機確認は未実施。
+状態: 完了。
 
-実施内容:
+- 手動優先、1 Shot 1 CinemachineCamera
+- Unity 6.3+、Cinemachine 3
+- 旧版互換なし
+- Agent Skills、コードとInspectorスタイル
 
-- 初期版と将来構想を分離
-- 最小3型のアーキテクチャへ縮小
-- 旧版互換を不要とする方針を明記
-- C#コードスタイルと過剰設計防止規則を追加
-- Antigravity向けの実装委譲手順を追加
+## 4. Step 1 — A/B成立確認
 
-## 4. Step 1 — 最小動作版
+状態: Runtime実装済み。最終的な見た目はユーザー確認。
+
+- 1台のProgram CameraとBrain
+- Fixed Shot AとSpline Shot B
+- キー1 / 2の直接Cut
+- Speed、Reverse、Hold、Resume
+- Off Air準備と終点Hold
+
+A/Bは製品の最終操作数ではなく、独立したカメラ切り替えが成立することを確認する土台とする。
+
+## 5. Step 2 — 現在の実装対象
 
 ### 目的
 
-Unity 6.3とCinemachine 3で、独立したCinemachineCameraを持つA/BをキーボードCutし、Bの移動を手動調整できる状態を作る。
+ユーザーの作業用Sceneで、1つのWindowから1 Targetと複数の基本カメラワークを設定し、キーボードだけで使用できる状態を作る。
 
 ### 実装範囲
 
-- Cinemachine 2依存ファイルと削除・置換範囲の実装前監査
-- package設定をUnity 6.3 / Cinemachine 3へ更新
-- Runtime namespaceを`toshi.VLiveKit.Camera`へ統一
-- `VLiveCameraShot`
-- `VLiveCameraSwitcher`
-- `VLiveCameraKeyboardInput`
-- 1台のProgram CameraとCinemachine Brain
-- Shot A: 安定したFixed Shot
-- Shot B: 始点から終点へ移動するSpline Shot
-- A/Bの各Shotに専用CinemachineCamera
-- キー1 / 2によるA/B Cut
-- BのOff Air中の始点準備と終点Hold
-- Speed、Reverse、Hold、Resume
-- Cut成功時のProgram Shot名ログ
-- 動作確認用SceneまたはPrefab
+- `VLiveCameraMotionPreset` ScriptableObject
+- `VLiveCameraSetupWindow` EditorWindow
+- Target、Output Camera、Preset選択
+- `Create / Update Camera Rig`
+- SwitcherのA/B固定参照を順序付きShot一覧へ変更
+- キー1〜9の直接Cut
+- 6つの初期Preset
+  - Fixed Medium
+  - Push In
+  - Pull Out
+  - Truck Left
+  - Truck Right
+  - Arc Around
+- 生成される各Shot専用のCinemachineCameraとSpline
+- Speed、Reverse、Hold、Resumeの継続
+- 今回触るユーザー向けMonoBehaviourのCustomEditor
+- 複数Shot化で不要になるA/B専用Scene BuilderとPlayMode Verifierの削除
 
 ### 対象外
 
-- 旧API、Prefab、Sceneとの互換処理
+- 専用テストSceneの新規作成または既存Tests Sceneの変更、削除
+- Preview / Take / Tally
+- Camera Bank、Multiview、Blend、映像Transition
+- Pan、Tilt、Zoomのライブトリム
+- MIDI
+- Runtime AI、推薦、自動Take
+- Pattern検索、カテゴリ、サムネイル、Importer、AI metadata
+- 独自Solver、Command Bus、DI、汎用Editor framework
+
+### エージェント完了条件
+
+1. Unity ImportとCompileで新しいエラーがない。
+2. Setup WindowがMenuから開ける。
+3. diffを簡易Reviewし、参照、Undo、重複生成防止、所有権に明白な問題がない。
+4. Package直下READMEとTests Sceneを変更していない。
+5. 実施していないScene動作確認を完了扱いにしていない。
+
+### ユーザー受け入れ
+
+1. 作業用SceneでTargetを指定し、1回の操作でRigを作成できる。
+2. キー1〜6で複数ShotへCutできる。
+3. 各移動ShotがCut後に分かりやすく動く。
+4. Speed、Reverse、Hold、Resumeを操作できる。
+5. 再度Setupしても重複せず、Undoできる。
+
+## 6. Step 3 — 手動運用の改善
+
+Step 2をユーザーが確認した後、不足したものだけを追加する。
+
+- Presetの追加と値調整
+- Pan、Tilt、Zoomの手動トリム
+- Program状態の見やすさ
+- Palette検索やカテゴリが実際に必要かの確認
+
+## 7. Step 4 — 現場操作
+
 - Preview / Take / Tally
 - Camera Bank
-- Motion Pattern Asset
-- MIDI
-- AI
-- Recommendation
-- Video Transition
-- Multiview
-- Command Bus、独自Solver、DI、汎用Adapter階層
-- 同じCinemachineCameraへ別Shot設定を上書きする方式
-- A/Bを汎用Slotとして動的再構成する方式
+- MIDIとSoft Takeover
+- 必要になったTransition
 
-### 完了条件
+キーボード運用を維持し、MIDIを必須にしない。
 
-1. Unity 6.3とCinemachine 3でImportとCompileが成功する。
-2. A/Bが別々のCinemachineCameraとして構成されている。
-3. AからB、BからAへCinemachineのCutとして切り替えられる。
-4. BはCut後に始点から終点へ動き、終点で収束してHoldする。
-5. Speed、Reverse、Hold、Resumeで位置が飛ばない。
-6. 同一Shotの再選択とLive中のBで再生位置がResetされない。
-7. 無効な指示や参照欠落でProgramを失わない。
-8. Game Viewで切り替え、始点、移動、終点構図を目視確認する。
-9. 30分の反復操作で例外と入力残留がない。
+## 8. 将来
 
-## 5. Step 2 — 現場向け手動スイッチング
-
-Step 1の操作感をユーザーが確認してから、実装範囲を確定する。
-
-候補:
-
-- Preview / Take
-- Program / Preview Tally
-- Camera Bank
-- Cinemachine Blend
-- Pan、Tilt、Zoomなどのライブ調整
-- 操作状態のConsole
-- Shotごとに専用CinemachineCameraを追加する多カメラ構成
-
-この段階でも、MIDIと半自動化は実装しない。Step 1で不足した操作だけを仕様へ追加する。
-
-## 6. Step 3 — 再利用とMIDI
-
-Step 2で複数Shotを制作し、設定複製や入力差し替えの実害が確認できてから着手する。
-
-候補:
-
-- 再利用可能なMotion Pattern Asset
-- Entry / Main / Exitまたは必要になった再生規則
-- MIDI Input
-- MIDI Mapping
-- Soft Takeover / Pickup
-- Tally LED Feedback
-
-キーボード操作を維持し、MIDIを必須にしない。
-
-## 7. 将来 — 制作支援と半自動化
-
-次は方向性だけを保持し、現時点で実装構造を決めない。
-
-- AIによるPattern制作支援
+- AIによるMotion Preset Asset生成
 - Timeline / BPM Cue
 - 次Shot候補の推薦
-- 明示的に許可された区間での半自動Take
-- Multiviewと大規模Patternライブラリ
+- 明示的に許可された半自動Take
+- Multiviewと大規模Palette
 
-手動運用で得られたShot、操作履歴、失敗例を基に、必要な段階で設計する。
+AIはStep 2と同じPreset形式を作成し、専用Runtime経路を持たない。
 
-## 8. 実装順序のルール
+## 9. 実装順序の規則
 
-- 実装エージェントへはStep全体ではなく、さらに小さな1タスクを渡す。
-- 現在のStepがGame Viewで成立するまで次へ進まない。
+- Step 2は独立した1つの縦切り実装として一括で依頼できる。
+- 実装中の通常判断はエージェントに任せる。
+- 製品挙動、データ所有権、公開API、範囲外削除を変える場合だけ確認する。
 - 将来機能のための空コードや拡張ポイントを作らない。
-- 実装中に必要性が判明した仕様だけを、ユーザー承認後に追加する。
-- 旧版互換のために実装を複雑化しない。
-- 削除対象はタスクごとに具体的なパスを指定する。
-- 初期A/Bで設定コピー方式を導入せず、各ShotのCinemachineCameraを直接切り替える。
-- package更新前にCinemachine 2依存を監査し、削除・置換する正確なパスをユーザーが確認する。
+- ユーザーの既存Sceneと無関係な変更を保持する。
