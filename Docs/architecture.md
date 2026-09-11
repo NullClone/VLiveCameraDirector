@@ -62,7 +62,7 @@ Rig Inspector / Shot Inspector
 | `VLiveCameraRigBuilder` | Editor上でRig、Shot、Camera、Spline、Aim Proxyを明示的に生成、同期、再構築する |
 | `VLiveCameraPresetBaker` | Scene上のShotから完全なSplineと各Trackを新しいPreset Assetへ保存する |
 | `VLiveCameraMotionValidator` | PresetまたはShotの運動値と構図値を診断し、結果をEditorへ返す |
-| `VLiveCameraRigEditor` | Rig設定、Shot Slot、同期操作、Preset保存、診断、Live状態をInspectorへ提示する |
+| `VLiveCameraRigEditor` | Rig設定、Shot Slot、同期、全Shot再構築を簡潔なInspectorへ提示する |
 | `VLiveCameraSetupWindow` | 初期Rig作成だけを行う入口を提供する |
 
 `VLiveCameraMotionEvaluator`はRuntime再生とEditor診断で同じ結果を得る必要があるため共通化する。汎用Animation frameworkにはせず、VLiveCameraUnitのPresetだけを評価する具体型とする。
@@ -207,7 +207,16 @@ Motion PlayerはShotに適用済みの時間を進め、Motion Evaluatorの結�
 
 ### Create
 
-メニューまたはSetup Windowは、新しいRig一式をUndo可能な1操作で作成し、生成したRigを選択する。既存の任意のSwitcherを探索して流用しない。
+メニューまたはSetup Windowは、Cameraを含まない新しいRig骨格をUndo可能な1操作で作成し、生成したRigを選択する。Camera、Cinemachine Brain、既存Switcherを探索、生成、割り当て、変更しない。
+
+### Inspector
+
+Custom InspectorはIMGUIで実装する。標準の`SerializedProperty`、`EditorGUILayout`、`EditorStyles`を中心にし、Inspectorの固定表示は英語、Tooltipは日本語とする。独自テーマやダッシュボードを作らず、各Componentが所有する設定、操作、状態だけを表示する。
+
+- RigはScene全体の設定、Slot、Apply / Sync、Rebuild Allを扱う。
+- ShotはShot固有のRebuild、Preset保存、診断、削除を扱う。
+- SwitcherはProgram、Inputはキー、Motion Playerは再生状態を扱う。
+- App UIは将来のライブ操作Window専用とし、Custom Inspectorへ使用しない。
 
 ### Apply / Sync
 
@@ -258,7 +267,7 @@ Slotから外す操作とSceneオブジェクトの削除を分ける。生成�
 
 Program出力は1台のUnity Cameraと、そのCameraに付属するCinemachine Brainを使用する。ShotのCinemachineCameraを切り替え、Unity CameraのTransformやLensを毎フレームコピーしない。
 
-新しいProgram Cameraへ`MainCamera`タグを付けるのは、Sceneに既存のMain Cameraがない場合だけとする。既存Cameraを使用または変更する場合はユーザーが明示的に指定する。
+SetupはProgram Cameraを生成せず、`Camera.main`を自動割り当てせず、CameraやTagを変更しない。Program CameraはユーザーがRig Inspectorで明示的に指定する。`Apply / Sync`は明示指定されたCameraにCinemachine BrainがなければUndo対応で追加できる。
 
 現在はCutだけを扱う。Preview、Take、Blend、映像CrossfadeをMotion Foundationへ含めない。
 
@@ -316,7 +325,7 @@ Editor:
 - Preset Baker
 - Motion Validator表示
 - Setup Window
-- Custom Editors
+- IMGUI Custom Editors
 
 ## 12. 互換性
 

@@ -8,7 +8,7 @@ VLiveCameraUnitは、事前に用意した多数のカメラをライブ中に�
 
 ## 2. 目指す操作体験
 
-1. メニューまたは簡略化されたSetup WindowからCamera Rigを1回の操作で作成する。
+1. メニューまたは簡略化されたSetup WindowからCameraを含まないRig骨格を1回の操作で作成する。
 2. Hierarchyで`VLive Camera Rig`を選択する。
 3. InspectorでPerformer Target、正面基準、構図スケール、使用するMotion Presetと順序を設定する。
 4. `Apply / Sync`で不足するShotを生成し、参照と順序を同期する。
@@ -52,7 +52,11 @@ Motion Presetは位置Splineだけではない。
 
 Setup WindowとメニューはRigの初期作成だけを担当する。Target、正面基準、Scale、Shot構成の編集と同期は`VLiveCameraRig`のInspectorを正本とし、WindowとInspectorに同じ設定を重複して持たせない。
 
+SetupはUnity CameraやCinemachine Brainを生成、探索、割り当て、変更しない。Program CameraはRig Inspectorでユーザーが明示的に指定する。
+
 Inspectorの値を変更しただけではSceneオブジェクトやAssetを生成、削除、再配置、保存しない。変更は内容が明確なボタン操作とUndoの単位で行う。
+
+Custom InspectorはIMGUIを使用し、UnityとCinemachineの標準Componentに近い簡潔な外観とする。固定表示は英語、Tooltipは日本語とし、独自Banner、絵文字、色付きBadge、装飾目的のBoxを使用しない。App UIは将来のライブ操作Windowに使用する。
 
 ### 3.5 Preset AssetとScene調整を分ける
 
@@ -83,6 +87,7 @@ Motion Preset Assetは再利用可能な原本、生成済みShotはScene固有�
 - 1台のProgram CameraとCinemachine Brain
 - 1 Shotにつき1台の専用CinemachineCamera
 - Inspector主導のRig Authoring
+- 標準IMGUIによる英語Custom Inspector
 - ScriptableObject形式のMotion Preset
 - 完全なSpline Knot、Tangent、Up
 - Distance単位のSpline再生

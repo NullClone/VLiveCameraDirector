@@ -3,12 +3,13 @@
 VLiveCameraUnit is a Unity 6.3+ / Cinemachine 3 package for performing prepared
 live-camera shots with operator control and reliable composition assistance.
 
-The current goal is the Motion Foundation on top of the proven manual rig:
-replace position-only spline playback with a Camera Performance preset that
-coordinates body, timing, aim, composition, lens, and entry state. Multiple
-independent shot cameras remain keyboard-selectable. Gold-master expansion,
-App UI, MIDI, recommendation, and automation come after this foundation is
-proven in the user's Scene.
+The current goal is an Inspector Refresh on top of the proven Motion Foundation:
+replace the custom dashboard-like Editors with concise IMGUI Inspectors that
+resemble standard Unity and Cinemachine components. Fixed Inspector text is
+English and Tooltips may remain Japanese. Multiple independent shot cameras
+remain keyboard-selectable. The larger runtime refactor, gold-master expansion,
+App UI, MIDI, recommendation, and automation come after this refresh is proven
+in the user's Scene.
 
 ## Read first
 
@@ -49,6 +50,11 @@ made. Do not duplicate the same explanation.
   every generated knot to Auto Smooth.
 - Keep the first release manual-first. Do not add MIDI, runtime AI, Preview,
   compatibility wrappers, or speculative extension layers.
+- Use IMGUI for the current Custom Inspectors. Do not migrate them to UI Toolkit
+  or App UI. Remove decorative banners, emoji, custom themes, and coloured
+  status badges in favour of standard Unity controls.
+- Setup creates the Rig scaffold but never creates, discovers, assigns, or
+  modifies a Unity Camera. The user explicitly assigns the Program Camera.
 - Keep rig authoring, Program switching, shot playback, and input in separate
   concrete responsibilities. Do not use this rule to add unused interfaces,
   services, registries, or factories.

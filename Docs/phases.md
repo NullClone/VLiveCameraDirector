@@ -12,22 +12,23 @@
 - ProjectではUnity Splines 2.9.0が解決されている。
 - `VLiveCameraRig`と順序付きShot SlotがScene Authoringの正本である。
 - Rig InspectorからTarget、正面基準、Distance Scale、Motion Scale、Shot Slotを編集できる。
-- Setup WindowとGameObject Menuから初期Rigを作成できる。
+- Setup WindowとGameObject MenuからCameraを含まない初期Rig骨格を作成できる。
 - `Apply / Sync`、Selected / All Rebuild、明示的な生成物削除が分かれている。
 - 各Shotは別々のCinemachineCameraを持つ。
 - `VLiveCameraSwitcher`、`VLiveCameraShot`、`VLiveCameraKeyboardInput`がある。
 - 6つの標準Motion Presetとキーによる直接Cutがある。
 - Spline ShotはSpeed、Reverse、Hold、Resumeを持つ。
+- Motion Presetは完全なKnot、Timing、Aim、Composition、Lens、Roll、Activationを持つ。
+- Motion EvaluatorとMotion Playerが同じPlayback Timeから各Trackを評価する。
 - ユーザーの作業用SceneでRig作成と現在の切り替え動作が確認済みである。
 
-現在のMotion実装には次の制限がある。
+現在のEditor UXには次の課題がある。
 
-- Presetは`Vector3[]`の制御点だけを持つ。
-- Builderが全KnotをAuto Smoothへ設定する。
-- Spline位置を正規化位置/秒で直接進める。
-- 終端付近だけ同じSmoothStepで減速する。
-- Aim、Composition、Lens、Roll、Activationを独立したTrackとして持たない。
-- ReverseとHoldの速度変化に機材別の応答がない。
+- Inspectorへ独自Banner、暗色背景、色付きBadge、常設説明が多い。
+- 固定表示へ英語と日本語が混在している。
+- Rig InspectorへShot固有操作、診断、Live状態が集中している。
+- Repaint中に`GUIStyle`を生成するInspectorがある。
+- 機能増加に伴いInspectorコードの可読性が低下している。
 
 ## 3. 完了済み
 
@@ -73,7 +74,9 @@
 - Shot参照による安定した所有物識別
 - 可変長Keyboard割り当てと競合表示
 
-## 4. Step 4 — 現在の実装対象: Motion Foundation
+## 4. Step 4 — Motion Foundation
+
+状態: 完了。ユーザーSceneで基本動作確認済み。現在の同梱PresetはGold Masterではない。
 
 ### 目的
 
@@ -170,9 +173,44 @@ Preset数の量産より先に、1つのShotをプロ品質へ調整できるデ
 7. Scene上で調整したShotを新しいPresetとして保存できる。
 8. Validatorの警告と実映像を比較できる。
 
-## 5. Step 5 — Rig CharacterとGold Master
+## 5. Step 4.5 — 現在の実装対象: Inspector Refresh
 
-Step 4をユーザーが確認した後に行う。
+### 目的
+
+機能を増やさず、全Custom InspectorをUnityとCinemachineの標準Componentに近い簡潔なIMGUIへ刷新する。操作の所有先を整理し、次の大規模RuntimeリファクタリングとPreset拡張を読みやすいEditor基盤で行えるようにする。
+
+### 対象
+
+- Rig、Shot、Motion Preset、Rig Profile、Motion Player、Switcher、Keyboard InputのCustom Inspector
+- Setup Windowの表示と、Cameraを生成しないSetup説明
+- Inspector固定表示の英語化
+- 日本語Tooltipの維持
+- 標準PropertyField、EditorStyles、Foldout、HelpBox、DisabledScopeへの置き換え
+- Shot固有操作をShot Inspectorへ移し、Rig Inspectorを簡略化
+- RepaintごとのGUIStyle生成と不要な常時Repaintの除去
+
+### 対象外
+
+- Runtimeデータモデル、Motion計算、Camera挙動の変更
+- Preset Asset値とSpline形状の変更
+- UI ToolkitまたはApp UIへの移行
+- 新しいCamera Work、Gold Master、MIDI、Preview、Take
+- 汎用Inspector framework、独自テーマ、USS
+
+### 完了条件
+
+1. 全Inspectorの固定表示が英語で、Tooltipは日本語のまま利用できる。
+2. 独自Banner、暗色背景、絵文字、色付きBadge、装飾目的のBoxがない。
+3. SerializedProperty、Undo、Prefab Overrideを維持する。
+4. Rig、Shot、Switcher、Input、Player、Preset、Profileの表示責務が仕様どおり分かれている。
+5. SetupがCameraを生成、探索、割り当て、変更しないことをUIが正しく説明する。
+6. Inspector操作だけでSceneやAssetを暗黙変更しない。
+7. Unity ImportとCompileで新しいエラーがない。
+8. Runtime、Preset Asset、ユーザーScene、Package直下READMEを変更していない。
+
+## 6. Step 5 — Rig CharacterとGold Master
+
+Inspector Refreshをユーザーが確認した後に行う。
 
 - Dolly、Fluid Head、Crane、Gimbal、Handheld、Robotic等のRig Profile調整
 - RollとHorizon
@@ -184,7 +222,7 @@ Step 4をユーザーが確認した後に行う。
 
 数値はメーカー公称値や調査値をそのまま固定せず、映像確認から調整する。
 
-## 6. Step 6 — Palette運用
+## 7. Step 6 — Palette運用
 
 - Gold Masterからの左右、距離、Duration、Lens、Energy Variant
 - AIによるPreset候補生成
@@ -194,7 +232,7 @@ Step 4をユーザーが確認した後に行う。
 
 AIはUnity Editor APIから人と同じMotion Preset Assetを作成する。YAML直接編集やAI専用Runtime形式を使用しない。
 
-## 7. Step 7 — 現場操作
+## 8. Step 7 — 現場操作
 
 - App UIによるCamera PaletteとProgram表示
 - Preview / Take / Tally
@@ -205,7 +243,7 @@ AIはUnity Editor APIから人と同じMotion Preset Assetを作成する。YAML
 
 キーボードによるDirect Cutを維持し、MIDIを必須にしない。
 
-## 8. 将来
+## 9. 将来
 
 - Focus / Iris / Exposure Track
 - Timeline / BPM Cue
@@ -215,10 +253,10 @@ AIはUnity Editor APIから人と同じMotion Preset Assetを作成する。YAML
 - 必要性が映像で確認されたJerk-Limited Solver
 - 必要性が確認されたAim Response拡張
 
-## 9. 実装順序の規則
+## 10. 実装順序の規則
 
-- Step 4は独立してCompileできる1つの縦切りとして一括依頼できる。
-- 密接したRuntime、Editor、同梱Presetは一緒に変更してよい。
+- Step 4.5はEditor表示だけの独立した縦切りとして一括依頼できる。
+- Runtime、Preset Asset、Camera挙動を同じ差分で変更しない。
 - 実装中の通常判断はエージェントに任せる。
 - 製品挙動、データ所有権、公開API、破壊的な範囲変更が仕様を越える場合だけ確認する。
 - Step 5以降のAsset、UI、空interfaceを先に追加しない。

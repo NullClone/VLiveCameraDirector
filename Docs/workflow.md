@@ -43,22 +43,19 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 
 ## 4. 現在の縦切り実装
 
-`Docs/phases.md`のStep 4 Motion Foundationは、次の内部順で一括実装できる。
+`Docs/phases.md`のStep 4.5 Inspector Refreshを次に実装する。
 
-1. `git status --short`と現在のPreset、Builder、Shot再生、Switcher、Inputを確認する。
-2. 現在解決されているCinemachine 3.1.7とUnity Splinesの実APIを確認する。
-3. `VLiveCameraMotionPreset`を完全なSpline、Timing、Aim、Composition、Lens、Activationを持つ形式へ更新する。
-4. Preset原本、Shotの適用済み設定、Runtime状態を分け、`VLiveCameraMotionEvaluator`と`VLiveCameraMotionPlayer`を追加する。
-5. Spline DollyをDistance単位へ変更し、DurationとProgress Curveから位置を評価する。
-6. Shot専用Aim ProxyとRotation Composer設定、Lens Trackを同じPlayback Timeへ接続する。
-7. Static / Rolling Entryと連続的なSpeed、Hold、Resume、Reverseを実装する。
-8. BuilderのCreate、Apply / Sync、Rebuildを新形式へ対応させる。
-9. Scene上のSelected Shotから新しいPresetを保存する明示操作を追加する。
-10. 無効値、Curve、速度、加速度、Jerk、In / Out、Aim、Lensの簡易Validatorを追加する。
-11. 6つの同梱Presetを新形式へ更新する。
-12. Import、Compile、Console、diffを簡易確認する。
+1. `git status --short`と全Custom Inspector、Setup Windowを確認する。
+2. `ui-imgui` Skillを読み、既存のRuntime挙動とEditor操作を一覧化する。
+3. 固定表示を英語へ統一し、日本語Tooltipを維持する。
+4. 独自Banner、暗色背景、絵文字、色付きBadge、装飾目的のBoxを除去する。
+5. 標準IMGUIとSerializedPropertyを中心に各Inspectorを簡略化する。
+6. Shot固有のRebuild、保存、診断、削除をShot Inspectorへ置き、Rig InspectorをRig全体の操作へ絞る。
+7. Custom GUIStyleを使う場合はキャッシュし、Repaint内の生成をなくす。
+8. Setup WindowをCamera非生成の実際の挙動と一致させる。
+9. Import、Compile、Console、diffを簡易確認する。
 
-途中でGold Master量産、Preview、App UI、MIDI、専用テストScene、汎用Editor frameworkを追加しない。
+Runtime、Preset Asset、Camera Work、UI Toolkit、App UI、MIDI、専用テストScene、汎用Inspector frameworkを同時に変更しない。
 
 ## 5. 実装規則
 
@@ -118,6 +115,8 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 - ValidatorがAssetやSceneを暗黙変更しない。
 - 表示されるSerializedFieldにTooltipがある。
 - ユーザー向けMonoBehaviourに有用なCustomEditorがある。
+- Inspectorの固定表示が英語で、標準IMGUI中心の外観になっている。
+- Repaint中にGUIStyleを生成せず、不要な常時Repaintがない。
 - 無効な選択でProgramを失わない。
 
 ## 8. Git

@@ -43,7 +43,7 @@ with `Header`. Stack attributes one per line in this order:
 ```csharp
 // Fields
 
-[Header("Motion Settings (移動設定)")]
+[Header("Motion Settings")]
 [Tooltip("Spline上を移動する基本速度。")]
 [Min(0.0f)]
 [SerializeField]
@@ -90,13 +90,37 @@ Every serialized field visible in the Inspector must have a `Tooltip`, including
 fields inside nested serializable types.
 
 - Write Tooltips in concise Japanese.
-- Use `English (日本語)` for user-facing Header labels when both names help
-  recognition, matching the PrismLipSync layout.
+- Use English only for every visible Inspector label, Header, button, status,
+  warning, and help message. Japanese is allowed in Tooltips, XML summaries,
+  source comments, and authored asset content.
 - State units, valid ranges, special values, and operational effect when relevant.
 - Use `Header`, `Range`, `Min`, and related attributes where they prevent
   authoring mistakes.
 - Keep validation in `OnValidate` when invalid serialized values could exist.
 - Do not use a Tooltip to repeat only the field name.
+
+## Inspector presentation
+
+Custom Inspectors and the current Setup Window deliberately use IMGUI. Do not
+migrate them to UI Toolkit or App UI during the Inspector refresh. App UI is
+reserved for the future live-operation window.
+
+- Use `OnInspectorGUI`, `EditorGUILayout`, `SerializedObject`, and
+  `SerializedProperty` as the default path.
+- Prefer built-in `EditorStyles`, standard spacing, indentation, foldouts,
+  disabled scopes, and `EditorGUILayout.HelpBox`.
+- Do not draw branded banners, decorative cards, custom dark backgrounds,
+  emoji, coloured status badges, or a package-specific visual theme.
+- Keep essential settings visible and place infrequent or diagnostic settings
+  behind a clearly named foldout.
+- Show a warning only when it is actionable in the current context. Do not use
+  permanent instructional HelpBoxes as decoration.
+- Cache every custom `GUIStyle` and reusable `GUIContent` outside
+  `OnGUI`/`OnInspectorGUI`. Never construct a `GUIStyle` during a repaint.
+- Use colour only when a standard Unity control cannot communicate the same
+  semantic state. Prefer `MessageType` and disabled state.
+- Keep component-specific actions with the component that owns the operation;
+  do not turn the Rig Inspector into a dashboard for every subsystem.
 
 ## MonoBehaviour inspectors
 
