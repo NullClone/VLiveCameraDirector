@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace VLiveKit.Camera
     /// VLiveCameraRigで管理される1つのショットスロット。
     /// Preset参照とそれに対応して生成されたShot参照を保持します。
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public class VLiveCameraShotSlot
     {
         // Fields
@@ -44,9 +45,7 @@ namespace VLiveKit.Camera
         /// <summary>
         /// 空のショットスロットを作成します。
         /// </summary>
-        public VLiveCameraShotSlot()
-        {
-        }
+        public VLiveCameraShotSlot() { }
 
         /// <summary>
         /// 指定されたPresetを持つショットスロットを作成します。
@@ -268,6 +267,7 @@ namespace VLiveKit.Camera
                             return fwd.normalized;
                         }
                     }
+
                     return Vector3.forward;
 
                 case ForwardReferenceMode.WorldPlusZ:

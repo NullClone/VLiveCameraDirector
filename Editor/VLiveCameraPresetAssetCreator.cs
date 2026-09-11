@@ -23,6 +23,19 @@ namespace VLiveKit.Camera.Editor
         [MenuItem("Tools/VLive Camera/Create Default Presets", priority = 20)]
         public static void CreateOrUpdateDefaultPresets()
         {
+            CreateDefaultPresetsInternal(true);
+        }
+
+        /// <summary>
+        /// 不足している初期Motion Preset Assetのみを生成します（既存Presetは上書きしません）。
+        /// </summary>
+        public static void CreateMissingDefaultPresets()
+        {
+            CreateDefaultPresetsInternal(false);
+        }
+
+        private static void CreateDefaultPresetsInternal(bool overwriteExisting)
+        {
             if (!Directory.Exists(PresetFolderPath))
             {
                 Directory.CreateDirectory(PresetFolderPath);
@@ -64,7 +77,8 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Static,
                 0f,
                 5.0f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             // 2. Push In (+Z 正面からTargetへ直線接近)
@@ -93,7 +107,8 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Static,
                 0f,
                 5.0f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             // 3. Pull Out (Targetから後方+Zへ後退)
@@ -122,7 +137,8 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Static,
                 0f,
                 5.0f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             // 4. Truck Left (Targetを捉えたまま右から左へ移動: +X -> -X)
@@ -152,7 +168,8 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Static,
                 0f,
                 5.0f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             // 5. Truck Right (Targetを捉えたまま左から右へ移動: -X -> +X)
@@ -182,7 +199,8 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Static,
                 0f,
                 5.0f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             // 6. Arc Around (Target周囲を弧状に回り込む: 右側から正面を経て左側へ)
@@ -213,7 +231,8 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Static,
                 0f,
                 6.0f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             // 7. Push In Rolling (Rolling Entry確認用プリセット: In Time で移動中の状態から開始)
@@ -242,20 +261,13 @@ namespace VLiveKit.Camera.Editor
                 EntryMode.Rolling,
                 1.0f,
                 5.5f,
-                ExitBehavior.Hold
+                ExitBehavior.Hold,
+                overwriteExisting
             );
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[VLiveCameraPresetAssetCreator] Default motion presets updated successfully.");
-        }
-
-        /// <summary>
-        /// 不足している初期Motion Preset Assetのみを生成します。
-        /// </summary>
-        public static void CreateMissingDefaultPresets()
-        {
-            CreateOrUpdateDefaultPresets();
         }
 
         private static void CreateOrUpdatePreset(
@@ -280,11 +292,17 @@ namespace VLiveKit.Camera.Editor
             float inTime,
             float outTime,
             ExitBehavior exitBehavior,
+            bool overwriteExisting = true,
             float startDistance = 0f,
             float endDistance = 0f)
         {
             string assetPath = $"{PresetFolderPath}/{fileName}";
             VLiveCameraMotionPreset preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(assetPath);
+
+            if (preset != null && !overwriteExisting)
+            {
+                return;
+            }
 
             VLiveCameraRigProfile rigProfile = (preset != null && preset.RigProfile != null) ? preset.RigProfile : defaultProfile;
 

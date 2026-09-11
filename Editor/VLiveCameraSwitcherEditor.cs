@@ -1,3 +1,4 @@
+using Unity.Cinemachine;
 using UnityEditor;
 using UnityEngine;
 
@@ -84,7 +85,7 @@ namespace VLiveKit.Camera.Editor
                 using (new EditorGUI.DisabledScope(true))
                 {
                     EditorGUILayout.ObjectField("Program Camera", switcher.Rig.ProgramCamera, typeof(UnityEngine.Camera), true);
-                    EditorGUILayout.ObjectField("Cinemachine Brain", switcher.CinemachineBrain, typeof(Unity.Cinemachine.CinemachineBrain), true);
+                    EditorGUILayout.ObjectField("Cinemachine Brain", switcher.CinemachineBrain, typeof(CinemachineBrain), true);
                 }
             }
 

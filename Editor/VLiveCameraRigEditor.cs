@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -234,10 +233,10 @@ namespace VLiveKit.Camera.Editor
                         if (GUILayout.Button("Rebuild", GUILayout.Width(62), GUILayout.Height(18)))
                         {
                             if (EditorUtility.DisplayDialog(
-                                "Rebuild Shot From Preset",
-                                $"Slot {i + 1} のカメラ位置、Lens、Aim、Spline、移動設定を Preset 初期値から再構築します。\n手動調整は上書きされます。続行しますか？",
-                                "Rebuild",
-                                "Cancel"))
+                                    "Rebuild Shot From Preset",
+                                    $"Slot {i + 1} のカメラ位置、Lens、Aim、Spline、移動設定を Preset 初期値から再構築します。\n手動調整は上書きされます。続行しますか？",
+                                    "Rebuild",
+                                    "Cancel"))
                             {
                                 serializedObject.ApplyModifiedProperties();
                                 VLiveCameraRigBuilder.RebuildShotFromPreset(rig, i);
@@ -253,10 +252,10 @@ namespace VLiveKit.Camera.Editor
                         {
                             string shotName = shotObj != null ? shotObj.name : $"Shot {i + 1}";
                             if (EditorUtility.DisplayDialog(
-                                "Delete Shot GameObject",
-                                $"Shot GameObject '{shotName}' および Spline、Aim Proxy を Scene から削除しますか？\n（Undo 可能です）",
-                                "Delete",
-                                "Cancel"))
+                                    "Delete Shot GameObject",
+                                    $"Shot GameObject '{shotName}' および Spline、Aim Proxy を Scene から削除しますか？\n（Undo 可能です）",
+                                    "Delete",
+                                    "Cancel"))
                             {
                                 serializedObject.ApplyModifiedProperties();
                                 VLiveCameraRigBuilder.DeleteShotGameObject(rig, i);
@@ -350,10 +349,10 @@ namespace VLiveKit.Camera.Editor
                     if (GUILayout.Button($"Rebuild Slot {_selectedSlotForOperation + 1} From Preset", GUILayout.Height(24)))
                     {
                         if (EditorUtility.DisplayDialog(
-                            "Rebuild Selected Shot From Preset",
-                            $"Slot {_selectedSlotForOperation + 1} のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
-                            "Rebuild",
-                            "Cancel"))
+                                "Rebuild Selected Shot From Preset",
+                                $"Slot {_selectedSlotForOperation + 1} のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
+                                "Rebuild",
+                                "Cancel"))
                         {
                             serializedObject.ApplyModifiedProperties();
                             VLiveCameraRigBuilder.RebuildShotFromPreset(rig, _selectedSlotForOperation);
@@ -365,10 +364,10 @@ namespace VLiveKit.Camera.Editor
                     if (GUILayout.Button("Rebuild All From Presets", GUILayout.Height(24)))
                     {
                         if (EditorUtility.DisplayDialog(
-                            "Rebuild All Shots From Presets",
-                            "すべての Shot のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
-                            "Rebuild All",
-                            "Cancel"))
+                                "Rebuild All Shots From Presets",
+                                "すべての Shot のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
+                                "Rebuild All",
+                                "Cancel"))
                         {
                             serializedObject.ApplyModifiedProperties();
                             VLiveCameraRigBuilder.RebuildAllShotsFromPreset(rig);

@@ -71,6 +71,14 @@ namespace VLiveKit.Camera
         [SerializeField]
         private Quaternion _appliedRigOrientation = Quaternion.identity;
 
+        [Tooltip("Rebuild時に適用された水平距離スケール。")]
+        [SerializeField]
+        private float _appliedDistanceScale = 1.0f;
+
+        [Tooltip("Rebuild時に適用された移動幅スケール。")]
+        [SerializeField]
+        private float _appliedMotionScale = 1.0f;
+
 
         // Properties
 
@@ -141,9 +149,12 @@ namespace VLiveKit.Camera
         public VLiveCameraAppliedMotion AppliedMotion => _appliedMotion;
         public float AppliedTargetHeight => _appliedTargetHeight;
         public Quaternion AppliedRigOrientation => _appliedRigOrientation;
+        public float AppliedDistanceScale => _appliedDistanceScale > 0.001f ? _appliedDistanceScale : 1.0f;
+        public float AppliedMotionScale => _appliedMotionScale > 0.001f ? _appliedMotionScale : 1.0f;
 
         /// <summary>
         /// このショットが正常にProgramとして動作可能であるかを取得します。
+        /// 不正値や欠落参照がある場合はfalseを返し、暗黙の代替演出を行いません。
         /// </summary>
         public bool IsValid
         {
@@ -154,9 +165,35 @@ namespace VLiveKit.Camera
                     return false;
                 }
 
+                if (_performerTarget == null || _aimProxy == null || RotationComposer == null)
+                {
+                    return false;
+                }
+
+                if (_appliedMotion == null)
+                {
+                    return false;
+                }
+
+                if (_appliedMotion.ClipDuration <= 0.001f || _appliedMotion.EffectiveDuration <= 0.001f)
+                {
+                    return false;
+                }
+
+                if (_appliedMotion.ProgressCurve == null || _appliedMotion.ProgressCurve.length < 2)
+                {
+                    return false;
+                }
+
                 if (_shotType == ShotType.Spline)
                 {
-                    if (SplineDolly == null || SplineDolly.Spline == null || _appliedMotion == null)
+                    if (SplineDolly == null || SplineDolly.Spline == null)
+                    {
+                        return false;
+                    }
+
+                    var spline = SplineDolly.Spline.Spline;
+                    if (spline == null || spline.Count < 2 || spline.GetLength() <= 0.001f)
                     {
                         return false;
                     }
@@ -283,6 +320,14 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
+        /// Aim Proxy Transformを設定します（参照修復・初期化用）。
+        /// </summary>
+        public void SetAimProxy(Transform aimProxy)
+        {
+            _aimProxy = aimProxy;
+        }
+
+        /// <summary>
         /// ショットの構成要素を一括設定します（Builder用）。
         /// </summary>
         public void Configure(
@@ -296,7 +341,9 @@ namespace VLiveKit.Camera
             Transform performerTarget,
             VLiveCameraMotionPreset preset,
             float targetHeight,
-            Quaternion rigOrientation)
+            Quaternion rigOrientation,
+            float distanceScale = 1.0f,
+            float motionScale = 1.0f)
         {
             _shotName = shotName;
             _cinemachineCamera = cmCam;
@@ -309,6 +356,8 @@ namespace VLiveKit.Camera
             _appliedPreset = preset;
             _appliedTargetHeight = targetHeight;
             _appliedRigOrientation = rigOrientation;
+            _appliedDistanceScale = Mathf.Max(0.01f, distanceScale);
+            _appliedMotionScale = Mathf.Max(0.01f, motionScale);
 
             if (_appliedMotion == null)
             {
@@ -335,11 +384,19 @@ namespace VLiveKit.Camera
         /// <summary>
         /// 適用済みMotion設定の内部値をPresetから再同期します（Rebuild用）。
         /// </summary>
-        public void SyncAppliedMotion(VLiveCameraMotionPreset preset, float splineLength, float targetHeight, Quaternion rigOrientation)
+        public void SyncAppliedMotion(
+            VLiveCameraMotionPreset preset,
+            float splineLength,
+            float targetHeight,
+            Quaternion rigOrientation,
+            float distanceScale = 1.0f,
+            float motionScale = 1.0f)
         {
             _appliedPreset = preset;
             _appliedTargetHeight = targetHeight;
             _appliedRigOrientation = rigOrientation;
+            _appliedDistanceScale = Mathf.Max(0.01f, distanceScale);
+            _appliedMotionScale = Mathf.Max(0.01f, motionScale);
 
             if (_appliedMotion == null)
             {
@@ -351,6 +408,21 @@ namespace VLiveKit.Camera
                 _appliedMotion.ApplyFromPreset(preset, splineLength, preset.RigProfile);
             }
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (_appliedDistanceScale < 0.01f)
+            {
+                _appliedDistanceScale = 1.0f;
+            }
+
+            if (_appliedMotionScale < 0.01f)
+            {
+                _appliedMotionScale = 1.0f;
+            }
+        }
+#endif
 
         private void EnsureComponentReferences()
         {

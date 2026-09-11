@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace VLiveKit.Camera
@@ -6,7 +7,7 @@ namespace VLiveKit.Camera
     /// Motion Presetから解決され、Scene上の個別Shotへ具体的に適用された再生設定。
     /// Runtime再生状態（時刻や速度）とは独立してShotが所有します。
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public class VLiveCameraAppliedMotion
     {
         // Fields

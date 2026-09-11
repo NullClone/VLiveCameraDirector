@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -91,7 +92,7 @@ namespace VLiveKit.Camera
     /// <summary>
     /// スプラインの単一結節点（制御点、接線、モード、回転）を保持するシリアライズ可能構造体。
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public struct MotionKnot
     {
         [Tooltip("ターゲットローカル空間における制御点位置。")]
@@ -406,7 +407,7 @@ namespace VLiveKit.Camera
         // Methods
 
         /// <summary>
-        /// プリセットの主要パラメータを一括初期化します（CreatorおよびBaker共用）。
+        /// プリセットの主要パラメータを一括初期化します（Creator用簡易オーバーロード）。
         /// </summary>
         public void Initialize(
             string displayName,
@@ -432,6 +433,109 @@ namespace VLiveKit.Camera
             float startDistance = 0f,
             float endDistance = 0f)
         {
+            Initialize(
+                displayName,
+                shotType,
+                motionFamily,
+                shotSize,
+                energy,
+                description,
+                rigProfile,
+                knots,
+                isClosed,
+                referenceSplineLength,
+                clipDuration,
+                progressCurve,
+                scaleTimingMode,
+                0.2f,
+                3.0f,
+                0.1f,
+                aimOffset,
+                null,
+                null,
+                null,
+                screenPosition,
+                null,
+                null,
+                false,
+                new Vector2(0.1f, 0.1f),
+                false,
+                new Vector2(0.8f, 0.8f),
+                Vector2.zero,
+                new Vector2(0.5f, 0.5f),
+                false,
+                0f,
+                0f,
+                true,
+                LensMode.FieldOfView,
+                fieldOfView,
+                null,
+                50f,
+                null,
+                new Vector2(36f, 24f),
+                RollMode.MaintainHorizon,
+                null,
+                entryMode,
+                inTime,
+                outTime,
+                exitBehavior,
+                startDistance,
+                endDistance
+            );
+        }
+
+        /// <summary>
+        /// プリセットの全トラック・全パラメータを一括初期化します（Bakerおよび完全保存用）。
+        /// </summary>
+        public void Initialize(
+            string displayName,
+            VLiveCameraShot.ShotType shotType,
+            MotionFamily motionFamily,
+            ShotSize shotSize,
+            ShotEnergy energy,
+            string description,
+            VLiveCameraRigProfile rigProfile,
+            MotionKnot[] knots,
+            bool isClosed,
+            float referenceSplineLength,
+            float clipDuration,
+            AnimationCurve progressCurve,
+            ScaleTimingMode scaleTimingMode,
+            float minSpeedMultiplier,
+            float maxSpeedMultiplier,
+            float speedStep,
+            Vector3 aimOffset,
+            AnimationCurve aimOffsetXCurve,
+            AnimationCurve aimOffsetYCurve,
+            AnimationCurve aimOffsetZCurve,
+            Vector2 screenPosition,
+            AnimationCurve screenPositionXCurve,
+            AnimationCurve screenPositionYCurve,
+            bool deadZoneEnabled,
+            Vector2 deadZoneSize,
+            bool hardLimitsEnabled,
+            Vector2 hardLimitsSize,
+            Vector2 hardLimitsOffset,
+            Vector2 damping,
+            bool lookaheadEnabled,
+            float lookaheadTime,
+            float lookaheadSmoothing,
+            bool centerOnActivate,
+            LensMode lensMode,
+            float fieldOfView,
+            AnimationCurve fieldOfViewCurve,
+            float focalLength,
+            AnimationCurve focalLengthCurve,
+            Vector2 sensorSize,
+            RollMode rollMode,
+            AnimationCurve rollCurve,
+            EntryMode entryMode,
+            float inTime,
+            float outTime,
+            ExitBehavior exitBehavior,
+            float startDistance = 0f,
+            float endDistance = 0f)
+        {
             _displayName = displayName;
             _shotType = shotType;
             _motionFamily = motionFamily;
@@ -441,21 +545,62 @@ namespace VLiveKit.Camera
             _rigProfile = rigProfile;
             _knots = knots ?? new MotionKnot[0];
             _isClosed = isClosed;
-            _referenceSplineLength = referenceSplineLength;
+            _referenceSplineLength = Mathf.Max(0f, referenceSplineLength);
             _startDistance = Mathf.Max(0f, startDistance);
             _endDistance = Mathf.Max(0f, endDistance);
             _clipDuration = Mathf.Max(0.1f, clipDuration);
             _progressCurve = (progressCurve != null && progressCurve.length > 0)
-                ? progressCurve
+                ? new AnimationCurve(progressCurve.keys)
                 : AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
             _scaleTimingMode = scaleTimingMode;
+            _minSpeedMultiplier = Mathf.Max(0f, minSpeedMultiplier);
+            _maxSpeedMultiplier = Mathf.Max(_minSpeedMultiplier, maxSpeedMultiplier);
+            _speedStep = Mathf.Max(0.01f, speedStep);
+
             _aimOffset = aimOffset;
+            _aimOffsetXCurve = CloneOrEmptyCurve(aimOffsetXCurve);
+            _aimOffsetYCurve = CloneOrEmptyCurve(aimOffsetYCurve);
+            _aimOffsetZCurve = CloneOrEmptyCurve(aimOffsetZCurve);
+
             _screenPosition = screenPosition;
+            _screenPositionXCurve = CloneOrEmptyCurve(screenPositionXCurve);
+            _screenPositionYCurve = CloneOrEmptyCurve(screenPositionYCurve);
+
+            _deadZoneEnabled = deadZoneEnabled;
+            _deadZoneSize = deadZoneSize;
+            _hardLimitsEnabled = hardLimitsEnabled;
+            _hardLimitsSize = hardLimitsSize;
+            _hardLimitsOffset = hardLimitsOffset;
+            _damping = damping;
+            _lookaheadEnabled = lookaheadEnabled;
+            _lookaheadTime = Mathf.Clamp(lookaheadTime, 0f, 1f);
+            _lookaheadSmoothing = Mathf.Clamp(lookaheadSmoothing, 0f, 30f);
+            _centerOnActivate = centerOnActivate;
+
+            _lensMode = lensMode;
             _fieldOfView = Mathf.Clamp(fieldOfView, 1f, 179f);
+            _fieldOfViewCurve = CloneOrEmptyCurve(fieldOfViewCurve);
+            _focalLength = Mathf.Max(1f, focalLength);
+            _focalLengthCurve = CloneOrEmptyCurve(focalLengthCurve);
+            _sensorSize = sensorSize;
+
+            _rollMode = rollMode;
+            _rollCurve = CloneOrEmptyCurve(rollCurve);
+
             _entryMode = entryMode;
             _inTime = Mathf.Clamp(inTime, 0f, _clipDuration);
             _outTime = Mathf.Clamp(outTime, _inTime, _clipDuration);
             _exitBehavior = exitBehavior;
+        }
+
+        private static AnimationCurve CloneOrEmptyCurve(AnimationCurve source)
+        {
+            if (source == null || source.length == 0)
+            {
+                return new AnimationCurve();
+            }
+
+            return new AnimationCurve(source.keys);
         }
 
         /// <summary>

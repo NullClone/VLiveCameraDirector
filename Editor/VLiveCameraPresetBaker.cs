@@ -40,11 +40,24 @@ namespace VLiveKit.Camera.Editor
                 return null;
             }
 
-            Vector3 targetPos = (rig != null && rig.PerformerTarget != null) ? rig.PerformerTarget.position : Vector3.zero;
-            Quaternion orientation = rig != null ? rig.GetReferenceOrientation() : Quaternion.identity;
-            float distanceScale = (rig != null && rig.DistanceScale > 0.001f) ? rig.DistanceScale : 1.0f;
-            float motionScale = (rig != null && rig.MotionScale > 0.001f) ? rig.MotionScale : 1.0f;
-            float targetHeight = (rig != null) ? rig.TargetHeight : shot.AppliedTargetHeight;
+            Transform targetTransform = (shot.PerformerTarget != null) ? shot.PerformerTarget : (rig != null ? rig.PerformerTarget : null);
+            Vector3 targetPos = (targetTransform != null) ? targetTransform.position : Vector3.zero;
+
+            Quaternion orientation = (shot.AppliedRigOrientation != Quaternion.identity)
+                ? shot.AppliedRigOrientation
+                : ((rig != null) ? rig.GetReferenceOrientation() : Quaternion.identity);
+
+            float distanceScale = (shot.AppliedDistanceScale > 0.001f)
+                ? shot.AppliedDistanceScale
+                : ((rig != null && rig.DistanceScale > 0.001f) ? rig.DistanceScale : 1.0f);
+
+            float motionScale = (shot.AppliedMotionScale > 0.001f)
+                ? shot.AppliedMotionScale
+                : ((rig != null && rig.MotionScale > 0.001f) ? rig.MotionScale : 1.0f);
+
+            float targetHeight = (shot.AppliedTargetHeight > 0.001f)
+                ? shot.AppliedTargetHeight
+                : ((rig != null) ? rig.TargetHeight : 1.4f);
 
             VLiveCameraAppliedMotion applied = shot.AppliedMotion ?? new VLiveCameraAppliedMotion();
 
@@ -58,7 +71,6 @@ namespace VLiveKit.Camera.Editor
                 SplineContainer container = shot.SplineDolly.Spline;
                 Spline spline = container.Spline;
                 isClosed = spline.Closed;
-                refSplineLength = spline.GetLength();
 
                 int knotCount = spline.Count;
                 knots = new MotionKnot[knotCount];
@@ -86,11 +98,10 @@ namespace VLiveKit.Camera.Editor
                             pi = p0 + deltaScaled / motionScale;
                         }
 
-                        Vector3 worldTanIn = container.transform.TransformVector((Vector3)spline[i].TangentIn);
-                        Vector3 presetTanIn = (Quaternion.Inverse(orientation) * worldTanIn) / motionScale;
-
-                        Vector3 worldTanOut = container.transform.TransformVector((Vector3)spline[i].TangentOut);
-                        Vector3 presetTanOut = (Quaternion.Inverse(orientation) * worldTanOut) / motionScale;
+                        // Tangents: BezierKnotのTangentIn/Outはknot.Rotationのローカル空間で定義されているため、
+                        // orientationによる回転を重ねて逆変換せず、MotionScaleのみを逆適用する
+                        Vector3 presetTanIn = ((Vector3)spline[i].TangentIn) / motionScale;
+                        Vector3 presetTanOut = ((Vector3)spline[i].TangentOut) / motionScale;
 
                         TangentMode mode = spline.GetTangentMode(i);
                         Quaternion worldRot = container.transform.rotation * (Quaternion)spline[i].Rotation;
@@ -98,6 +109,15 @@ namespace VLiveKit.Camera.Editor
 
                         knots[i] = new MotionKnot(pi, presetTanIn, presetTanOut, mode, presetRot);
                     }
+
+                    // 基準スプライン長はベイク後の未スケールknot列から正確に再計算
+                    var unscaledSpline = new Spline();
+                    for (int i = 0; i < knotCount; i++)
+                    {
+                        unscaledSpline.Add(new BezierKnot(knots[i].Position, knots[i].TangentIn, knots[i].TangentOut, knots[i].Rotation), knots[i].TangentMode);
+                    }
+                    unscaledSpline.Closed = isClosed;
+                    refSplineLength = unscaledSpline.GetLength();
                 }
             }
             else
@@ -115,6 +135,7 @@ namespace VLiveKit.Camera.Editor
                 {
                     new MotionKnot(p0, Vector3.zero, Vector3.zero, TangentMode.Linear, presetRot)
                 };
+                refSplineLength = 0f;
             }
 
             // 2. Aim Offset
@@ -127,20 +148,78 @@ namespace VLiveKit.Camera.Editor
                 presetAimOffset = Quaternion.Inverse(orientation) * aboveHeight;
             }
 
-            // 3. Screen Position & Lens
+            // 3. Screen Position & RotationComposer Settings
             Vector2 screenPos = applied.ScreenPosition;
+            bool deadZoneEnabled = applied.DeadZoneEnabled;
+            Vector2 deadZoneSize = applied.DeadZoneSize;
+            bool hardLimitsEnabled = applied.HardLimitsEnabled;
+            Vector2 hardLimitsSize = applied.HardLimitsSize;
+            Vector2 hardLimitsOffset = applied.HardLimitsOffset;
+            Vector2 damping = applied.Damping;
+            bool lookaheadEnabled = applied.LookaheadEnabled;
+            float lookaheadTime = applied.LookaheadTime;
+            float lookaheadSmoothing = applied.LookaheadSmoothing;
+            bool centerOnActivate = applied.CenterOnActivate;
+
             if (shot.RotationComposer != null)
             {
                 screenPos = shot.RotationComposer.Composition.ScreenPosition;
+                deadZoneEnabled = shot.RotationComposer.Composition.DeadZone.Enabled;
+                deadZoneSize = shot.RotationComposer.Composition.DeadZone.Size;
+                hardLimitsEnabled = shot.RotationComposer.Composition.HardLimits.Enabled;
+                hardLimitsSize = shot.RotationComposer.Composition.HardLimits.Size;
+                hardLimitsOffset = shot.RotationComposer.Composition.HardLimits.Offset;
+                damping = shot.RotationComposer.Damping;
+                lookaheadEnabled = shot.RotationComposer.Lookahead.Enabled;
+                lookaheadTime = shot.RotationComposer.Lookahead.Time;
+                lookaheadSmoothing = shot.RotationComposer.Lookahead.Smoothing;
+                centerOnActivate = shot.RotationComposer.CenterOnActivate;
             }
 
+            // 4. Lens Settings
+            LensMode lensMode = applied.LensMode;
             float fov = applied.FieldOfView;
+            float focalLength = applied.FocalLength;
+            Vector2 sensorSize = applied.SensorSize;
+
             if (shot.CinemachineCamera != null)
             {
                 fov = shot.CinemachineCamera.Lens.FieldOfView;
+                if (shot.CinemachineCamera.Lens.PhysicalProperties.SensorSize.sqrMagnitude > 0.01f)
+                {
+                    sensorSize = shot.CinemachineCamera.Lens.PhysicalProperties.SensorSize;
+                }
+
+                if (shot.CinemachineCamera.Lens.ModeOverride == LensSettings.OverrideModes.Physical)
+                {
+                    lensMode = LensMode.FocalLength;
+                    if (sensorSize.y > 0.001f)
+                    {
+                        focalLength = UnityEngine.Camera.FieldOfViewToFocalLength(fov, sensorSize.y);
+                    }
+                }
+                else if (shot.CinemachineCamera.Lens.ModeOverride == LensSettings.OverrideModes.Perspective)
+                {
+                    lensMode = LensMode.FieldOfView;
+                }
+                else if (lensMode == LensMode.FocalLength && sensorSize.y > 0.001f)
+                {
+                    focalLength = UnityEngine.Camera.FieldOfViewToFocalLength(fov, sensorSize.y);
+                }
             }
 
-            // 4. Asset Path
+            // 5. Identity & Intent
+            ShotSize shotSize = (shot.AppliedPreset != null) ? shot.AppliedPreset.Size : ShotSize.Medium;
+            ShotEnergy energy = (shot.AppliedPreset != null) ? shot.AppliedPreset.Energy : ShotEnergy.Normal;
+            MotionFamily family = (shot.AppliedPreset != null) ? shot.AppliedPreset.Family : applied.Family;
+            VLiveCameraRigProfile rigProfile = (shot.AppliedPreset != null) ? shot.AppliedPreset.RigProfile : null;
+
+            string displayName = shot.ShotName + " (Baked)";
+            string description = (shot.AppliedPreset != null)
+                ? $"Baked from shot '{shot.ShotName}' based on '{shot.AppliedPreset.DisplayName}'"
+                : $"Baked from scene Shot '{shot.ShotName}'";
+
+            // 6. Asset Path
             if (string.IsNullOrEmpty(targetAssetPath))
             {
                 if (!Directory.Exists(DefaultPresetFolder))
@@ -154,7 +233,7 @@ namespace VLiveKit.Camera.Editor
 
             targetAssetPath = AssetDatabase.GenerateUniqueAssetPath(targetAssetPath);
 
-            // 5. 確認ダイアログ (Source Shotと保存先パスを表示)
+            // 7. 確認ダイアログ (Source Shotと保存先パスを表示)
             if (showConfirmationDialog)
             {
                 bool proceed = EditorUtility.DisplayDialog(
@@ -170,25 +249,50 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // 6. Presetインスタンス作成と保存
+            // 8. Presetインスタンス作成と完全保存
             var preset = ScriptableObject.CreateInstance<VLiveCameraMotionPreset>();
             preset.Initialize(
-                shot.ShotName + " (Baked)",
+                displayName,
                 shot.Type,
-                applied.Family,
-                ShotSize.Medium,
-                ShotEnergy.Normal,
-                $"Baked from scene Shot '{shot.ShotName}'",
-                shot.AppliedPreset != null ? shot.AppliedPreset.RigProfile : null,
+                family,
+                shotSize,
+                energy,
+                description,
+                rigProfile,
                 knots,
                 isClosed,
                 refSplineLength,
                 applied.ClipDuration,
                 applied.ProgressCurve,
                 applied.ScaleMode,
+                applied.MinSpeedMultiplier,
+                applied.MaxSpeedMultiplier,
+                applied.SpeedStep,
                 presetAimOffset,
+                applied.AimOffsetXCurve,
+                applied.AimOffsetYCurve,
+                applied.AimOffsetZCurve,
                 screenPos,
+                applied.ScreenPositionXCurve,
+                applied.ScreenPositionYCurve,
+                deadZoneEnabled,
+                deadZoneSize,
+                hardLimitsEnabled,
+                hardLimitsSize,
+                hardLimitsOffset,
+                damping,
+                lookaheadEnabled,
+                lookaheadTime,
+                lookaheadSmoothing,
+                centerOnActivate,
+                lensMode,
                 fov,
+                applied.FieldOfViewCurve,
+                focalLength,
+                applied.FocalLengthCurve,
+                sensorSize,
+                applied.RollMode,
+                applied.RollCurve,
                 applied.EntryMode,
                 applied.InTime,
                 applied.OutTime,

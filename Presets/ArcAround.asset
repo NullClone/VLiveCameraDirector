@@ -16,7 +16,7 @@ MonoBehaviour:
   _shotType: 1
   _motionFamily: 4
   _shotSize: 2
-  _energy: 2
+  _energy: 1
   _description: "\u88AB\u5199\u4F53\u306E\u524D\u9762\u3092\u5F27\u3092\u63CF\u3044\u3066\u56DE\u308A\u8FBC\u3080\u30C0\u30A4\u30CA\u30DF\u30C3\u30AF\u30B7\u30E7\u30C3\u30C8\u3002"
   _rigProfile: {fileID: 11400000, guid: 54ec1dd82cf3c4f4da191f1ff7d58230, type: 2}
   _knots:

@@ -21,7 +21,6 @@ namespace VLiveKit.Camera.Editor
         public const string ShotsContainerName = "Shots";
         public const string SplinesContainerName = "Splines";
         public const string AimProxiesContainerName = "Aim Proxies";
-        public const string ProgramCameraName = "Program Camera";
 
         private static readonly string[] DefaultPresetNames = new string[]
         {
@@ -42,7 +41,7 @@ namespace VLiveKit.Camera.Editor
         [MenuItem("GameObject/VLiveKit/Camera Rig", false, 10)]
         public static void CreateRigFromMenu()
         {
-            CreateRig();
+            CreateRig(null, UnityEngine.Camera.main);
         }
 
         /// <summary>
@@ -56,11 +55,12 @@ namespace VLiveKit.Camera.Editor
                 return null;
             }
 
-            Scene currentScene = SceneManager.GetActiveScene();
+            var currentScene = SceneManager.GetActiveScene();
 
             Undo.IncrementCurrentGroup();
             Undo.SetCurrentGroupName("Create Camera Rig");
             int undoGroup = Undo.GetCurrentGroup();
+
 
             // 1. Root GameObject & Components
             var rigGo = new GameObject(RigGameObjectName);
@@ -73,51 +73,11 @@ namespace VLiveKit.Camera.Editor
             switcher.SetRig(rig);
             keyboardInput.SetSwitcher(switcher);
 
-            // 2. Program Camera & CinemachineBrain
-            UnityEngine.Camera programCam = outputCamera;
-            if (programCam == null)
-            {
-                var camGo = new GameObject(ProgramCameraName);
-                camGo.transform.SetParent(rigGo.transform, false);
-                programCam = camGo.AddComponent<UnityEngine.Camera>();
 
-                bool hasExistingMainCamera = false;
-                var allCameras = Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-                foreach (var cam in allCameras)
-                {
-                    if (cam.gameObject != camGo && cam.CompareTag("MainCamera"))
-                    {
-                        hasExistingMainCamera = true;
-                        break;
-                    }
-                }
+            // 2. Program Camera
 
-                if (!hasExistingMainCamera)
-                {
-                    camGo.tag = "MainCamera";
-                }
+            rig.ProgramCamera = outputCamera;
 
-                Undo.RegisterCreatedObjectUndo(camGo, "Create Program Camera");
-            }
-
-            var brain = programCam.GetComponent<CinemachineBrain>();
-            if (brain == null)
-            {
-                brain = Undo.AddComponent<CinemachineBrain>(programCam.gameObject);
-            }
-            else
-            {
-                Undo.RecordObject(brain, "Update CinemachineBrain Blend");
-            }
-
-            brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
-            EditorUtility.SetDirty(brain);
-
-            rig.ProgramCamera = programCam;
-            if (performerTarget != null)
-            {
-                rig.PerformerTarget = performerTarget;
-            }
 
             // 3. Containers
             var shotsGo = new GameObject(ShotsContainerName);
@@ -192,24 +152,6 @@ namespace VLiveKit.Camera.Editor
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
             Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
-
-            // 2. Program Camera & Brain確保
-            if (rig.ProgramCamera == null)
-            {
-                Transform camChild = rig.transform.Find(ProgramCameraName);
-                if (camChild != null)
-                {
-                    rig.ProgramCamera = camChild.GetComponent<UnityEngine.Camera>();
-                }
-
-                if (rig.ProgramCamera == null)
-                {
-                    var camGo = new GameObject(ProgramCameraName);
-                    camGo.transform.SetParent(rig.transform, false);
-                    rig.ProgramCamera = camGo.AddComponent<UnityEngine.Camera>();
-                    Undo.RegisterCreatedObjectUndo(camGo, "Create Program Camera");
-                }
-            }
 
             CinemachineBrain brain = rig.CinemachineBrain;
             if (brain == null && rig.ProgramCamera != null)
@@ -286,6 +228,7 @@ namespace VLiveKit.Camera.Editor
                     {
                         assignedShots.Add(slot.Shot);
                     }
+
                     createdCount++;
                 }
             }
@@ -558,7 +501,12 @@ namespace VLiveKit.Camera.Editor
 
             // 2. Camera配置計算
             MotionKnot[] knots = preset.Knots;
-            Vector3 p0 = (knots != null && knots.Length > 0) ? knots[0].Position : new Vector3(0f, 1.3f, 3.5f);
+            if (knots == null || knots.Length == 0)
+            {
+                Debug.LogError($"[VLiveCameraRigBuilder] Preset '{preset.DisplayName}' にKnotが定義されていないため、正常なカメラ配置を行えません。");
+            }
+
+            Vector3 p0 = (knots != null && knots.Length > 0) ? knots[0].Position : new Vector3(0f, rig.TargetHeight, 3.5f);
             Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
             Vector3 worldP0 = targetPos + orientation * scaledP0;
 
@@ -623,7 +571,9 @@ namespace VLiveKit.Camera.Editor
                 rig.PerformerTarget,
                 preset,
                 rig.TargetHeight,
-                orientation
+                orientation,
+                rig.DistanceScale,
+                rig.MotionScale
             );
             EditorUtility.SetDirty(shot);
             EditorUtility.SetDirty(player);
@@ -652,6 +602,7 @@ namespace VLiveKit.Camera.Editor
                 aimProxyGo.transform.SetParent(aimProxiesContainer, false);
                 Undo.RegisterCreatedObjectUndo(aimProxyGo, "Create Repaired Aim Proxy");
                 aimProxy = aimProxyGo.transform;
+                shot.SetAimProxy(aimProxy);
                 repaired++;
             }
 
@@ -751,6 +702,7 @@ namespace VLiveKit.Camera.Editor
                 aimProxyGo.transform.SetParent(aimProxiesContainer, false);
                 Undo.RegisterCreatedObjectUndo(aimProxyGo, "Create Aim Proxy GameObject");
                 aimProxy = aimProxyGo.transform;
+                shot.SetAimProxy(aimProxy);
             }
 
             Undo.RecordObject(aimProxy, "Update Aim Proxy Position");
@@ -759,7 +711,12 @@ namespace VLiveKit.Camera.Editor
 
             // 2. Camera Transform配置
             MotionKnot[] knots = preset.Knots;
-            Vector3 p0 = (knots != null && knots.Length > 0) ? knots[0].Position : new Vector3(0f, 1.3f, 3.5f);
+            if (knots == null || knots.Length == 0)
+            {
+                Debug.LogError($"[VLiveCameraRigBuilder] Preset '{preset.DisplayName}' にKnotが定義されていないため、正常なカメラ配置を行えません。");
+            }
+
+            Vector3 p0 = (knots != null && knots.Length > 0) ? knots[0].Position : new Vector3(0f, rig.TargetHeight, 3.5f);
             Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
             Vector3 worldP0 = targetPos + orientation * scaledP0;
 
@@ -870,7 +827,9 @@ namespace VLiveKit.Camera.Editor
                 rig.PerformerTarget,
                 preset,
                 rig.TargetHeight,
-                orientation
+                orientation,
+                rig.DistanceScale,
+                rig.MotionScale
             );
 
             player.Configure(shot, cmCam, dolly, composer, aimProxy);
@@ -885,14 +844,12 @@ namespace VLiveKit.Camera.Editor
             var spline = splineContainer.Spline;
             spline.Clear();
 
-            MotionKnot[] knots = preset.Knots;
+            MotionKnot[] knots = preset != null ? preset.Knots : null;
             if (knots == null || knots.Length == 0)
             {
-                knots = new MotionKnot[]
-                {
-                    new MotionKnot(new Vector3(0f, 1.3f, 4.5f)),
-                    new MotionKnot(new Vector3(0f, 1.3f, 1.8f))
-                };
+                Debug.LogError($"[VLiveCameraRigBuilder] Preset '{preset?.DisplayName}' にKnotが定義されていないため、Splineを生成できません。安全方針に従い代替演出は生成しません。");
+                EditorUtility.SetDirty(splineContainer);
+                return;
             }
 
             spline.Closed = preset.IsClosed;
@@ -919,18 +876,16 @@ namespace VLiveKit.Camera.Editor
                 Vector3 worldPoint = targetPos + orientation * scaledPoint;
                 Vector3 localPoint = splineContainer.transform.InverseTransformPoint(worldPoint);
 
-                // Tangents: MotionScaleを適用してローカルへ変換
-                Vector3 worldTanIn = orientation * (knotData.TangentIn * rig.MotionScale);
-                Vector3 localTanIn = splineContainer.transform.InverseTransformVector(worldTanIn);
-
-                Vector3 worldTanOut = orientation * (knotData.TangentOut * rig.MotionScale);
-                Vector3 localTanOut = splineContainer.transform.InverseTransformVector(worldTanOut);
-
                 // Rotation
                 Quaternion worldRot = orientation * knotData.Rotation;
                 Quaternion localRot = Quaternion.Inverse(splineContainer.transform.rotation) * worldRot;
 
-                var bezierKnot = new BezierKnot((float3)localPoint, (float3)localTanIn, (float3)localTanOut, (quaternion)localRot);
+                // Tangents: BezierKnotのTangentIn/Outはknot.Rotationのローカル空間で定義されるため、
+                // orientationによる回転を重ねて適用せず、MotionScaleのみを適用する
+                Vector3 knotTanIn = knotData.TangentIn * rig.MotionScale;
+                Vector3 knotTanOut = knotData.TangentOut * rig.MotionScale;
+
+                var bezierKnot = new BezierKnot((float3)localPoint, (float3)knotTanIn, (float3)knotTanOut, (quaternion)localRot);
                 spline.Add(bezierKnot);
 
                 // 全KnotをAutoSmoothへ強制せず、Presetが定義したTangentModeを個別に設定
