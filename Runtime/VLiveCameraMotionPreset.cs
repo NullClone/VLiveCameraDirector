@@ -25,9 +25,9 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _fieldOfView = 40f;
 
-        [Tooltip("追従ターゲットの中心からのオフセット（メートル単位）。")]
+        [Tooltip("Rig の Target Height (注視基準高さ) からの追加構図オフセット（メートル単位）。")]
         [SerializeField]
-        private Vector3 _targetOffset = new Vector3(0f, 1.2f, 0f);
+        private Vector3 _targetOffset = Vector3.zero;
 
         [Header("Trajectory (軌道設定)")]
         [Tooltip("ターゲットローカル座標系における相対制御点。Fixedの場合は初期配置、Splineの場合はスプラインの制御点として使用します。")]
@@ -64,7 +64,7 @@ namespace VLiveKit.Camera
         public float FieldOfView => _fieldOfView;
 
         /// <summary>
-        /// 追従ターゲットからのオフセットを取得します。
+        /// Rig の Target Height からの追加構図オフセットを取得します。
         /// </summary>
         public Vector3 TargetOffset => _targetOffset;
 

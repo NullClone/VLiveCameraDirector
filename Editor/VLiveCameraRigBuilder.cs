@@ -135,7 +135,7 @@ namespace VLiveKit.Camera.Editor
             List<VLiveCameraMotionPreset> presets = LoadDefaultPresets();
             foreach (var preset in presets)
             {
-                rig.Slots.Add(new VLiveCameraShotSlot(preset, null));
+                rig.AddSlot(new VLiveCameraShotSlot(preset, null));
             }
 
             EditorUtility.SetDirty(rig);
@@ -173,6 +173,12 @@ namespace VLiveKit.Camera.Editor
             if (rig.PerformerTarget == null)
             {
                 Debug.LogWarning("[VLiveCameraRigBuilder] Performer Target が設定されていないため Apply / Sync を中断しました。");
+                return false;
+            }
+
+            if (!rig.IsForwardReferenceValid())
+            {
+                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効（Custom Reference が未設定または垂直方向）のため Apply / Sync を中断しました。");
                 return false;
             }
 
@@ -254,7 +260,14 @@ namespace VLiveKit.Camera.Editor
                 // 既に別のSlotに割り当て済みのShotは重複共有せず、専用Shotの新規生成へ
                 if (slot.Shot != null && assignedShots.Contains(slot.Shot))
                 {
-                    slot.Shot = null;
+                    slot.SetShot(null);
+                }
+
+                // Rig所有でない外部Shotが割り当てられている場合は変更せず、専用Shotを新規生成
+                if (slot.Shot != null && !IsShotOwnedByRig(rig, slot.Shot))
+                {
+                    Debug.LogWarning($"[VLiveCameraRigBuilder] Slot {i + 1} の Shot '{slot.Shot.name}' はこのRig所有の生成物ではないため変更しません。専用Shotを新規生成します。");
+                    slot.SetShot(null);
                 }
 
                 if (slot.Shot != null)
@@ -287,7 +300,7 @@ namespace VLiveKit.Camera.Editor
                     if (composer == null)
                     {
                         composer = Undo.AddComponent<CinemachineRotationComposer>(slot.Shot.gameObject);
-                        composer.TargetOffset = new Vector3(preset.TargetOffset.x, rig.TargetHeight + preset.TargetOffset.y, preset.TargetOffset.z);
+                        composer.TargetOffset = CalculateTargetOffset(rig, preset);
                         EditorUtility.SetDirty(composer);
                         repairedCount++;
                     }
@@ -357,12 +370,25 @@ namespace VLiveKit.Camera.Editor
                 return;
             }
 
+            if (!rig.IsForwardReferenceValid())
+            {
+                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効（Custom Reference が未設定または垂直方向）のため Rebuild できません。");
+                return;
+            }
+
             Undo.IncrementCurrentGroup();
             Undo.SetCurrentGroupName($"Rebuild Shot {slotIndex + 1} From Preset");
             int undoGroup = Undo.GetCurrentGroup();
+            Undo.RecordObject(rig, $"Rebuild Shot {slotIndex + 1} From Preset");
 
-            if (slot.Shot == null)
+            if (slot.Shot == null || !IsShotOwnedByRig(rig, slot.Shot))
             {
+                if (slot.Shot != null)
+                {
+                    Debug.LogWarning($"[VLiveCameraRigBuilder] Slot {slotIndex + 1} の Shot '{slot.Shot.name}' はこのRig所有の生成物ではないため変更しません。専用Shotを新規生成します。");
+                    slot.SetShot(null);
+                }
+
                 Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
                 Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
                 BuildNewShotForSlot(rig, slot.Preset, slotIndex, shotsContainer, splinesContainer, slot);
@@ -402,9 +428,16 @@ namespace VLiveKit.Camera.Editor
                 return;
             }
 
+            if (!rig.IsForwardReferenceValid())
+            {
+                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効（Custom Reference が未設定または垂直方向）のため Rebuild できません。");
+                return;
+            }
+
             Undo.IncrementCurrentGroup();
             Undo.SetCurrentGroupName("Rebuild All Shots From Presets");
             int undoGroup = Undo.GetCurrentGroup();
+            Undo.RecordObject(rig, "Rebuild All Shots From Presets");
 
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
@@ -417,8 +450,14 @@ namespace VLiveKit.Camera.Editor
                     continue;
                 }
 
-                if (slot.Shot == null)
+                if (slot.Shot == null || !IsShotOwnedByRig(rig, slot.Shot))
                 {
+                    if (slot.Shot != null)
+                    {
+                        Debug.LogWarning($"[VLiveCameraRigBuilder] Slot {i + 1} の Shot '{slot.Shot.name}' はこのRig所有の生成物ではないため変更しません。専用Shotを新規生成します。");
+                        slot.SetShot(null);
+                    }
+
                     BuildNewShotForSlot(rig, slot.Preset, i, shotsContainer, splinesContainer, slot);
                 }
                 else
@@ -464,6 +503,19 @@ namespace VLiveKit.Camera.Editor
 
             VLiveCameraShot shot = slot.Shot;
 
+            if (!IsShotOwnedByRig(rig, shot))
+            {
+                Debug.LogWarning($"[VLiveCameraRigBuilder] Slot {slotIndex + 1} の Shot '{shot.name}' はこのRig所有の生成物ではないためSceneから削除しません。スロット参照のみクリアします。");
+                Undo.RecordObject(rig, "Clear Shot Reference in Slot");
+                slot.SetShot(null);
+                EditorUtility.SetDirty(rig);
+                Undo.CollapseUndoOperations(undoGroup);
+                EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
+                return;
+            }
+
+            Undo.RecordObject(rig, "Delete Shot GameObject");
+
             if (shot.SplineDolly != null && shot.SplineDolly.Spline != null)
             {
                 // Rig配下のSplineのみ削除（外部アセットの誤削除を防止）
@@ -479,14 +531,46 @@ namespace VLiveKit.Camera.Editor
                 Undo.DestroyObjectImmediate(shot.gameObject);
             }
 
-            Undo.RecordObject(rig, "Clear Shot Reference in Slot");
-            slot.Shot = null;
+            slot.SetShot(null);
             EditorUtility.SetDirty(rig);
 
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
 
             Debug.Log($"[VLiveCameraRigBuilder] Shot {slotIndex + 1} のGameObjectを削除しました。");
+        }
+
+        /// <summary>
+        /// 指定されたShotがこのRig配下に生成・所有されたものであるかを判定します。
+        /// </summary>
+        /// <param name="rig">対象のVLiveCameraRig。</param>
+        /// <param name="shot">判定するVLiveCameraShot。</param>
+        /// <returns>Rig配下のオブジェクトであればtrue。</returns>
+        public static bool IsShotOwnedByRig(VLiveCameraRig rig, VLiveCameraShot shot)
+        {
+            if (rig == null || shot == null)
+            {
+                return false;
+            }
+
+            return shot.transform.IsChildOf(rig.transform) && shot.gameObject != rig.gameObject;
+        }
+
+        /// <summary>
+        /// Rig設定とPresetオフセットに基づき、CinemachineRotationComposer用のTargetローカルオフセットを算出します。
+        /// </summary>
+        private static Vector3 CalculateTargetOffset(VLiveCameraRig rig, VLiveCameraMotionPreset preset)
+        {
+            if (rig == null)
+            {
+                return Vector3.zero;
+            }
+
+            Vector3 presetOffset = preset != null ? preset.TargetOffset : Vector3.zero;
+            Quaternion orientation = rig.GetReferenceOrientation();
+            Vector3 worldOffset = Vector3.up * rig.TargetHeight + orientation * presetOffset;
+            Quaternion targetRot = rig.PerformerTarget != null ? rig.PerformerTarget.rotation : Quaternion.identity;
+            return Quaternion.Inverse(targetRot) * worldOffset;
         }
 
         private static Transform EnsureContainer(Transform parent, string name)
@@ -536,7 +620,7 @@ namespace VLiveKit.Camera.Editor
             EditorUtility.SetDirty(cmCam);
 
             var composer = shotGo.AddComponent<CinemachineRotationComposer>();
-            composer.TargetOffset = new Vector3(preset.TargetOffset.x, rig.TargetHeight + preset.TargetOffset.y, preset.TargetOffset.z);
+            composer.TargetOffset = CalculateTargetOffset(rig, preset);
             EditorUtility.SetDirty(composer);
 
             CinemachineSplineDolly dolly = null;
@@ -568,7 +652,7 @@ namespace VLiveKit.Camera.Editor
             );
             EditorUtility.SetDirty(shot);
 
-            slot.Shot = shot;
+            slot.SetShot(shot);
         }
 
         private static void RebuildExistingShot(
@@ -609,12 +693,12 @@ namespace VLiveKit.Camera.Editor
                 Undo.RecordObject(composer, "Rebuild Rotation Composer");
             }
 
-            composer.TargetOffset = new Vector3(preset.TargetOffset.x, rig.TargetHeight + preset.TargetOffset.y, preset.TargetOffset.z);
+            composer.TargetOffset = CalculateTargetOffset(rig, preset);
             EditorUtility.SetDirty(composer);
 
             if (preset.ShotType == VLiveCameraShot.ShotType.Spline)
             {
-                if (shot.SplineDolly != null && shot.SplineDolly.Spline != null)
+                if (shot.SplineDolly != null && shot.SplineDolly.Spline != null && shot.SplineDolly.Spline.transform.IsChildOf(rig.transform))
                 {
                     Undo.RecordObject(shot.SplineDolly.Spline, "Rebuild Spline Knots");
                     PopulateSplineKnots(shot.SplineDolly.Spline, rig, preset);
@@ -670,18 +754,29 @@ namespace VLiveKit.Camera.Editor
             var splineContainer = splineGo.AddComponent<SplineContainer>();
             PopulateSplineKnots(splineContainer, rig, preset);
 
-            if (shot.SplineDolly == null && shot.CinemachineCamera != null)
+            CinemachineSplineDolly dolly = shot.SplineDolly;
+            if (dolly == null && shot.CinemachineCamera != null)
             {
-                Undo.AddComponent<CinemachineSplineDolly>(shot.CinemachineCamera.gameObject);
+                dolly = Undo.AddComponent<CinemachineSplineDolly>(shot.CinemachineCamera.gameObject);
+                Undo.RecordObject(shot, "Set Spline Dolly Reference");
+                shot.Configure(
+                    shot.ShotName,
+                    shot.CinemachineCamera,
+                    preset.ShotType,
+                    dolly,
+                    preset.InitialSpeed,
+                    preset.DecelerationDistance
+                );
+                EditorUtility.SetDirty(shot);
             }
 
-            if (shot.SplineDolly != null)
+            if (dolly != null)
             {
-                Undo.RecordObject(shot.SplineDolly, "Repair Spline Dolly Reference");
-                shot.SplineDolly.Spline = splineContainer;
-                shot.SplineDolly.PositionUnits = PathIndexUnit.Normalized;
-                shot.SplineDolly.CameraPosition = 0f;
-                EditorUtility.SetDirty(shot.SplineDolly);
+                Undo.RecordObject(dolly, "Repair Spline Dolly Reference");
+                dolly.Spline = splineContainer;
+                dolly.PositionUnits = PathIndexUnit.Normalized;
+                dolly.CameraPosition = 0f;
+                EditorUtility.SetDirty(dolly);
             }
         }
 
@@ -735,22 +830,13 @@ namespace VLiveKit.Camera.Editor
             {
                 string path = $"{VLiveCameraPresetAssetCreator.PresetFolderPath}/{presetName}.asset";
                 var preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(path);
-                if (preset == null)
-                {
-                    string[] guids = AssetDatabase.FindAssets($"{presetName} t:VLiveCameraMotionPreset");
-                    if (guids != null && guids.Length > 0)
-                    {
-                        preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(AssetDatabase.GUIDToAssetPath(guids[0]));
-                    }
-                }
-
                 if (preset != null)
                 {
                     list.Add(preset);
                 }
             }
 
-            if (list.Count < 6)
+            if (list.Count < DefaultPresetNames.Length)
             {
                 VLiveCameraPresetAssetCreator.CreateMissingDefaultPresets();
                 list.Clear();
@@ -761,6 +847,10 @@ namespace VLiveKit.Camera.Editor
                     if (preset != null)
                     {
                         list.Add(preset);
+                    }
+                    else
+                    {
+                        Debug.LogError($"[VLiveCameraRigBuilder] 既定 Preset '{presetName}' をロードできませんでした（パス: {path}）。");
                     }
                 }
             }

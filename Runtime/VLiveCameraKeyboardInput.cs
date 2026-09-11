@@ -17,7 +17,7 @@ namespace VLiveKit.Camera
         private VLiveCameraSwitcher _switcher;
 
 #if ENABLE_INPUT_SYSTEM
-        private static readonly Key[] NumpadCutKeys = new Key[]
+        public static readonly Key[] ImplicitNumpadCutKeys = new Key[]
         {
             Key.Numpad1,
             Key.Numpad2,
@@ -29,6 +29,68 @@ namespace VLiveKit.Camera
             Key.Numpad8,
             Key.Numpad9
         };
+
+        public static readonly Key[] ImplicitSpeedUpKeys = new Key[]
+        {
+            Key.Equals,
+            Key.NumpadPlus
+        };
+
+        public static readonly Key[] ImplicitSpeedDownKeys = new Key[]
+        {
+            Key.Minus,
+            Key.NumpadMinus
+        };
+
+        /// <summary>
+        /// 指定されたキーがランタイム暗黙 Cut キー（テンキー1〜9）であるかを判定します。
+        /// </summary>
+        public static bool IsImplicitCutKey(Key key, out int slotIndex)
+        {
+            for (int i = 0; i < ImplicitNumpadCutKeys.Length; i++)
+            {
+                if (ImplicitNumpadCutKeys[i] == key)
+                {
+                    slotIndex = i;
+                    return true;
+                }
+            }
+
+            slotIndex = -1;
+            return false;
+        }
+
+        /// <summary>
+        /// 指定されたキーがランタイム暗黙 Speed Up キー（Equals / NumpadPlus）であるかを判定します。
+        /// </summary>
+        public static bool IsImplicitSpeedUpKey(Key key)
+        {
+            for (int i = 0; i < ImplicitSpeedUpKeys.Length; i++)
+            {
+                if (ImplicitSpeedUpKeys[i] == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 指定されたキーがランタイム暗黙 Speed Down キー（Minus / NumpadMinus）であるかを判定します。
+        /// </summary>
+        public static bool IsImplicitSpeedDownKey(Key key)
+        {
+            for (int i = 0; i < ImplicitSpeedDownKeys.Length; i++)
+            {
+                if (ImplicitSpeedDownKeys[i] == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         [Header("Keyboard Bindings - Shot Cut (ショット切り替えキー)")]
         [Tooltip("ショット1〜9へ直接Cutするためのキー割り当て一覧。")]
@@ -94,12 +156,31 @@ namespace VLiveKit.Camera
 #if ENABLE_INPUT_SYSTEM
         private static bool IsPressed(Keyboard keyboard, Key key)
         {
-            if (key == Key.None)
+            if (key <= Key.None || (int)key >= (int)Key.IMESelected)
             {
                 return false;
             }
 
-            return keyboard[key].wasPressedThisFrame;
+            var control = keyboard[key];
+            return control != null && control.wasPressedThisFrame;
+        }
+
+        private static bool IsAnyPressed(Keyboard keyboard, Key[] keys)
+        {
+            if (keys == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (IsPressed(keyboard, keys[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 #endif
 
@@ -120,12 +201,12 @@ namespace VLiveKit.Camera
             // Cut selection (deterministic priority: lowest number wins, bounded by cut keys and shot count)
             int shotCount = _switcher.ShotCount;
             int cutKeyCount = _cutKeys != null ? _cutKeys.Length : 0;
-            int maxSlots = Mathf.Min(cutKeyCount, shotCount);
+            int maxSlots = Mathf.Min(Mathf.Max(cutKeyCount, ImplicitNumpadCutKeys.Length), shotCount);
 
             for (int i = 0; i < maxSlots; i++)
             {
-                bool mainPressed = IsPressed(keyboard, _cutKeys[i]);
-                bool numpadPressed = (i < NumpadCutKeys.Length) && IsPressed(keyboard, NumpadCutKeys[i]);
+                bool mainPressed = (i < cutKeyCount) && IsPressed(keyboard, _cutKeys[i]);
+                bool numpadPressed = (i < ImplicitNumpadCutKeys.Length) && IsPressed(keyboard, ImplicitNumpadCutKeys[i]);
                 if (mainPressed || numpadPressed)
                 {
                     _switcher.CutToShot(i + 1);
@@ -134,11 +215,11 @@ namespace VLiveKit.Camera
             }
 
             // Speed adjustment
-            if (IsPressed(keyboard, _speedUpKey) || IsPressed(keyboard, Key.Equals) || IsPressed(keyboard, Key.NumpadPlus))
+            if (IsPressed(keyboard, _speedUpKey) || IsAnyPressed(keyboard, ImplicitSpeedUpKeys))
             {
                 _switcher.SpeedUp();
             }
-            else if (IsPressed(keyboard, _speedDownKey) || IsPressed(keyboard, Key.Minus) || IsPressed(keyboard, Key.NumpadMinus))
+            else if (IsPressed(keyboard, _speedDownKey) || IsAnyPressed(keyboard, ImplicitSpeedDownKeys))
             {
                 _switcher.SpeedDown();
             }

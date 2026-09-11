@@ -189,6 +189,77 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
+            // 4. 暗黙キー（テンキー1〜9、=、-、テンキー±）との競合チェック
+            // 4a. Cut Keys と暗黙キーの検証
+            for (int i = 0; i < _cutKeysProp.arraySize; i++)
+            {
+                int keyVal = _cutKeysProp.GetArrayElementAtIndex(i).intValue;
+                if (keyVal == (int)Key.None)
+                {
+                    continue;
+                }
+
+                Key key = (Key)keyVal;
+
+                if (VLiveCameraKeyboardInput.IsImplicitSpeedUpKey(key))
+                {
+                    warnings.Add($"Cut キー {i + 1} に暗黙の Speed Up キー '{key}' が割り当てられています（同時発火します）。");
+                }
+                else if (VLiveCameraKeyboardInput.IsImplicitSpeedDownKey(key))
+                {
+                    warnings.Add($"Cut キー {i + 1} に暗黙の Speed Down キー '{key}' が割り当てられています（同時発火します）。");
+                }
+                else if (VLiveCameraKeyboardInput.IsImplicitCutKey(key, out int numpadIndex))
+                {
+                    if (numpadIndex != i)
+                    {
+                        warnings.Add($"Cut キー {i + 1} に Shot {numpadIndex + 1} の暗黙 Cut キー '{key}' が割り当てられています（同時発火します）。");
+                    }
+                    else
+                    {
+                        warnings.Add($"Cut キー {i + 1} に暗黙 Cut キー '{key}' が重複指定されています（テンキーは常時有効のため設定不要です）。");
+                    }
+                }
+            }
+
+            // 4b. 移動制御キーと暗黙キーの検証
+            foreach (var kvp in motionKeys)
+            {
+                if (kvp.Value == (int)Key.None)
+                {
+                    continue;
+                }
+
+                Key key = (Key)kvp.Value;
+
+                if (VLiveCameraKeyboardInput.IsImplicitCutKey(key, out int numpadIndex))
+                {
+                    warnings.Add($"移動制御キー '{kvp.Key}' に Shot {numpadIndex + 1} の暗黙 Cut キー '{key}' が割り当てられています（同時発火します）。");
+                }
+                else if (VLiveCameraKeyboardInput.IsImplicitSpeedUpKey(key))
+                {
+                    if (kvp.Key != "Speed Up")
+                    {
+                        warnings.Add($"移動制御キー '{kvp.Key}' に暗黙の Speed Up キー '{key}' が割り当てられています（同時発火します）。");
+                    }
+                    else
+                    {
+                        warnings.Add($"移動制御キー 'Speed Up' に暗黙キー '{key}' が指定されています（既に暗黙で有効なため設定不要です）。");
+                    }
+                }
+                else if (VLiveCameraKeyboardInput.IsImplicitSpeedDownKey(key))
+                {
+                    if (kvp.Key != "Speed Down")
+                    {
+                        warnings.Add($"移動制御キー '{kvp.Key}' に暗黙の Speed Down キー '{key}' が割り当てられています（同時発火します）。");
+                    }
+                    else
+                    {
+                        warnings.Add($"移動制御キー 'Speed Down' に暗黙キー '{key}' が指定されています（既に暗黙で有効なため設定不要です）。");
+                    }
+                }
+            }
+
             if (warnings.Count > 0)
             {
                 EditorGUILayout.Space(4);

@@ -128,7 +128,7 @@ namespace VLiveKit.Camera.Editor
             {
                 if (_customReferenceProp.objectReferenceValue == null)
                 {
-                    EditorGUILayout.HelpBox("Custom Reference が未設定です。指定Transformの正面方向（XZ射影）が使用されます。", MessageType.Warning);
+                    EditorGUILayout.HelpBox("Custom Reference が未設定です。CustomReference モードでは参照 Transform の指定が必須です（Apply / Rebuild は無効化されます）。", MessageType.Error);
                 }
                 else
                 {
@@ -136,7 +136,7 @@ namespace VLiveKit.Camera.Editor
                     Vector3 fwdXZ = Vector3.ProjectOnPlane(customTransform.forward, Vector3.up);
                     if (fwdXZ.sqrMagnitude < 0.0001f)
                     {
-                        EditorGUILayout.HelpBox("Custom Reference の forward を XZ 平面に射影した長さがほぼ 0 です。正面方向として World +Z を代用します。", MessageType.Warning);
+                        EditorGUILayout.HelpBox("Custom Reference の forward が垂直方向（真上または真下）を向いているため、水平正面方向を決定できません（Apply / Rebuild は無効化されます）。", MessageType.Error);
                     }
                 }
             }
@@ -214,44 +214,51 @@ namespace VLiveKit.Camera.Editor
                 EditorGUILayout.PropertyField(presetProp, new GUIContent("Preset"));
 
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.PropertyField(shotProp, new GUIContent("Shot"));
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    EditorGUILayout.PropertyField(shotProp, new GUIContent("Shot"));
+                }
 
                 if (shotProp.objectReferenceValue != null)
                 {
-                    EditorGUI.BeginDisabledGroup(Application.isPlaying);
-                    if (GUILayout.Button("Rebuild", GUILayout.Width(62), GUILayout.Height(18)))
+                    bool canRebuildSingle = !Application.isPlaying && _performerTargetProp.objectReferenceValue != null && rig.IsForwardReferenceValid();
+                    using (new EditorGUI.DisabledScope(!canRebuildSingle))
                     {
-                        if (EditorUtility.DisplayDialog(
-                            "Rebuild Shot From Preset",
-                            $"Slot {i + 1} のカメラ位置、Lens、Aim、Spline、移動設定を Preset 初期値から再構築します。\n手動調整は上書きされます。続行しますか？",
-                            "Rebuild",
-                            "Cancel"))
+                        if (GUILayout.Button("Rebuild", GUILayout.Width(62), GUILayout.Height(18)))
                         {
-                            serializedObject.ApplyModifiedProperties();
-                            VLiveCameraRigBuilder.RebuildShotFromPreset(rig, i);
-                            serializedObject.Update();
-                            GUIUtility.ExitGUI();
+                            if (EditorUtility.DisplayDialog(
+                                "Rebuild Shot From Preset",
+                                $"Slot {i + 1} のカメラ位置、Lens、Aim、Spline、移動設定を Preset 初期値から再構築します。\n手動調整は上書きされます。続行しますか？",
+                                "Rebuild",
+                                "Cancel"))
+                            {
+                                serializedObject.ApplyModifiedProperties();
+                                VLiveCameraRigBuilder.RebuildShotFromPreset(rig, i);
+                                serializedObject.Update();
+                                GUIUtility.ExitGUI();
+                            }
                         }
                     }
 
-                    if (GUILayout.Button("Delete", GUILayout.Width(52), GUILayout.Height(18)))
+                    using (new EditorGUI.DisabledScope(Application.isPlaying))
                     {
-                        var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
-                        string shotName = shotObj != null ? shotObj.name : $"Shot {i + 1}";
-                        if (EditorUtility.DisplayDialog(
-                            "Delete Shot GameObject",
-                            $"Shot GameObject '{shotName}' および Spline を Scene から削除しますか？\n（Undo 可能です）",
-                            "Delete",
-                            "Cancel"))
+                        if (GUILayout.Button("Delete", GUILayout.Width(52), GUILayout.Height(18)))
                         {
-                            serializedObject.ApplyModifiedProperties();
-                            VLiveCameraRigBuilder.DeleteShotGameObject(rig, i);
-                            serializedObject.Update();
-                            GUIUtility.ExitGUI();
+                            var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
+                            string shotName = shotObj != null ? shotObj.name : $"Shot {i + 1}";
+                            if (EditorUtility.DisplayDialog(
+                                "Delete Shot GameObject",
+                                $"Shot GameObject '{shotName}' および Spline を Scene から削除しますか？\n（Undo 可能です）",
+                                "Delete",
+                                "Cancel"))
+                            {
+                                serializedObject.ApplyModifiedProperties();
+                                VLiveCameraRigBuilder.DeleteShotGameObject(rig, i);
+                                serializedObject.Update();
+                                GUIUtility.ExitGUI();
+                            }
                         }
                     }
-
-                    EditorGUI.EndDisabledGroup();
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -289,7 +296,8 @@ namespace VLiveKit.Camera.Editor
             }
 
             bool hasTarget = _performerTargetProp.objectReferenceValue != null;
-            bool canApply = !Application.isPlaying && hasTarget;
+            bool isForwardValid = rig.IsForwardReferenceValid();
+            bool canApply = !Application.isPlaying && hasTarget && isForwardValid;
 
             EditorGUI.BeginDisabledGroup(!canApply);
             var prevColor = GUI.backgroundColor;
@@ -307,7 +315,7 @@ namespace VLiveKit.Camera.Editor
 
             EditorGUILayout.Space(4);
 
-            bool canRebuild = !Application.isPlaying && hasTarget && _slotsProp.arraySize > 0;
+            bool canRebuild = !Application.isPlaying && hasTarget && isForwardValid && _slotsProp.arraySize > 0;
             EditorGUI.BeginDisabledGroup(!canRebuild);
             if (GUILayout.Button("Rebuild All From Presets", GUILayout.Height(24)))
             {

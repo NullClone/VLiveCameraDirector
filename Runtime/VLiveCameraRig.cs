@@ -34,13 +34,9 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
-        /// 生成されたShotコンポーネントを取得または設定します。
+        /// 生成されたShotコンポーネントを取得します。
         /// </summary>
-        public VLiveCameraShot Shot
-        {
-            get => _shot;
-            set => _shot = value;
-        }
+        public VLiveCameraShot Shot => _shot;
 
 
         // Methods
@@ -53,13 +49,32 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
-        /// 指定されたPresetとShotを持つショットスロットを作成します。
+        /// 指定されたPresetを持つショットスロットを作成します。
         /// </summary>
-        public VLiveCameraShotSlot(VLiveCameraMotionPreset preset, VLiveCameraShot shot = null)
+        public VLiveCameraShotSlot(VLiveCameraMotionPreset preset)
+        {
+            _preset = preset;
+            _shot = null;
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor専用: 指定されたPresetとShotを持つショットスロットを作成します。
+        /// </summary>
+        public VLiveCameraShotSlot(VLiveCameraMotionPreset preset, VLiveCameraShot shot)
         {
             _preset = preset;
             _shot = shot;
         }
+
+        /// <summary>
+        /// Editor専用: 生成・再構築されたShot参照を設定します。
+        /// </summary>
+        public void SetShot(VLiveCameraShot shot)
+        {
+            _shot = shot;
+        }
+#endif
     }
 
     /// <summary>
@@ -204,7 +219,7 @@ namespace VLiveKit.Camera
         /// <summary>
         /// 管理されている順序付きShotスロット一覧を取得します。
         /// </summary>
-        public List<VLiveCameraShotSlot> Slots => _slots;
+        public IReadOnlyList<VLiveCameraShotSlot> Slots => _slots;
 
         /// <summary>
         /// 管理されているShotスロット数を取得します。
@@ -213,6 +228,29 @@ namespace VLiveKit.Camera
 
 
         // Methods
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor専用: 初期セットアップ時にスロットを追加します。
+        /// </summary>
+        public void AddSlot(VLiveCameraShotSlot slot)
+        {
+            if (_slots == null)
+            {
+                _slots = new List<VLiveCameraShotSlot>();
+            }
+
+            _slots.Add(slot);
+        }
+
+        /// <summary>
+        /// Editor専用: スロットリストをクリアします。
+        /// </summary>
+        public void ClearSlots()
+        {
+            _slots?.Clear();
+        }
+#endif
 
         /// <summary>
         /// 現在の設定に基づく正面方向の正規化ベクトルを取得します。
@@ -246,12 +284,38 @@ namespace VLiveKit.Camera
                         {
                             return fwd.normalized;
                         }
+
+                        Debug.LogWarning("[VLiveCameraRig] Custom Reference の forward が垂直方向のため World +Z にフォールバックしました。", this);
                     }
+                    else
+                    {
+                        Debug.LogWarning("[VLiveCameraRig] Custom Reference が未設定のため World +Z にフォールバックしました。", this);
+                    }
+
                     return Vector3.forward;
 
                 default:
                     return Vector3.forward;
             }
+        }
+
+        /// <summary>
+        /// 現在の正面基準設定が有効であるかを検証します。CustomReference モードで Transform が未指定または垂直方向の場合は false を返します。
+        /// </summary>
+        public bool IsForwardReferenceValid()
+        {
+            if (_forwardReferenceMode == ForwardReferenceMode.CustomReference)
+            {
+                if (_customReference == null)
+                {
+                    return false;
+                }
+
+                Vector3 fwd = Vector3.ProjectOnPlane(_customReference.forward, Vector3.up);
+                return fwd.sqrMagnitude >= 0.0001f;
+            }
+
+            return true;
         }
 
         /// <summary>
