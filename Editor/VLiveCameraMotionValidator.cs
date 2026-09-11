@@ -60,27 +60,27 @@ namespace VLiveKit.Camera.Editor
 
             if (shot == null)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "General", "Shot コンポーネントが null です。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "General", "Shot component is null."));
                 report.HasErrors = true;
                 return report;
             }
 
             if (shot.CinemachineCamera == null)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Camera", "専用 CinemachineCamera が未割り当てです。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Camera", "Dedicated CinemachineCamera is unassigned."));
                 report.HasErrors = true;
             }
 
             if (shot.AimProxy == null)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Aim", "専用 Aim Proxy が未設定です。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Aim", "Dedicated Aim Proxy is unassigned."));
                 report.HasWarnings = true;
             }
 
             VLiveCameraAppliedMotion motion = shot.AppliedMotion;
             if (motion == null)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Motion", "適用済み Motion 設定が存在しません。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Motion", "Applied Motion configuration is missing."));
                 report.HasErrors = true;
                 return report;
             }
@@ -90,7 +90,7 @@ namespace VLiveKit.Camera.Editor
             {
                 if (shot.SplineDolly == null || shot.SplineDolly.Spline == null)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Spline", "Spline Dolly または SplineContainer が未設定です。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Spline", "Spline Dolly or SplineContainer is unassigned."));
                     report.HasErrors = true;
                 }
                 else
@@ -109,7 +109,7 @@ namespace VLiveKit.Camera.Editor
                 float distToTarget = Vector3.Distance(shot.CinemachineCamera.transform.position, shot.PerformerTarget.position);
                 if (distToTarget <= nearClip)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Composition", $"Target までの距離 ({distToTarget:F2}m) がカメラの Near Clip Plane ({nearClip:F2}m) 以下です。被写体がクリップされる可能性があります。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Composition", $"Distance to Target ({distToTarget:F2}m) is within Near Clip Plane ({nearClip:F2}m). Subject may be clipped."));
                     report.HasWarnings = true;
                 }
             }
@@ -128,7 +128,7 @@ namespace VLiveKit.Camera.Editor
 
             if (preset == null)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "General", "Motion Preset が null です。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "General", "Motion Preset is null."));
                 report.HasErrors = true;
                 return report;
             }
@@ -160,31 +160,31 @@ namespace VLiveKit.Camera.Editor
             report.MinFieldOfView = float.MaxValue;
             report.MaxFieldOfView = float.MinValue;
 
-            // 1. In / Out Point 診断
+            // 1. In / Out Point checks
             if (motion.InTime < 0f)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Timing", $"In Time が 0 未満です ({motion.InTime:F2}s)。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Timing", $"In Time is negative ({motion.InTime:F2}s)."));
                 report.HasErrors = true;
             }
 
             if (motion.OutTime > motion.EffectiveDuration + 0.001f)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Timing", $"Out Time ({motion.OutTime:F2}s) が Duration ({motion.EffectiveDuration:F2}s) を超えています。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Timing", $"Out Time ({motion.OutTime:F2}s) exceeds Duration ({motion.EffectiveDuration:F2}s)."));
                 report.HasErrors = true;
             }
 
             if (motion.InTime >= motion.OutTime)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Timing", $"In Time ({motion.InTime:F2}s) が Out Time ({motion.OutTime:F2}s) 以上です。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Timing", $"In Time ({motion.InTime:F2}s) is greater than or equal to Out Time ({motion.OutTime:F2}s)."));
                 report.HasErrors = true;
             }
 
-            // 2. Profile制約
+            // 2. Profile constraints
             float recMaxSpeed = profile != null ? profile.RecommendedMaxSpeed : 5.0f;
             float recMaxAcc = profile != null ? profile.RecommendedMaxAcceleration : 10.0f;
             float recMaxJerk = profile != null ? profile.RecommendedMaxJerk : 50.0f;
 
-            // 3. サンプリング計算
+            // 3. Sampling
             float duration = Mathf.Max(0.01f, motion.EffectiveDuration);
             float dt = duration / (SampleCount - 1);
 
@@ -203,14 +203,14 @@ namespace VLiveKit.Camera.Editor
 
                 if (!sample.IsValid)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Safety", $"時刻 {t:F2}s で NaN または Infinity の異常値を検出しました。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Error, "Safety", $"Detected NaN or Infinity value at time {t:F2}s."));
                     report.HasErrors = true;
                 }
 
-                // Progress単調性チェック
+                // Progress monotonicity
                 if (i > 0 && sample.Progress < prevProgress - 0.005f && !monotonicityWarned)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Curve", $"Progress Curve が非単調です（時刻 {t:F2}s で後退区間が存在します）。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Curve", $"Progress Curve is non-monotonic (reversal detected at time {t:F2}s)."));
                     report.HasWarnings = true;
                     monotonicityWarned = true;
                 }
@@ -234,12 +234,12 @@ namespace VLiveKit.Camera.Editor
                 {
                     if (!report.HasWarnings)
                     {
-                        report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Info, "Composition", $"Screen Position ({sample.ScreenPosition.x:F2}, {sample.ScreenPosition.y:F2}) が通常枠 (±0.5) を越えています。"));
+                        report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Info, "Composition", $"Screen Position ({sample.ScreenPosition.x:F2}, {sample.ScreenPosition.y:F2}) exceeds standard framing bounds (±0.5)."));
                     }
                 }
             }
 
-            // 速度計算
+            // Velocities
             for (int i = 0; i < SampleCount; i++)
             {
                 if (i == 0)
@@ -262,7 +262,7 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // 加速度計算
+            // Accelerations
             for (int i = 0; i < SampleCount; i++)
             {
                 if (i == 0)
@@ -285,7 +285,7 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // Jerk計算
+            // Jerk
             for (int i = 0; i < SampleCount; i++)
             {
                 if (i == 0)
@@ -308,28 +308,28 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // 4. 動特性の推奨値比較
+            // 4. Dynamics recommended limits
             if (motion.ShotType == VLiveCameraShot.ShotType.Spline)
             {
                 if (report.MaxSpeed > recMaxSpeed)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Dynamics", $"最大移動速度 ({report.MaxSpeed:F2} m/s) が推奨値 ({recMaxSpeed:F2} m/s) を超えています。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Dynamics", $"Peak speed ({report.MaxSpeed:F2} m/s) exceeds recommended limit ({recMaxSpeed:F2} m/s)."));
                     report.HasWarnings = true;
                 }
 
                 if (report.MaxAcceleration > recMaxAcc)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Dynamics", $"最大加速度 ({report.MaxAcceleration:F2} m/s²) が推奨値 ({recMaxAcc:F2} m/s²) を超えています。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Dynamics", $"Peak acceleration ({report.MaxAcceleration:F2} m/s²) exceeds recommended limit ({recMaxAcc:F2} m/s²)."));
                     report.HasWarnings = true;
                 }
 
                 if (report.MaxJerk > recMaxJerk)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Info, "Dynamics", $"最大Jerk ({report.MaxJerk:F2} m/s³) が推奨値 ({recMaxJerk:F2} m/s³) を超えています。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Info, "Dynamics", $"Peak jerk ({report.MaxJerk:F2} m/s³) exceeds recommended limit ({recMaxJerk:F2} m/s³)."));
                 }
             }
 
-            // 5. Entry Mode検証
+            // 5. Entry Mode validation
             if (motion.ShotType == VLiveCameraShot.ShotType.Spline)
             {
                 int inIndex = Mathf.Clamp(Mathf.RoundToInt((motion.InTime / duration) * (SampleCount - 1)), 0, SampleCount - 1);
@@ -337,26 +337,26 @@ namespace VLiveKit.Camera.Editor
 
                 if (motion.EntryMode == EntryMode.Static && inSpeed > 0.5f)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Entry", $"Static Entry ですが In Time で非ゼロの進行速度 ({inSpeed:F2} m/s) を持ちます。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Entry", $"Static Entry configured but has non-zero speed ({inSpeed:F2} m/s) at In Time."));
                     report.HasWarnings = true;
                 }
                 else if (motion.EntryMode == EntryMode.Rolling && inSpeed < 0.05f)
                 {
-                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Entry", $"Rolling Entry ですが In Time での進行速度がほぼゼロ ({inSpeed:F2} m/s) です。"));
+                    report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Entry", $"Rolling Entry configured but has near-zero speed ({inSpeed:F2} m/s) at In Time."));
                     report.HasWarnings = true;
                 }
             }
 
-            // 6. Lens検証
+            // 6. Lens validation
             if (report.MinFieldOfView < 5f || report.MaxFieldOfView > 140f)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Lens", $"画角が極端な値です (最小: {report.MinFieldOfView:F1}°, 最大: {report.MaxFieldOfView:F1}°)。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Warning, "Lens", $"Extreme field of view detected (Min: {report.MinFieldOfView:F1}°, Max: {report.MaxFieldOfView:F1}°)."));
                 report.HasWarnings = true;
             }
 
             if (report.Messages.Count == 0)
             {
-                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Info, "OK", "診断結果: すべての運動・構図・タイミング値が正常範囲内です。"));
+                report.Messages.Add(new DiagnosticMessage(DiagnosticSeverity.Info, "OK", "All motion, composition, and timing values are within valid ranges."));
             }
         }
     }

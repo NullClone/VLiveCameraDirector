@@ -95,7 +95,6 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Target & Output (対象と出力設定)")]
         [Tooltip("カメラワークの注視・追従基準となる演者Transform。")]
         [SerializeField]
         private Transform _performerTarget;
@@ -104,7 +103,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private UnityEngine.Camera _programCamera;
 
-        [Header("Orientation & Framing (正面基準と構図)")]
         [Tooltip("正面方向の基準モード（TargetForward: Targetの正面XZ, WorldPlusZ: World +Z, WorldMinusZ: World -Z, CustomReference: 指定Transformの正面XZ）。")]
         [SerializeField]
         private ForwardReferenceMode _forwardReferenceMode = ForwardReferenceMode.TargetForward;
@@ -128,7 +126,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _motionScale = 1.0f;
 
-        [Header("Shot Slots (ショットスロット一覧)")]
         [Tooltip("番号順に管理されるShotスロット一覧。これがShot順の唯一の正本です。")]
         [SerializeField]
         private List<VLiveCameraShotSlot> _slots = new List<VLiveCameraShotSlot>();

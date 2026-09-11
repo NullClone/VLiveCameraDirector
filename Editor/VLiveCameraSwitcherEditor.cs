@@ -34,51 +34,26 @@ namespace VLiveKit.Camera.Editor
 
             var switcher = (VLiveCameraSwitcher)target;
 
-            DrawHeader(switcher);
-            EditorGUILayout.Space(6);
-
             DrawRigSection(switcher);
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawShotsSection(switcher);
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
-            DrawRuntimeSection(switcher);
+            DrawProgramMonitorSection(switcher);
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawHeader(VLiveCameraSwitcher switcher)
-        {
-            var rect = GUILayoutUtility.GetRect(0, 48, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(rect, new Color(0.08f, 0.09f, 0.13f));
-
-            var titleRect = new Rect(rect.x + 12, rect.y + 6, rect.width - 24, 20);
-            var subRect = new Rect(rect.x + 12, rect.y + 26, rect.width - 24, 16);
-
-            EditorGUI.LabelField(titleRect, "VLIVE CAMERA SWITCHER", new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 13,
-                normal = { textColor = Color.white }
-            });
-
-            string programName = switcher.CurrentProgramShot != null ? switcher.CurrentProgramShot.ShotName : "None";
-            EditorGUI.LabelField(subRect, $"PROGRAM: {programName}  |  Shots: {switcher.ShotCount}", new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = new Color(0.65f, 0.85f, 1f) }
-            });
-        }
-
         private void DrawRigSection(VLiveCameraSwitcher switcher)
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Target Rig (参照リグ)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Target Rig", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_rigProp);
 
             if (_rigProp.objectReferenceValue == null)
             {
-                EditorGUILayout.HelpBox("VLiveCameraRig が未設定です。Shot構成およびProgram出力はRigから取得されます。", MessageType.Warning);
+                EditorGUILayout.HelpBox("VLiveCameraRig is unassigned. Shot slots and Program output are resolved from the Rig.", MessageType.Warning);
             }
             else if (switcher.Rig != null)
             {
@@ -88,18 +63,15 @@ namespace VLiveKit.Camera.Editor
                     EditorGUILayout.ObjectField("Cinemachine Brain", switcher.CinemachineBrain, typeof(CinemachineBrain), true);
                 }
             }
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawShotsSection(VLiveCameraSwitcher switcher)
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Registered Shots (Rigのショット構成)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Registered Shots", EditorStyles.boldLabel);
 
             if (switcher.Rig == null || switcher.Rig.Slots == null || switcher.Rig.Slots.Count == 0)
             {
-                EditorGUILayout.HelpBox("ショットが登録されていません。VLiveCameraRig の Inspector で Shot Slots を設定してください。", MessageType.Info);
+                EditorGUILayout.HelpBox("No shots registered. Configure Shot Slots in the VLiveCameraRig Inspector.", MessageType.Info);
             }
             else
             {
@@ -116,30 +88,19 @@ namespace VLiveKit.Camera.Editor
                     EditorGUILayout.EndHorizontal();
                 }
             }
-
-            EditorGUILayout.EndVertical();
         }
 
-        private void DrawRuntimeSection(VLiveCameraSwitcher switcher)
+        private void DrawProgramMonitorSection(VLiveCameraSwitcher switcher)
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Program Monitor & Control (Live制御)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Program Monitor", EditorStyles.boldLabel);
 
-            string liveShotName = switcher.CurrentProgramShot != null ? switcher.CurrentProgramShot.ShotName : "未選択";
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField("Current Program:", GUILayout.Width(110));
-                var style = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    normal = { textColor = switcher.CurrentProgramShot != null ? new Color(1f, 0.35f, 0.35f) : Color.gray }
-                };
-                EditorGUILayout.LabelField(liveShotName, style);
-            }
+            string liveShotName = switcher.CurrentProgramShot != null ? switcher.CurrentProgramShot.ShotName : "None";
+            EditorGUILayout.LabelField("Current Program", liveShotName);
 
             if (Application.isPlaying)
             {
                 EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField("Direct Cut (ショット切り替え):", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField("Direct Cut", EditorStyles.miniBoldLabel);
 
                 int shotCount = switcher.ShotCount;
                 int columns = 3;
@@ -155,27 +116,18 @@ namespace VLiveKit.Camera.Editor
                                 var slot = switcher.Slots != null && index < switcher.Slots.Count ? switcher.Slots[index] : null;
                                 var shot = slot != null ? slot.Shot : null;
                                 string label = shot != null ? $"{index + 1}: {shot.ShotName}" : $"{index + 1}: (Null)";
-                                bool isCurrent = shot != null && shot == switcher.CurrentProgramShot;
 
-                                var prevBg = GUI.backgroundColor;
-                                if (isCurrent)
-                                {
-                                    GUI.backgroundColor = new Color(0.9f, 0.25f, 0.25f);
-                                }
-
-                                if (GUILayout.Button(label, GUILayout.Height(26)))
+                                if (GUILayout.Button(label, GUILayout.Height(24)))
                                 {
                                     switcher.CutToShot(index + 1);
                                 }
-
-                                GUI.backgroundColor = prevBg;
                             }
                         }
                     }
                 }
 
                 EditorGUILayout.Space(6);
-                EditorGUILayout.LabelField("Motion Control (現在のLive Shot操作):", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField("Motion Control", EditorStyles.miniBoldLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -212,10 +164,8 @@ namespace VLiveKit.Camera.Editor
             }
             else
             {
-                EditorGUILayout.HelpBox("Play Mode 中に直接Cutボタンおよび手動操作ボタンが表示されます。", MessageType.None);
+                EditorGUILayout.HelpBox("Direct Cut and motion control buttons are active during Play Mode.", MessageType.None);
             }
-
-            EditorGUILayout.EndVertical();
         }
     }
 }

@@ -17,7 +17,7 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        public const string RigGameObjectName = "VLive Camera Rig";
+        public const string RigGameObjectName = "Virtual Camera";
         public const string ShotsContainerName = "Shots";
         public const string SplinesContainerName = "Splines";
         public const string AimProxiesContainerName = "Aim Proxies";
@@ -38,10 +38,10 @@ namespace VLiveKit.Camera.Editor
         /// <summary>
         /// GameObjectメニューから新しいCamera Rigを作成します。
         /// </summary>
-        [MenuItem("GameObject/VLiveKit/Camera Rig", false, 10)]
+        [MenuItem("GameObject/VLiveKit/" + RigGameObjectName, false, 10)]
         public static void CreateRigFromMenu()
         {
-            CreateRig(null, UnityEngine.Camera.main);
+            CreateRig(null, null);
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace VLiveKit.Camera.Editor
         {
             if (Application.isPlaying)
             {
-                Debug.LogWarning("[VLiveCameraRigBuilder] Play Mode中はCamera Rigを作成できません。");
+                Debug.LogWarning("[VLiveCameraRigBuilder] Cannot create Camera Rig during Play Mode.");
                 return null;
             }
 
@@ -109,7 +109,7 @@ namespace VLiveKit.Camera.Editor
             Selection.activeGameObject = rigGo;
             EditorGUIUtility.PingObject(rigGo);
 
-            Debug.Log("[VLiveCameraRigBuilder] VLive Camera Rig を作成しました。InspectorでTargetを設定し、'Apply / Sync' を実行してください。");
+            Debug.Log("[VLiveCameraRigBuilder] VLive Camera Rig created. Assign Target and Program Camera in Inspector, then click 'Apply / Sync'.");
             return rig;
         }
 
@@ -239,7 +239,7 @@ namespace VLiveKit.Camera.Editor
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
 
-            Debug.Log($"[VLiveCameraRigBuilder] Apply / Sync 完了 (新規Shot生成: {createdCount}, 参照修復: {repairedCount})。");
+            Debug.Log($"[VLiveCameraRigBuilder] Apply / Sync completed (New shots created: {createdCount}, References repaired: {repairedCount}).");
             return true;
         }
 
@@ -305,7 +305,46 @@ namespace VLiveKit.Camera.Editor
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
 
-            Debug.Log($"[VLiveCameraRigBuilder] Shot {slotIndex + 1} ({slot.Preset.DisplayName}) を Preset 初期値から再構築しました。");
+            Debug.Log($"[VLiveCameraRigBuilder] Shot {slotIndex + 1} ({slot.Preset.DisplayName}) rebuilt from preset.");
+        }
+
+        /// <summary>
+        /// Scene上の指定ShotをPreset初期値から再構築します（手動調整は上書きされます）。
+        /// </summary>
+        public static void RebuildShotFromPreset(VLiveCameraShot shot)
+        {
+            if (shot == null)
+            {
+                return;
+            }
+
+            var rig = shot.GetComponentInParent<VLiveCameraRig>();
+            if (rig == null)
+            {
+                Debug.LogWarning("[VLiveCameraRigBuilder] Shot does not belong to a VLiveCameraRig.");
+                return;
+            }
+
+            int slotIndex = -1;
+            if (rig.Slots != null)
+            {
+                for (int i = 0; i < rig.Slots.Count; i++)
+                {
+                    if (rig.Slots[i] != null && rig.Slots[i].Shot == shot)
+                    {
+                        slotIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (slotIndex < 0)
+            {
+                Debug.LogWarning($"[VLiveCameraRigBuilder] Shot '{shot.name}' is not assigned to any slot in Rig.");
+                return;
+            }
+
+            RebuildShotFromPreset(rig, slotIndex);
         }
 
         /// <summary>
@@ -373,7 +412,7 @@ namespace VLiveKit.Camera.Editor
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
 
-            Debug.Log("[VLiveCameraRigBuilder] すべてのShotをPreset初期値から再構築しました。");
+            Debug.Log("[VLiveCameraRigBuilder] All shots rebuilt from presets.");
         }
 
         /// <summary>
@@ -444,7 +483,43 @@ namespace VLiveKit.Camera.Editor
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
 
-            Debug.Log($"[VLiveCameraRigBuilder] Shot {slotIndex + 1} のGameObjectを一式削除しました。");
+            Debug.Log($"[VLiveCameraRigBuilder] Deleted Shot {slotIndex + 1} GameObject and associated components.");
+        }
+
+        /// <summary>
+        /// 指定されたShot GameObject、Spline、Aim ProxyをSceneから明示的に削除します。
+        /// </summary>
+        public static void DeleteShotGameObject(VLiveCameraShot shot)
+        {
+            if (shot == null)
+            {
+                return;
+            }
+
+            var rig = shot.GetComponentInParent<VLiveCameraRig>();
+            if (rig == null)
+            {
+                Debug.LogWarning("[VLiveCameraRigBuilder] Shot does not belong to a VLiveCameraRig.");
+                return;
+            }
+
+            int slotIndex = -1;
+            if (rig.Slots != null)
+            {
+                for (int i = 0; i < rig.Slots.Count; i++)
+                {
+                    if (rig.Slots[i] != null && rig.Slots[i].Shot == shot)
+                    {
+                        slotIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (slotIndex >= 0)
+            {
+                DeleteShotGameObject(rig, slotIndex);
+            }
         }
 
         /// <summary>

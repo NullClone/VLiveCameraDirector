@@ -20,7 +20,6 @@ namespace VLiveKit.Camera
             Spline
         }
 
-        [Header("Shot Identification (ショット識別)")]
         [Tooltip("ショットの識別名。")]
         [SerializeField]
         private string _shotName = "Shot";

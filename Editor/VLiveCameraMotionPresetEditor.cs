@@ -5,7 +5,7 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraMotionPreset用のカスタムインスペクター。
-    /// 各Trackの階層的表示とMotion Validatorによるリアルタイム診断情報を提供します。
+    /// 各Trackの階層的表示とMotion Validatorによる診断情報を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraMotionPreset))]
     public class VLiveCameraMotionPresetEditor : UnityEditor.Editor
@@ -134,59 +134,35 @@ namespace VLiveKit.Camera.Editor
 
             var preset = (VLiveCameraMotionPreset)target;
 
-            DrawHeader(preset);
-            EditorGUILayout.Space(6);
-
             DrawIdentitySection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawBodySection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawTimingSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawAimSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawLensSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawRollSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawActivationSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawDiagnosticsSection(preset);
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawHeader(VLiveCameraMotionPreset preset)
-        {
-            var rect = GUILayoutUtility.GetRect(0, 48, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(rect, new Color(0.08f, 0.09f, 0.13f));
-
-            var titleRect = new Rect(rect.x + 12, rect.y + 6, rect.width - 24, 20);
-            var subRect = new Rect(rect.x + 12, rect.y + 26, rect.width - 24, 16);
-
-            EditorGUI.LabelField(titleRect, "VLIVE CAMERA MOTION PRESET", new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 13,
-                normal = { textColor = Color.white }
-            });
-
-            EditorGUI.LabelField(subRect, $"{preset.DisplayName}  |  {preset.ShotType} ({preset.Family})  |  {preset.EntryMode} Entry", new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = new Color(0.65f, 0.85f, 1f) }
-            });
-        }
-
         private void DrawIdentitySection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Identity & Intent (識別と意図)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Identity & Intent", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_displayNameProp);
             EditorGUILayout.PropertyField(_shotTypeProp);
@@ -195,14 +171,11 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.PropertyField(_energyProp);
             EditorGUILayout.PropertyField(_descriptionProp);
             EditorGUILayout.PropertyField(_rigProfileProp);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawBodySection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Body Track (移動軌道)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Body Track", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_isClosedProp);
             EditorGUILayout.PropertyField(_referenceSplineLengthProp);
@@ -214,14 +187,11 @@ namespace VLiveKit.Camera.Editor
             }
 
             EditorGUILayout.PropertyField(_knotsProp, true);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawTimingSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Timing Track (タイミング設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Timing Track", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_clipDurationProp);
             EditorGUILayout.PropertyField(_progressCurveProp);
@@ -234,14 +204,11 @@ namespace VLiveKit.Camera.Editor
             }
 
             EditorGUILayout.PropertyField(_speedStepProp);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawAimSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Aim & Composition (注視・構図設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Aim & Composition", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_aimOffsetProp);
             if (_aimOffsetXCurveProp != null && _aimOffsetYCurveProp != null && _aimOffsetZCurveProp != null)
@@ -280,14 +247,11 @@ namespace VLiveKit.Camera.Editor
             }
 
             EditorGUILayout.PropertyField(_centerOnActivateProp);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawLensSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Lens Track (レンズ設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Lens Track", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_lensModeProp);
             if (_lensModeProp.enumValueIndex == (int)LensMode.FieldOfView)
@@ -301,28 +265,22 @@ namespace VLiveKit.Camera.Editor
                 EditorGUILayout.PropertyField(_focalLengthCurveProp);
                 EditorGUILayout.PropertyField(_sensorSizeProp);
             }
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawRollSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Roll Track (ロール設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Roll Track", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_rollModeProp);
             if (_rollModeProp.enumValueIndex == (int)RollMode.RollCurve)
             {
                 EditorGUILayout.PropertyField(_rollCurveProp);
             }
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawActivationSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Activation & Entry (開始・終了設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Activation", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_entryModeProp);
 
@@ -333,16 +291,13 @@ namespace VLiveKit.Camera.Editor
             }
 
             EditorGUILayout.PropertyField(_exitBehaviorProp);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawDiagnosticsSection(VLiveCameraMotionPreset preset)
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Motion Diagnostics (運動・構図診断)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Motion Diagnostics", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Run Diagnostics (診断実行)", GUILayout.Height(26)))
+            if (GUILayout.Button("Run Diagnostics", GUILayout.Height(24)))
             {
                 _cachedReport = VLiveCameraMotionValidator.ValidatePreset(preset);
             }
@@ -350,25 +305,34 @@ namespace VLiveKit.Camera.Editor
             if (_cachedReport != null)
             {
                 EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField($"Duration: {_cachedReport.Duration:F2}s  |  Spline Length: {_cachedReport.SplineLength:F2}m", EditorStyles.miniBoldLabel);
-                EditorGUILayout.LabelField($"Peak Speed: {_cachedReport.MaxSpeed:F2} m/s  |  Peak Acc: {_cachedReport.MaxAcceleration:F2} m/s²  |  Peak Jerk: {_cachedReport.MaxJerk:F2} m/s³", EditorStyles.miniLabel);
-                EditorGUILayout.LabelField($"FOV Range: {_cachedReport.MinFieldOfView:F1}° 〜 {_cachedReport.MaxFieldOfView:F1}°", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(
+                    $"Duration: {_cachedReport.Duration:F2}s  |  Spline Length: {_cachedReport.SplineLength:F2}m\n" +
+                    $"Peak Speed: {_cachedReport.MaxSpeed:F2} m/s  |  Peak Acc: {_cachedReport.MaxAcceleration:F2} m/s²  |  Peak Jerk: {_cachedReport.MaxJerk:F2} m/s³\n" +
+                    $"FOV Range: {_cachedReport.MinFieldOfView:F1}° - {_cachedReport.MaxFieldOfView:F1}°",
+                    EditorStyles.miniLabel
+                );
 
-                EditorGUILayout.Space(4);
-                foreach (var msg in _cachedReport.Messages)
+                EditorGUILayout.Space(2);
+
+                if (_cachedReport.Messages.Count == 0)
                 {
-                    MessageType msgType = msg.Severity switch
+                    EditorGUILayout.HelpBox("No issues found.", MessageType.Info);
+                }
+                else
+                {
+                    foreach (var msg in _cachedReport.Messages)
                     {
-                        VLiveCameraMotionValidator.DiagnosticSeverity.Error => MessageType.Error,
-                        VLiveCameraMotionValidator.DiagnosticSeverity.Warning => MessageType.Warning,
-                        _ => MessageType.Info
-                    };
+                        MessageType msgType = msg.Severity switch
+                        {
+                            VLiveCameraMotionValidator.DiagnosticSeverity.Error => MessageType.Error,
+                            VLiveCameraMotionValidator.DiagnosticSeverity.Warning => MessageType.Warning,
+                            _ => MessageType.Info
+                        };
 
-                    EditorGUILayout.HelpBox($"[{msg.Category}] {msg.Message}", msgType);
+                        EditorGUILayout.HelpBox($"[{msg.Category}] {msg.Message}", msgType);
+                    }
                 }
             }
-
-            EditorGUILayout.EndVertical();
         }
     }
 }

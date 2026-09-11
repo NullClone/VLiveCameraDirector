@@ -1,5 +1,4 @@
 using UnityEditor;
-using UnityEngine;
 
 namespace VLiveKit.Camera.Editor
 {
@@ -44,64 +43,35 @@ namespace VLiveKit.Camera.Editor
         {
             serializedObject.Update();
 
-            DrawProfileHeader();
-            EditorGUILayout.Space(6);
-
             DrawResponseSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawConstraintsSection();
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawProfileHeader()
-        {
-            var rect = GUILayoutUtility.GetRect(0, 48, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(rect, new Color(0.08f, 0.09f, 0.13f));
-
-            var titleRect = new Rect(rect.x + 12, rect.y + 6, rect.width - 24, 20);
-            var subRect = new Rect(rect.x + 12, rect.y + 26, rect.width - 24, 16);
-
-            EditorGUI.LabelField(titleRect, "VLIVE CAMERA RIG PROFILE", new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 13,
-                normal = { textColor = Color.white }
-            });
-
-            EditorGUI.LabelField(subRect, "機材応答特性・検証推奨範囲プロファイル", new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = new Color(0.65f, 0.85f, 1f) }
-            });
-        }
-
         private void DrawResponseSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Operational Responses (操作応答設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Operational Responses", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_speedResponseTimeProp);
             EditorGUILayout.PropertyField(_holdDecelerationTimeProp);
             EditorGUILayout.PropertyField(_resumeAccelerationTimeProp);
             EditorGUILayout.PropertyField(_reverseDecelerationTimeProp);
             EditorGUILayout.PropertyField(_reverseAccelerationTimeProp);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawConstraintsSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Recommended Constraints (検証推奨範囲)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Recommended Constraints", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_recommendedMaxSpeedProp);
             EditorGUILayout.PropertyField(_recommendedMaxAccelerationProp);
             EditorGUILayout.PropertyField(_recommendedMaxJerkProp);
             EditorGUILayout.PropertyField(_recommendedMaxAngularSpeedProp);
 
-            EditorGUILayout.HelpBox("これらの値はValidatorの警告判定に使用され、Runtime再生の演出を暗黙に変更しません。", MessageType.None);
-
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.HelpBox("These constraints are used by the Motion Validator for diagnostics and do not alter runtime playback.", MessageType.None);
         }
     }
 }

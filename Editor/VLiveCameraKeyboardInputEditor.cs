@@ -27,6 +27,7 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _resumeKeyProp;
         private SerializedProperty _freezeKeyProp;
 #endif
+        private bool _showControlsReference = false;
 
 
         // Methods
@@ -49,65 +50,38 @@ namespace VLiveKit.Camera.Editor
         {
             serializedObject.Update();
 
-            DrawTitleBanner();
-            EditorGUILayout.Space(6);
-
             DrawTargetSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
             DrawBindingsSection();
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(8);
 
-            DrawGuideSection();
+            DrawControlsReferenceSection();
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawTitleBanner()
-        {
-            var rect = GUILayoutUtility.GetRect(0, 48, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(rect, new Color(0.08f, 0.09f, 0.13f));
-
-            var titleRect = new Rect(rect.x + 12, rect.y + 6, rect.width - 24, 20);
-            var subRect = new Rect(rect.x + 12, rect.y + 26, rect.width - 24, 16);
-
-            EditorGUI.LabelField(titleRect, "VLIVE CAMERA KEYBOARD INPUT", new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 13,
-                normal = { textColor = Color.white }
-            });
-
-            EditorGUI.LabelField(subRect, "キーボードによるショットCutおよび移動制御", new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = new Color(0.65f, 0.85f, 1f) }
-            });
-        }
-
         private void DrawTargetSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Target Switcher (制御対象)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Target Switcher", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_switcherProp);
 
             if (_switcherProp.objectReferenceValue == null)
             {
-                EditorGUILayout.HelpBox("VLiveCameraSwitcher が未割り当てです。入力によるカメラ切り替えが機能しません。", MessageType.Warning);
+                EditorGUILayout.HelpBox("VLiveCameraSwitcher is unassigned. Keyboard camera switching will not function.", MessageType.Warning);
             }
-
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawBindingsSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Key Bindings (キー設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Key Bindings", EditorStyles.boldLabel);
 
 #if ENABLE_INPUT_SYSTEM
             EditorGUILayout.PropertyField(_cutKeysProp, new GUIContent("Shot Cut Keys"), true);
             EditorGUILayout.Space(4);
 
-            EditorGUILayout.LabelField("Motion Control Keys:", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("Motion Control Keys", EditorStyles.miniBoldLabel);
             EditorGUILayout.PropertyField(_speedUpKeyProp);
             EditorGUILayout.PropertyField(_speedDownKeyProp);
             EditorGUILayout.PropertyField(_reverseKeyProp);
@@ -117,10 +91,8 @@ namespace VLiveKit.Camera.Editor
 
             ValidateKeyConflicts();
 #else
-            EditorGUILayout.LabelField("Legacy Input Manager が有効です (Alpha1-9, Arrow Keys, R, H, Space)。");
+            EditorGUILayout.LabelField("Legacy Input Manager active (Alpha1-9, Arrow Keys, R, H, Space).");
 #endif
-
-            EditorGUILayout.EndVertical();
         }
 
 #if ENABLE_INPUT_SYSTEM
@@ -133,7 +105,7 @@ namespace VLiveKit.Camera.Editor
 
             var warnings = new List<string>();
 
-            // 1. Cut Keys内の重複チェック
+            // 1. Cut keys duplicate check
             var seenCutKeys = new HashSet<int>();
             var duplicateCutKeys = new HashSet<int>();
 
@@ -152,10 +124,10 @@ namespace VLiveKit.Camera.Editor
             foreach (int dupKey in duplicateCutKeys)
             {
                 string keyName = ((Key)dupKey).ToString();
-                warnings.Add($"Shot Cut Keys 内でキー '{keyName}' が重複して割り当てられています。");
+                warnings.Add($"Duplicate cut key '{keyName}' assigned in Shot Cut Keys.");
             }
 
-            // 2. Motion Control Keysの収集と重複チェック
+            // 2. Motion control keys duplicate check
             var motionKeys = new Dictionary<string, int>
             {
                 { "Speed Up", _speedUpKeyProp.intValue },
@@ -174,7 +146,7 @@ namespace VLiveKit.Camera.Editor
                     if (seenMotionKeys.TryGetValue(kvp.Value, out string existingAction))
                     {
                         string keyName = ((Key)kvp.Value).ToString();
-                        warnings.Add($"移動制御キー '{keyName}' が '{existingAction}' と '{kvp.Key}' で重複しています。");
+                        warnings.Add($"Duplicate motion key '{keyName}' used for both '{existingAction}' and '{kvp.Key}'.");
                     }
                     else
                     {
@@ -183,18 +155,17 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // 3. Cut KeysとMotion Control Keysの競合チェック
+            // 3. Cut keys vs Motion keys conflict check
             foreach (var kvp in seenMotionKeys)
             {
                 if (seenCutKeys.Contains(kvp.Key))
                 {
                     string keyName = ((Key)kvp.Key).ToString();
-                    warnings.Add($"Cut キーと移動制御キー '{kvp.Value}' で同じキー '{keyName}' が競合しています。");
+                    warnings.Add($"Conflict between Cut key and Motion key '{kvp.Value}' for key '{keyName}'.");
                 }
             }
 
-            // 4. 暗黙キー（テンキー1〜9、=、-、テンキー±）との競合チェック
-            // 4a. Cut Keys と暗黙キーの検証
+            // 4. Implicit keys check
             for (int i = 0; i < _cutKeysProp.arraySize; i++)
             {
                 int keyVal = _cutKeysProp.GetArrayElementAtIndex(i).intValue;
@@ -207,26 +178,25 @@ namespace VLiveKit.Camera.Editor
 
                 if (VLiveCameraKeyboardInput.IsImplicitSpeedUpKey(key))
                 {
-                    warnings.Add($"Cut キー {i + 1} に暗黙の Speed Up キー '{key}' が割り当てられています（同時発火します）。");
+                    warnings.Add($"Cut key {i + 1} has implicit Speed Up key '{key}' assigned (will trigger simultaneously).");
                 }
                 else if (VLiveCameraKeyboardInput.IsImplicitSpeedDownKey(key))
                 {
-                    warnings.Add($"Cut キー {i + 1} に暗黙の Speed Down キー '{key}' が割り当てられています（同時発火します）。");
+                    warnings.Add($"Cut key {i + 1} has implicit Speed Down key '{key}' assigned (will trigger simultaneously).");
                 }
                 else if (VLiveCameraKeyboardInput.IsImplicitCutKey(key, out int numpadIndex))
                 {
                     if (numpadIndex != i)
                     {
-                        warnings.Add($"Cut キー {i + 1} に Shot {numpadIndex + 1} の暗黙 Cut キー '{key}' が割り当てられています（同時発火します）。");
+                        warnings.Add($"Cut key {i + 1} has implicit Cut key '{key}' for Shot {numpadIndex + 1} assigned (will trigger simultaneously).");
                     }
                     else
                     {
-                        warnings.Add($"Cut キー {i + 1} に暗黙 Cut キー '{key}' が重複指定されています（テンキーは常時有効のため設定不要です）。");
+                        warnings.Add($"Cut key {i + 1} has implicit Cut key '{key}' assigned (numpad is active by default, duplicate assignment).");
                     }
                 }
             }
 
-            // 4b. 移動制御キーと暗黙キーの検証
             foreach (var kvp in motionKeys)
             {
                 if (kvp.Value == (int)Key.None)
@@ -238,28 +208,20 @@ namespace VLiveKit.Camera.Editor
 
                 if (VLiveCameraKeyboardInput.IsImplicitCutKey(key, out int numpadIndex))
                 {
-                    warnings.Add($"移動制御キー '{kvp.Key}' に Shot {numpadIndex + 1} の暗黙 Cut キー '{key}' が割り当てられています（同時発火します）。");
+                    warnings.Add($"Motion key '{kvp.Key}' has implicit Cut key '{key}' for Shot {numpadIndex + 1} assigned (will trigger simultaneously).");
                 }
                 else if (VLiveCameraKeyboardInput.IsImplicitSpeedUpKey(key))
                 {
                     if (kvp.Key != "Speed Up")
                     {
-                        warnings.Add($"移動制御キー '{kvp.Key}' に暗黙の Speed Up キー '{key}' が割り当てられています（同時発火します）。");
-                    }
-                    else
-                    {
-                        warnings.Add($"移動制御キー 'Speed Up' に暗黙キー '{key}' が指定されています（既に暗黙で有効なため設定不要です）。");
+                        warnings.Add($"Motion key '{kvp.Key}' has implicit Speed Up key '{key}' assigned (will trigger simultaneously).");
                     }
                 }
                 else if (VLiveCameraKeyboardInput.IsImplicitSpeedDownKey(key))
                 {
                     if (kvp.Key != "Speed Down")
                     {
-                        warnings.Add($"移動制御キー '{kvp.Key}' に暗黙の Speed Down キー '{key}' が割り当てられています（同時発火します）。");
-                    }
-                    else
-                    {
-                        warnings.Add($"移動制御キー 'Speed Down' に暗黙キー '{key}' が指定されています（既に暗黙で有効なため設定不要です）。");
+                        warnings.Add($"Motion key '{kvp.Key}' has implicit Speed Down key '{key}' assigned (will trigger simultaneously).");
                     }
                 }
             }
@@ -272,25 +234,19 @@ namespace VLiveKit.Camera.Editor
         }
 #endif
 
-        private void DrawGuideSection()
+        private void DrawControlsReferenceSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Operation Guide (操作ガイド)", EditorStyles.boldLabel);
-
-            string guideText =
-                "【キーボード操作一覧】\n" +
-                "・ 数字キー 1〜N: 対応番号のShotへ直接Cut（テンキー対応）\n" +
-                "・ ↑ / ＝ / ＋: Spline進行速度アップ\n" +
-                "・ ↓ / －: Spline進行速度ダウン\n" +
-                "・ R: 進行方向の反転 (Reverse)\n" +
-                "・ H: 移動の一時停止 (Hold)\n" +
-                "・ Space: 移動の再開 (Resume)\n\n" +
-                "※ 同一Shotの再選択は現在の状態を維持します。\n" +
-                "※ Fixed Shotへの移動操作は安全に無視されます。";
-
-            EditorGUILayout.HelpBox(guideText, MessageType.None);
-
-            EditorGUILayout.EndVertical();
+            _showControlsReference = EditorGUILayout.Foldout(_showControlsReference, "Controls Reference");
+            if (_showControlsReference)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.LabelField("• Numbers 1-9 / Numpad 1-9: Direct cut to corresponding shot");
+                EditorGUILayout.LabelField("• Up Arrow / = / +: Speed up spline motion");
+                EditorGUILayout.LabelField("• Down Arrow / -: Speed down spline motion");
+                EditorGUILayout.LabelField("• R: Reverse motion direction");
+                EditorGUILayout.LabelField("• Space / H: Hold or resume motion");
+                EditorGUI.indentLevel--;
+            }
         }
     }
 }

@@ -116,6 +116,7 @@ namespace VLiveKit.Camera.Editor
                     {
                         unscaledSpline.Add(new BezierKnot(knots[i].Position, knots[i].TangentIn, knots[i].TangentOut, knots[i].Rotation), knots[i].TangentMode);
                     }
+
                     unscaledSpline.Closed = isClosed;
                     refSplineLength = unscaledSpline.GetLength();
                 }
@@ -233,14 +234,14 @@ namespace VLiveKit.Camera.Editor
 
             targetAssetPath = AssetDatabase.GenerateUniqueAssetPath(targetAssetPath);
 
-            // 7. 確認ダイアログ (Source Shotと保存先パスを表示)
+            // 7. Confirmation dialog
             if (showConfirmationDialog)
             {
                 bool proceed = EditorUtility.DisplayDialog(
-                    "Bake Preset (プリセット保存確認)",
-                    $"Source Shot: {shot.ShotName}\n保存先パス: {targetAssetPath}\n\nこのShotから新規Motion Presetを生成して保存しますか？",
-                    "保存 (Save)",
-                    "キャンセル (Cancel)"
+                    "Save Shot As New Preset",
+                    $"Source Shot: {shot.ShotName}\nTarget Path: {targetAssetPath}\n\nCreate and save a new Motion Preset from this shot?",
+                    "Save",
+                    "Cancel"
                 );
 
                 if (!proceed)
@@ -305,7 +306,7 @@ namespace VLiveKit.Camera.Editor
             EditorUtility.SetDirty(preset);
             AssetDatabase.SaveAssetIfDirty(preset);
 
-            Debug.Log($"[VLiveCameraPresetBaker] Shot '{shot.ShotName}' から新しい Motion Preset を保存しました: {targetAssetPath}");
+            Debug.Log($"[VLiveCameraPresetBaker] Saved new Motion Preset from shot '{shot.ShotName}': {targetAssetPath}");
             return preset;
         }
     }

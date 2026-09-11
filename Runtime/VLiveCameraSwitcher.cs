@@ -16,7 +16,6 @@ namespace VLiveKit.Camera
         private const int ActivePriority = 10;
         private const int InactivePriority = 0;
 
-        [Header("Target Rig (対象リグ)")]
         [Tooltip("管理対象のVLiveCameraRig参照。Shotスロット一覧およびProgram CameraはRigから取得します。")]
         [SerializeField]
         private VLiveCameraRig _rig;
@@ -172,7 +171,7 @@ namespace VLiveKit.Camera
 
             nextShot.OnEnterProgram();
 
-            Debug.Log($"[VLiveCameraSwitcher] Program: {nextShot.ShotName}");
+            // Debug.Log($"[VLiveCameraSwitcher] Program: {nextShot.ShotName}");
         }
 
         /// <summary>
