@@ -22,7 +22,7 @@ HierarchyとComponentを手作業で組み立てなくても、1回の操作でV
 - `VLiveCameraKeyboardInput`
 - Program CameraとCinemachine Brain
 - 6つの標準Presetを参照するShot Slot
-- ShotとSplineを配置する子Container
+- Shot、Spline、Aim Proxyを配置する子Container
 
 作成後はRigを選択し、ユーザーがInspectorでTargetを割り当てて`Apply / Sync`できる状態にする。新しいProgram Cameraへ`MainCamera`タグを付けるのはSceneに既存のMain Cameraがない場合だけとする。既存CameraやSwitcherを自動探索して変更しない。
 
@@ -54,9 +54,11 @@ Inspectorは次の3区分を持つ。
 - `Apply / Sync`
 - `Rebuild Selected From Preset`
 - `Rebuild All From Presets`
+- `Save Selected Shot As New Preset`
+- 選択ShotまたはPresetのMotion診断
 - 生成済みShotの明示的な削除
 
-Inspectorは不足参照、無効なScale、キー不足などを簡潔に表示する。検索、カテゴリ、画像サムネイル、Preset専用管理画面は現在作らない。
+Inspectorは不足参照、無効なScale、キー不足、Motion診断結果などを簡潔に表示する。検索、カテゴリ、画像サムネイル、Preset専用管理画面は現在作らない。
 
 ## 5. Apply / Sync
 
@@ -64,14 +66,15 @@ Inspectorは不足参照、無効なScale、キー不足などを簡潔に表示
 
 - Slotに不足するShotと専用CinemachineCameraを生成する。
 - Spline Shotに不足する専用Splineを生成する。
+- Shotに不足するAim ProxyとMotion Playerを生成する。
 - Target、Program出力、SlotとShot間の参照を修復する。
 - 新規生成物だけへPreset初期値、正面基準、スケールを適用する。
 
-既存ShotのTransform、Lens、Spline形状、速度設定を上書きしない。Slotから外れたShotを自動削除しない。Inspectorの値変更、`OnValidate`、Selection変更、Domain ReloadだけではScene構成を変更しない。
+既存ShotのTransform、Lens、Spline形状、Aim、適用済みMotion設定を上書きしない。Preset、Rig Profile、Target Height、Rig Scale、正面基準、Slot参照の変更を既存Shotへ反映するにはRebuildが必要であることを表示し、Applyだけでは差し替えない。Slotから外れたShotを自動削除しない。Inspectorの値変更、`OnValidate`、Selection変更、Domain ReloadだけではScene構成を変更しない。
 
 ## 6. Rebuildと削除
 
-`Rebuild From Preset`は、対象ShotのCamera位置、Lens、Aim、Spline、Preset由来の移動設定を現在のRig設定とPresetから再適用する破壊的操作である。
+`Rebuild From Preset`は、対象ShotのCamera位置、Lens、Aim、Splineと、Timing、Curve、Activationを含む適用済みMotion設定を現在のRig設定とPresetから再生成する破壊的操作である。
 
 - 対象と失われる手動調整を実行前に表示する。
 - SelectedとAllを分ける。
@@ -80,7 +83,20 @@ Inspectorは不足参照、無効なScale、キー不足などを簡潔に表示
 
 Slotから外す操作とSceneオブジェクトの削除を分ける。生成済みShotやSplineを削除する場合は対象を明示し、確認とUndoを必須とする。
 
-## 7. 安全性
+## 7. SceneからPresetへの保存
+
+`Save Selected Shot As New Preset`は、Scene上で調整したShotを再利用可能な新しいMotion Presetへ保存する明示操作とする。
+
+- Source Shotと保存先を実行前に表示する。
+- 現在のCamera、Spline、Aim、LensとShotの適用済みMotion設定から、Knot、Tangent、Up、Timing、Composition、Activationを保存する。
+- 既存Presetを暗黙に上書きしない。
+- Asset YAMLを直接編集せず、Unity Editor APIで作成する。
+- 保存後に元のSlotのPreset参照を自動で差し替えない。差し替える場合は別の明示選択とする。
+- SceneやProjectを自動保存しない。
+
+AIによるPreset生成も同じAsset作成処理を利用する。AI専用形式やPrefab形式のMotion Presetを追加しない。
+
+## 8. 安全性
 
 - すべてのScene変更をUndoできる。
 - 既存Cameraを使用する場合は、ユーザーがInspectorで明示的に割り当てる。
@@ -91,13 +107,13 @@ Slotから外す操作とSceneオブジェクトの削除を分ける。生成�
 - 再実行でユーザー調整値をPreset初期値へ戻さない。
 - Prefab Instanceを編集する場合はPrefab Overrideを正しく記録する。
 
-## 8. 所有権
+## 9. 所有権
 
 Windowとメニューは初期導入、Rig Inspectorは設定、BuilderはScene変更を担当する。設定の正本は`VLiveCameraRig`だけとし、Window、CustomEditor、Builderが設定値のコピーを保持しない。
 
 生成物の識別にはSlot内のShot参照とRigの親子関係を使用する。Preset参照、GameObject名、Scene内で最初に見つかったSwitcherだけを識別根拠にしない。
 
-## 9. Agent確認
+## 10. Agent確認
 
 実装エージェントは次だけを既定確認とする。
 
@@ -107,7 +123,7 @@ Windowとメニューは初期導入、Rig Inspectorは設定、BuilderはScene�
 
 専用テストSceneの作成、ユーザーSceneの保存、Game Viewでの構図評価、長時間試験は行わない。実際のRig作成、Apply、Rebuild結果とカメラワークはユーザーが作業用Sceneで確認する。
 
-## 10. 受け入れ条件
+## 11. 受け入れ条件
 
 1. 1回の操作で初期Rigを作成できる。
 2. Target、正面、スケール、Shot SlotsをRig Inspectorで編集できる。
@@ -116,3 +132,6 @@ Windowとメニューは初期導入、Rig Inspectorは設定、BuilderはScene�
 5. Rebuildと削除が明示操作で、Undoできる。
 6. Inspector編集だけではSceneオブジェクトを生成、削除、再配置しない。
 7. Sceneを自動保存せず、初期PaletteのShotをキーで切り替えられる。
+8. Scene上のShotを既存Presetへ暗黙上書きせず、新しいPresetとして保存できる。
+9. Motion診断がShot、Asset、Sceneを暗黙変更しない。
+10. SlotのPreset参照変更がApplyだけで生成済みShotのCamera Performanceを差し替えない。

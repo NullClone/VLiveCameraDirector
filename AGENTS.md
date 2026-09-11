@@ -3,10 +3,12 @@
 VLiveCameraUnit is a Unity 6.3+ / Cinemachine 3 package for performing prepared
 live-camera shots with operator control and reliable composition assistance.
 
-The current goal is a practical manual baseline: create one rig with one action,
-then author one performer and an ordered motion-preset palette from the rig
-Inspector. Multiple independent shot cameras are selected from the keyboard.
-MIDI, recommendation, and automation come after this workflow is proven.
+The current goal is the Motion Foundation on top of the proven manual rig:
+replace position-only spline playback with a Camera Performance preset that
+coordinates body, timing, aim, composition, lens, and entry state. Multiple
+independent shot cameras remain keyboard-selectable. Gold-master expansion,
+App UI, MIDI, recommendation, and automation come after this foundation is
+proven in the user's Scene.
 
 ## Read first
 
@@ -38,6 +40,13 @@ made. Do not duplicate the same explanation.
   `VLiveKit.Camera.Tests` namespaces.
 - Keep one CinemachineCamera per shot. Never reconfigure a live camera as another
   shot.
+- Keep Motion Preset assets free of runtime state. Motion playback state has one
+  owner, and all motion channels share one playback time.
+- Treat a Motion Preset as reusable source data and a generated Shot as an
+  applied scene instance. Only an explicit rebuild reapplies preset values to an
+  existing Shot.
+- Preserve full spline knots, tangents, tangent modes, and up data. Do not force
+  every generated knot to Auto Smooth.
 - Keep the first release manual-first. Do not add MIDI, runtime AI, Preview,
   compatibility wrappers, or speculative extension layers.
 - Keep rig authoring, Program switching, shot playback, and input in separate
@@ -68,9 +77,10 @@ visible serialized field requires a Tooltip, and every user-facing MonoBehaviour
 requires a useful CustomEditor before it is production-ready.
 
 Default agent verification is a scoped diff review, Unity import and compile, and
-a quick Console check. Do not create a test Scene, run extended Play Mode tests,
-or judge camera composition unless the task explicitly requests it. The user
-performs visual and operational acceptance in their own Scene.
+a quick Console check. Motion validation may report numeric diagnostics but must
+not be presented as visual acceptance. Do not create a test Scene, run extended
+Play Mode tests, or judge camera composition unless the task explicitly requests
+it. The user performs visual and operational acceptance in their own Scene.
 
 Stage only approved paths. Do not branch, push, or open a pull request unless
 explicitly asked. Report changed files, checks, unchecked boundaries, and the
