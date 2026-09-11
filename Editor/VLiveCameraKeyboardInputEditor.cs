@@ -25,6 +25,7 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _reverseKeyProp;
         private SerializedProperty _holdKeyProp;
         private SerializedProperty _resumeKeyProp;
+        private SerializedProperty _freezeKeyProp;
 #endif
 
 
@@ -40,6 +41,7 @@ namespace VLiveKit.Camera.Editor
             _reverseKeyProp = serializedObject.FindProperty("_reverseKey");
             _holdKeyProp = serializedObject.FindProperty("_holdKey");
             _resumeKeyProp = serializedObject.FindProperty("_resumeKey");
+            _freezeKeyProp = serializedObject.FindProperty("_freezeKey");
 #endif
         }
 
@@ -111,6 +113,7 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.PropertyField(_reverseKeyProp);
             EditorGUILayout.PropertyField(_holdKeyProp);
             EditorGUILayout.PropertyField(_resumeKeyProp);
+            EditorGUILayout.PropertyField(_freezeKeyProp);
 
             ValidateKeyConflicts();
 #else
@@ -159,7 +162,8 @@ namespace VLiveKit.Camera.Editor
                 { "Speed Down", _speedDownKeyProp.intValue },
                 { "Reverse", _reverseKeyProp.intValue },
                 { "Hold", _holdKeyProp.intValue },
-                { "Resume", _resumeKeyProp.intValue }
+                { "Resume", _resumeKeyProp.intValue },
+                { "Freeze", _freezeKeyProp.intValue }
             };
 
             var seenMotionKeys = new Dictionary<int, string>();

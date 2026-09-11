@@ -4,6 +4,7 @@
     "references": [
         "Unity.Cinemachine",
         "Unity.Splines",
+        "Unity.Mathematics",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

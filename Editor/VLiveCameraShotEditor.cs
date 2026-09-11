@@ -1,4 +1,3 @@
-using Unity.Cinemachine;
 using UnityEditor;
 using UnityEngine;
 
@@ -6,7 +5,7 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraShot用のカスタムインスペクター。
-    /// 構図設定、参照検証、および再生中の移動状態の可視化と手動操作を提供します。
+    /// 所有コンポーネント、適用済みMotion設定、再生状態の可視化と手動操作、Preset保存、診断機能を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraShot))]
     [CanEditMultipleObjects]
@@ -15,17 +14,17 @@ namespace VLiveKit.Camera.Editor
         // Fields
 
         private SerializedProperty _shotNameProp;
-        private SerializedProperty _cinemachineCameraProp;
         private SerializedProperty _shotTypeProp;
+        private SerializedProperty _cinemachineCameraProp;
         private SerializedProperty _splineDollyProp;
-        private SerializedProperty _initialSpeedProp;
-        private SerializedProperty _minSpeedProp;
-        private SerializedProperty _maxSpeedProp;
-        private SerializedProperty _speedStepProp;
-        private SerializedProperty _initialDirectionProp;
-        private SerializedProperty _startPositionProp;
-        private SerializedProperty _endPositionProp;
-        private SerializedProperty _decelerationDistanceProp;
+        private SerializedProperty _rotationComposerProp;
+        private SerializedProperty _aimProxyProp;
+        private SerializedProperty _motionPlayerProp;
+        private SerializedProperty _performerTargetProp;
+        private SerializedProperty _appliedPresetProp;
+        private SerializedProperty _appliedTargetHeightProp;
+
+        private VLiveCameraMotionValidator.ValidationReport _report;
 
 
         // Methods
@@ -33,17 +32,20 @@ namespace VLiveKit.Camera.Editor
         private void OnEnable()
         {
             _shotNameProp = serializedObject.FindProperty("_shotName");
-            _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
             _shotTypeProp = serializedObject.FindProperty("_shotType");
+            _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
             _splineDollyProp = serializedObject.FindProperty("_splineDolly");
-            _initialSpeedProp = serializedObject.FindProperty("_initialSpeed");
-            _minSpeedProp = serializedObject.FindProperty("_minSpeed");
-            _maxSpeedProp = serializedObject.FindProperty("_maxSpeed");
-            _speedStepProp = serializedObject.FindProperty("_speedStep");
-            _initialDirectionProp = serializedObject.FindProperty("_initialDirection");
-            _startPositionProp = serializedObject.FindProperty("_startPosition");
-            _endPositionProp = serializedObject.FindProperty("_endPosition");
-            _decelerationDistanceProp = serializedObject.FindProperty("_decelerationDistance");
+            _rotationComposerProp = serializedObject.FindProperty("_rotationComposer");
+            _aimProxyProp = serializedObject.FindProperty("_aimProxy");
+            _motionPlayerProp = serializedObject.FindProperty("_motionPlayer");
+            _performerTargetProp = serializedObject.FindProperty("_performerTarget");
+            _appliedPresetProp = serializedObject.FindProperty("_appliedPreset");
+            _appliedTargetHeightProp = serializedObject.FindProperty("_appliedTargetHeight");
+        }
+
+        public override bool RequiresConstantRepaint()
+        {
+            return Application.isPlaying;
         }
 
         public override void OnInspectorGUI()
@@ -58,14 +60,14 @@ namespace VLiveKit.Camera.Editor
             DrawIdentificationSection();
             EditorGUILayout.Space(6);
 
-            DrawCameraSection();
+            DrawComponentsSection();
             EditorGUILayout.Space(6);
 
-            if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShot.ShotType.Spline)
-            {
-                DrawMotionSection();
-                EditorGUILayout.Space(6);
-            }
+            DrawAppliedMotionSummary(shot);
+            EditorGUILayout.Space(6);
+
+            DrawOperationsSection(shot);
+            EditorGUILayout.Space(6);
 
             DrawRuntimeSection(shot);
 
@@ -89,7 +91,7 @@ namespace VLiveKit.Camera.Editor
             string statusText = shot.IsLive ? "● LIVE PROGRAM" : "OFF-AIR";
             Color statusColor = shot.IsLive ? new Color(1f, 0.35f, 0.35f) : new Color(0.6f, 0.7f, 0.8f);
 
-            EditorGUI.LabelField(subRect, $"{shot.ShotName}  |  {statusText}", new GUIStyle(EditorStyles.miniLabel)
+            EditorGUI.LabelField(subRect, $"{shot.ShotName}  |  {shot.Type}  |  {statusText}", new GUIStyle(EditorStyles.miniLabel)
             {
                 normal = { textColor = statusColor }
             });
@@ -101,70 +103,111 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.LabelField("Shot Identification (ショット識別)", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(_shotNameProp);
+            EditorGUILayout.PropertyField(_shotTypeProp);
 
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawCameraSection()
+        private void DrawComponentsSection()
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Camera Configuration (カメラ設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Owned Components & References (所有コンポーネント)", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_shotTypeProp);
-            EditorGUILayout.PropertyField(_cinemachineCameraProp);
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.PropertyField(_cinemachineCameraProp);
+                EditorGUILayout.PropertyField(_splineDollyProp);
+                EditorGUILayout.PropertyField(_rotationComposerProp);
+                EditorGUILayout.PropertyField(_aimProxyProp);
+                EditorGUILayout.PropertyField(_motionPlayerProp);
+                EditorGUILayout.PropertyField(_performerTargetProp);
+            }
 
             if (_cinemachineCameraProp.objectReferenceValue == null)
             {
-                EditorGUILayout.HelpBox("CinemachineCamera が未割り当てです。ショットとして機能しません。", MessageType.Warning);
+                EditorGUILayout.HelpBox("CinemachineCamera が未割り当てです。Rig Inspector の Apply / Sync で修復してください。", MessageType.Warning);
             }
 
-            if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShot.ShotType.Spline)
+            if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShot.ShotType.Spline && _splineDollyProp.objectReferenceValue == null)
             {
-                EditorGUILayout.PropertyField(_splineDollyProp);
-                if (_splineDollyProp.objectReferenceValue == null)
-                {
-                    EditorGUILayout.HelpBox("Spline Shot には CinemachineSplineDolly が必要です。", MessageType.Warning);
-                }
-                else
-                {
-                    var dolly = (CinemachineSplineDolly)_splineDollyProp.objectReferenceValue;
-                    if (dolly != null && dolly.Spline == null)
-                    {
-                        EditorGUILayout.HelpBox("CinemachineSplineDolly に SplineContainer が設定されていません。", MessageType.Warning);
-                    }
-                }
+                EditorGUILayout.HelpBox("Spline Dolly が未割り当てです。Rig Inspector の Apply / Sync で修復してください。", MessageType.Warning);
             }
 
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawMotionSection()
+        private void DrawAppliedMotionSummary(VLiveCameraShot shot)
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Spline Motion Settings (スプライン移動設定)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Applied Motion Configuration (適用済み設定)", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_initialSpeedProp);
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.PropertyField(_appliedPresetProp, new GUIContent("Source Preset"));
+                EditorGUILayout.PropertyField(_appliedTargetHeightProp, new GUIContent("Applied Target Height"));
+            }
+
+            VLiveCameraAppliedMotion applied = shot.AppliedMotion;
+            if (applied != null)
+            {
+                EditorGUILayout.Space(2);
+                EditorGUILayout.LabelField($"Duration: {applied.EffectiveDuration:F2}s  |  Timing Mode: {applied.ScaleMode}", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField($"Entry: {applied.EntryMode} (In: {applied.InTime:F2}s, Out: {applied.OutTime:F2}s)  |  Exit: {applied.ExitBehavior}", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField($"Aim Offset: {applied.AimOffset}  |  Screen Pos: ({applied.ScreenPosition.x:F2}, {applied.ScreenPosition.y:F2})", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField($"FOV: {applied.FieldOfView:F1}° ({applied.LensMode})  |  Roll: {applied.RollMode}", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawOperationsSection(VLiveCameraShot shot)
+        {
+            if (targets.Length > 1)
+            {
+                return;
+            }
+
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Shot Operations (操作)", EditorStyles.boldLabel);
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.PropertyField(_minSpeedProp, new GUIContent("Min Speed"));
-                EditorGUILayout.PropertyField(_maxSpeedProp, new GUIContent("Max Speed"));
+                if (GUILayout.Button("Save As New Preset (新規Preset保存)", GUILayout.Height(24)))
+                {
+                    var rig = shot.GetComponentInParent<VLiveCameraRig>();
+                    VLiveCameraPresetBaker.BakePresetFromShot(rig, shot);
+                }
+
+                if (GUILayout.Button("Run Diagnostics (診断実行)", GUILayout.Height(24)))
+                {
+                    _report = VLiveCameraMotionValidator.ValidateShot(shot);
+                }
             }
 
-            EditorGUILayout.PropertyField(_speedStepProp);
-            EditorGUILayout.PropertyField(_initialDirectionProp);
+            if (_report != null)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.BeginVertical("helpBox");
+                EditorGUILayout.LabelField("Diagnostics Report:", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Duration: {_report.Duration:F2}s  |  Spline: {_report.SplineLength:F2}m", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField($"Peak Speed: {_report.MaxSpeed:F2} m/s  |  Peak Acc: {_report.MaxAcceleration:F2} m/s²  |  Peak Jerk: {_report.MaxJerk:F2} m/s³", EditorStyles.miniLabel);
 
-            EditorGUILayout.Space(2);
-            EditorGUILayout.PropertyField(_startPositionProp);
-            EditorGUILayout.PropertyField(_endPositionProp);
-            EditorGUILayout.PropertyField(_decelerationDistanceProp);
+                foreach (var msg in _report.Messages)
+                {
+                    MessageType msgType = msg.Severity switch
+                    {
+                        VLiveCameraMotionValidator.DiagnosticSeverity.Error => MessageType.Error,
+                        VLiveCameraMotionValidator.DiagnosticSeverity.Warning => MessageType.Warning,
+                        _ => MessageType.Info
+                    };
+
+                    EditorGUILayout.HelpBox($"[{msg.Category}] {msg.Message}", msgType);
+                }
+
+                EditorGUILayout.EndVertical();
+            }
 
             EditorGUILayout.EndVertical();
-        }
-
-        public override bool RequiresConstantRepaint()
-        {
-            return Application.isPlaying;
         }
 
         private void DrawRuntimeSection(VLiveCameraShot shot)
@@ -189,48 +232,53 @@ namespace VLiveKit.Camera.Editor
 
             EditorGUILayout.Space(4);
 
-            if (shot.Type == VLiveCameraShot.ShotType.Spline)
+            float duration = shot.AppliedMotion != null ? shot.AppliedMotion.EffectiveDuration : 0f;
+            float progress = duration > 0.001f ? Mathf.Clamp01(shot.CurrentTime / duration) : 0f;
+
+            EditorGUI.ProgressBar(
+                EditorGUILayout.GetControlRect(false, 18),
+                progress,
+                $"Time: {shot.CurrentTime:F2}s / {duration:F2}s (Speed: {shot.CurrentSpeedMultiplier:F2}x, Dist: {shot.CurrentSplineDistance:F2}m)"
+            );
+
+            if (Application.isPlaying && shot.IsLive)
             {
-                EditorGUI.ProgressBar(
-                    EditorGUILayout.GetControlRect(false, 18),
-                    shot.CurrentPosition,
-                    $"Position: {shot.CurrentPosition:F2} (Speed: {shot.CurrentSpeed:F2}, Dir: {shot.CurrentDirection})"
-                );
-
-                if (Application.isPlaying && shot.IsLive)
+                EditorGUILayout.Space(4);
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.Space(4);
-                    using (new EditorGUILayout.HorizontalScope())
+                    if (GUILayout.Button("Speed -"))
                     {
-                        if (GUILayout.Button("Speed -"))
-                        {
-                            shot.SpeedDown();
-                        }
+                        shot.SpeedDown();
+                    }
 
-                        if (GUILayout.Button("Speed +"))
-                        {
-                            shot.SpeedUp();
-                        }
+                    if (GUILayout.Button("Speed +"))
+                    {
+                        shot.SpeedUp();
+                    }
 
-                        if (GUILayout.Button("Reverse"))
-                        {
-                            shot.Reverse();
-                        }
+                    if (GUILayout.Button("Reverse"))
+                    {
+                        shot.Reverse();
+                    }
 
-                        if (shot.IsHolding)
+                    if (shot.IsHolding)
+                    {
+                        if (GUILayout.Button("Resume"))
                         {
-                            if (GUILayout.Button("Resume"))
-                            {
-                                shot.Resume();
-                            }
+                            shot.Resume();
                         }
-                        else
+                    }
+                    else
+                    {
+                        if (GUILayout.Button("Hold"))
                         {
-                            if (GUILayout.Button("Hold"))
-                            {
-                                shot.Hold();
-                            }
+                            shot.Hold();
                         }
+                    }
+
+                    if (GUILayout.Button("Freeze"))
+                    {
+                        shot.Freeze();
                     }
                 }
             }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -5,7 +6,7 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraRig用のカスタムインスペクター。
-    /// Target設定、正面基準、スケール、順序付きShot Slotsの編集、同期・再構築操作を提供します。
+    /// Target設定、正面基準、スケール、順序付きShot Slotsの編集、同期・再構築操作、Preset保存、Motion診断を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraRig))]
     public class VLiveCameraRigEditor : UnityEditor.Editor
@@ -20,6 +21,9 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _distanceScaleProp;
         private SerializedProperty _motionScaleProp;
         private SerializedProperty _slotsProp;
+
+        private int _selectedSlotForOperation = 0;
+        private VLiveCameraMotionValidator.ValidationReport _diagnosticReport;
 
 
         // Methods
@@ -219,7 +223,10 @@ namespace VLiveKit.Camera.Editor
                     EditorGUILayout.PropertyField(shotProp, new GUIContent("Shot"));
                 }
 
-                if (shotProp.objectReferenceValue != null)
+                var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
+                var presetObj = (VLiveCameraMotionPreset)presetProp.objectReferenceValue;
+
+                if (shotObj != null)
                 {
                     bool canRebuildSingle = !Application.isPlaying && _performerTargetProp.objectReferenceValue != null && rig.IsForwardReferenceValid();
                     using (new EditorGUI.DisabledScope(!canRebuildSingle))
@@ -244,11 +251,10 @@ namespace VLiveKit.Camera.Editor
                     {
                         if (GUILayout.Button("Delete", GUILayout.Width(52), GUILayout.Height(18)))
                         {
-                            var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
                             string shotName = shotObj != null ? shotObj.name : $"Shot {i + 1}";
                             if (EditorUtility.DisplayDialog(
                                 "Delete Shot GameObject",
-                                $"Shot GameObject '{shotName}' および Spline を Scene から削除しますか？\n（Undo 可能です）",
+                                $"Shot GameObject '{shotName}' および Spline、Aim Proxy を Scene から削除しますか？\n（Undo 可能です）",
                                 "Delete",
                                 "Cancel"))
                             {
@@ -262,6 +268,12 @@ namespace VLiveKit.Camera.Editor
                 }
 
                 EditorGUILayout.EndHorizontal();
+
+                // Preset参照とShot適用済み設定の相違警告
+                if (shotObj != null && presetObj != null && shotObj.AppliedPreset != null && shotObj.AppliedPreset != presetObj)
+                {
+                    EditorGUILayout.HelpBox($"⚠️ SlotのPreset参照とShotの適用済み設定が異なります（適用中: {shotObj.AppliedPreset.DisplayName}）。\n変更を反映するには Rebuild を実行してください。", MessageType.Warning);
+                }
 
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(2);
@@ -316,30 +328,118 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.Space(4);
 
             bool canRebuild = !Application.isPlaying && hasTarget && isForwardValid && _slotsProp.arraySize > 0;
-            EditorGUI.BeginDisabledGroup(!canRebuild);
-            if (GUILayout.Button("Rebuild All From Presets", GUILayout.Height(24)))
+
+            // Rebuild Selected & Rebuild All
+            int slotCount = rig.SlotCount;
+            if (slotCount > 0)
             {
-                if (EditorUtility.DisplayDialog(
-                    "Rebuild All Shots From Presets",
-                    "すべての Shot のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
-                    "Rebuild All",
-                    "Cancel"))
+                var slotNames = new string[slotCount];
+                for (int s = 0; s < slotCount; s++)
                 {
-                    serializedObject.ApplyModifiedProperties();
-                    VLiveCameraRigBuilder.RebuildAllShotsFromPreset(rig);
-                    serializedObject.Update();
-                    GUIUtility.ExitGUI();
+                    var sl = rig.Slots[s];
+                    string sName = (sl != null && sl.Shot != null) ? sl.Shot.ShotName : (sl != null && sl.Preset != null ? sl.Preset.DisplayName : "None");
+                    slotNames[s] = $"Slot {s + 1}: {sName}";
+                }
+
+                _selectedSlotForOperation = Mathf.Clamp(_selectedSlotForOperation, 0, slotCount - 1);
+                _selectedSlotForOperation = EditorGUILayout.Popup("Target Slot (対象スロット):", _selectedSlotForOperation, slotNames);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUI.BeginDisabledGroup(!canRebuild);
+                    if (GUILayout.Button($"Rebuild Slot {_selectedSlotForOperation + 1} From Preset", GUILayout.Height(24)))
+                    {
+                        if (EditorUtility.DisplayDialog(
+                            "Rebuild Selected Shot From Preset",
+                            $"Slot {_selectedSlotForOperation + 1} のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
+                            "Rebuild",
+                            "Cancel"))
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            VLiveCameraRigBuilder.RebuildShotFromPreset(rig, _selectedSlotForOperation);
+                            serializedObject.Update();
+                            GUIUtility.ExitGUI();
+                        }
+                    }
+
+                    if (GUILayout.Button("Rebuild All From Presets", GUILayout.Height(24)))
+                    {
+                        if (EditorUtility.DisplayDialog(
+                            "Rebuild All Shots From Presets",
+                            "すべての Shot のカメラ位置、Lens、Aim、Spline、移動設定を現在の Rig 設定と Preset 初期値から再構築します。\n手動で行った調整は上書きされます。続行しますか？",
+                            "Rebuild All",
+                            "Cancel"))
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            VLiveCameraRigBuilder.RebuildAllShotsFromPreset(rig);
+                            serializedObject.Update();
+                            GUIUtility.ExitGUI();
+                        }
+                    }
+
+                    EditorGUI.EndDisabledGroup();
+                }
+
+                EditorGUILayout.Space(4);
+
+                // Save Shot As New Preset
+                var selectedSlot = rig.Slots[_selectedSlotForOperation];
+                bool canBake = selectedSlot != null && selectedSlot.Shot != null;
+                EditorGUI.BeginDisabledGroup(!canBake);
+                if (GUILayout.Button($"Save Slot {_selectedSlotForOperation + 1} As New Preset (新規Preset保存)", GUILayout.Height(24)))
+                {
+                    VLiveCameraPresetBaker.BakePresetFromShot(rig, selectedSlot.Shot);
+                }
+
+                EditorGUI.EndDisabledGroup();
+
+                // Motion Diagnostics
+                EditorGUILayout.Space(4);
+                if (GUILayout.Button($"Run Diagnostics on Slot {_selectedSlotForOperation + 1} (運動診断)", GUILayout.Height(24)))
+                {
+                    if (selectedSlot != null && selectedSlot.Shot != null)
+                    {
+                        _diagnosticReport = VLiveCameraMotionValidator.ValidateShot(selectedSlot.Shot);
+                    }
+                    else if (selectedSlot != null && selectedSlot.Preset != null)
+                    {
+                        _diagnosticReport = VLiveCameraMotionValidator.ValidatePreset(selectedSlot.Preset);
+                    }
+                }
+
+                if (_diagnosticReport != null)
+                {
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.BeginVertical("helpBox");
+                    EditorGUILayout.LabelField("Motion Diagnostics Report:", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Duration: {_diagnosticReport.Duration:F2}s  |  Spline Length: {_diagnosticReport.SplineLength:F2}m", EditorStyles.miniBoldLabel);
+                    EditorGUILayout.LabelField($"Peak Speed: {_diagnosticReport.MaxSpeed:F2} m/s  |  Peak Acc: {_diagnosticReport.MaxAcceleration:F2} m/s²  |  Peak Jerk: {_diagnosticReport.MaxJerk:F2} m/s³", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField($"FOV Range: {_diagnosticReport.MinFieldOfView:F1}° 〜 {_diagnosticReport.MaxFieldOfView:F1}°", EditorStyles.miniLabel);
+
+                    EditorGUILayout.Space(2);
+                    foreach (var msg in _diagnosticReport.Messages)
+                    {
+                        MessageType msgType = msg.Severity switch
+                        {
+                            VLiveCameraMotionValidator.DiagnosticSeverity.Error => MessageType.Error,
+                            VLiveCameraMotionValidator.DiagnosticSeverity.Warning => MessageType.Warning,
+                            _ => MessageType.Info
+                        };
+
+                        EditorGUILayout.HelpBox($"[{msg.Category}] {msg.Message}", msgType);
+                    }
+
+                    EditorGUILayout.EndVertical();
                 }
             }
 
-            EditorGUI.EndDisabledGroup();
-
             EditorGUILayout.Space(4);
             EditorGUILayout.HelpBox(
-                "・ Apply / Sync: 不足Shotの生成と参照・順序の修復を行います（既存カメラのTransform, Lens, Spline, 速度の手動調整は維持されます）。\n" +
-                "・ Rebuild: 手動調整を上書きし、Preset初期値と現在のRigスケールから再構築します（確認ダイアログ・Undo対応）。\n" +
+                "・ Apply / Sync: 不足Shot、Aim Proxy、Splineの生成と参照・順序の修復を行います（手動調整は維持されます）。\n" +
+                "・ Rebuild: 手動調整を上書きし、Preset初期値と現在のRigスケールから再構築します。\n" +
+                "・ Save As New Preset: 調整済みShotから完全なKnot、Tangent、Trackを持つ新しいPreset Assetを作成します。\n" +
                 "・ ✕ボタン: Slotから外す操作（GameObjectは削除されません）。\n" +
-                "・ Deleteボタン: 生成済みGameObjectとSplineをSceneから明示的に削除します。",
+                "・ Deleteボタン: 生成済みGameObject、Spline、Aim ProxyをSceneから明示的に削除します。",
                 MessageType.None
             );
 
@@ -438,6 +538,11 @@ namespace VLiveKit.Camera.Editor
                         {
                             switcher.Hold();
                         }
+                    }
+
+                    if (GUILayout.Button("Freeze"))
+                    {
+                        switcher.Freeze();
                     }
                 }
             }

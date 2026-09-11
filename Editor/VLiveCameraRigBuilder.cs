@@ -20,6 +20,7 @@ namespace VLiveKit.Camera.Editor
         public const string RigGameObjectName = "VLive Camera Rig";
         public const string ShotsContainerName = "Shots";
         public const string SplinesContainerName = "Splines";
+        public const string AimProxiesContainerName = "Aim Proxies";
         public const string ProgramCameraName = "Program Camera";
 
         private static readonly string[] DefaultPresetNames = new string[]
@@ -47,9 +48,6 @@ namespace VLiveKit.Camera.Editor
         /// <summary>
         /// 現在のSceneに新しいVLiveCameraRig一式を作成します。
         /// </summary>
-        /// <param name="performerTarget">演者Target（任意）。</param>
-        /// <param name="outputCamera">Program出力Camera（任意）。</param>
-        /// <returns>生成されたVLiveCameraRig。</returns>
         public static VLiveCameraRig CreateRig(Transform performerTarget = null, UnityEngine.Camera outputCamera = null)
         {
             if (Application.isPlaying)
@@ -83,7 +81,6 @@ namespace VLiveKit.Camera.Editor
                 camGo.transform.SetParent(rigGo.transform, false);
                 programCam = camGo.AddComponent<UnityEngine.Camera>();
 
-                // MainCameraタグ: Scene内に既存のMainCameraがない場合のみ設定
                 bool hasExistingMainCamera = false;
                 var allCameras = Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 foreach (var cam in allCameras)
@@ -131,7 +128,11 @@ namespace VLiveKit.Camera.Editor
             splinesGo.transform.SetParent(rigGo.transform, false);
             Undo.RegisterCreatedObjectUndo(splinesGo, "Create Splines Container");
 
-            // 4. Default 6 Preset Slots
+            var aimProxiesGo = new GameObject(AimProxiesContainerName);
+            aimProxiesGo.transform.SetParent(rigGo.transform, false);
+            Undo.RegisterCreatedObjectUndo(aimProxiesGo, "Create Aim Proxies Container");
+
+            // 4. Default Preset Slots
             List<VLiveCameraMotionPreset> presets = LoadDefaultPresets();
             foreach (var preset in presets)
             {
@@ -153,10 +154,9 @@ namespace VLiveKit.Camera.Editor
         }
 
         /// <summary>
-        /// Rigの設定に基づき、不足Shotの生成、参照修復、順序同期を実行します。既存の手動調整値は保持されます。
+        /// Rigの設定に基づき、不足Shot・Aim Proxy・Spline・MotionPlayerの生成、参照修復、順序同期を実行します。
+        /// 既存Shotの手動調整値は保持されます。
         /// </summary>
-        /// <param name="rig">対象のVLiveCameraRig。</param>
-        /// <returns>同期が成功した場合はtrue。</returns>
         public static bool ApplySync(VLiveCameraRig rig)
         {
             if (Application.isPlaying)
@@ -191,6 +191,7 @@ namespace VLiveKit.Camera.Editor
             // 1. Containersの存在確認と確保
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
+            Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
 
             // 2. Program Camera & Brain確保
             if (rig.ProgramCamera == null)
@@ -274,54 +275,13 @@ namespace VLiveKit.Camera.Editor
                 {
                     assignedShots.Add(slot.Shot);
 
-                    // 既存Shot: 手動調整（Transform, Lens, Spline, 速度）を保持し、Target参照のみ修復
-                    Undo.RecordObject(slot.Shot, "Update Shot Target Reference");
-                    if (slot.Shot.CinemachineCamera == null)
-                    {
-                        var cmCam = Undo.AddComponent<CinemachineCamera>(slot.Shot.gameObject);
-                        cmCam.Target.TrackingTarget = rig.PerformerTarget;
-                        cmCam.Target.LookAtTarget = rig.PerformerTarget;
-                        cmCam.Lens.FieldOfView = preset.FieldOfView;
-                        cmCam.Priority = (i == 0) ? 10 : 0;
-                        EditorUtility.SetDirty(cmCam);
-                        repairedCount++;
-                    }
-                    else
-                    {
-                        Undo.RecordObject(slot.Shot.CinemachineCamera, "Update CinemachineCamera Target");
-                        slot.Shot.CinemachineCamera.Target.TrackingTarget = rig.PerformerTarget;
-                        slot.Shot.CinemachineCamera.Target.LookAtTarget = rig.PerformerTarget;
-                        EditorUtility.SetDirty(slot.Shot.CinemachineCamera);
-                        PrefabUtility.RecordPrefabInstancePropertyModifications(slot.Shot.CinemachineCamera);
-                    }
-
-                    // 壊れたRotationComposerの修復
-                    var composer = slot.Shot.GetComponent<CinemachineRotationComposer>();
-                    if (composer == null)
-                    {
-                        composer = Undo.AddComponent<CinemachineRotationComposer>(slot.Shot.gameObject);
-                        composer.TargetOffset = CalculateTargetOffset(rig, preset);
-                        EditorUtility.SetDirty(composer);
-                        repairedCount++;
-                    }
-
-                    // 壊れたSpline参照の修復
-                    if (preset.ShotType == VLiveCameraShot.ShotType.Spline)
-                    {
-                        if (slot.Shot.SplineDolly == null || slot.Shot.SplineDolly.Spline == null)
-                        {
-                            RepairSplineForShot(rig, preset, i, splinesContainer, slot.Shot);
-                            repairedCount++;
-                        }
-                    }
-
-                    EditorUtility.SetDirty(slot.Shot);
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(slot.Shot);
+                    // 既存Shot: 手動調整（Transform, Lens, Spline, 速度）を保持し、Targetと破損参照のみ修復
+                    repairedCount += RepairExistingShotReferences(rig, slot.Shot, i, aimProxiesContainer, splinesContainer);
                 }
                 else
                 {
                     // 不足Shot: Preset初期値から新規生成
-                    BuildNewShotForSlot(rig, preset, i, shotsContainer, splinesContainer, slot);
+                    BuildNewShotForSlot(rig, preset, i, shotsContainer, splinesContainer, aimProxiesContainer, slot);
                     if (slot.Shot != null)
                     {
                         assignedShots.Add(slot.Shot);
@@ -343,8 +303,6 @@ namespace VLiveKit.Camera.Editor
         /// <summary>
         /// 指定されたスロットのShotをPreset初期値から再構築します（手動調整は上書きされます）。
         /// </summary>
-        /// <param name="rig">対象のVLiveCameraRig。</param>
-        /// <param name="slotIndex">再構築するスロット番号（0始まり）。</param>
         public static void RebuildShotFromPreset(VLiveCameraRig rig, int slotIndex)
         {
             if (Application.isPlaying)
@@ -372,7 +330,7 @@ namespace VLiveKit.Camera.Editor
 
             if (!rig.IsForwardReferenceValid())
             {
-                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効（Custom Reference が未設定または垂直方向）のため Rebuild できません。");
+                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効のため Rebuild できません。");
                 return;
             }
 
@@ -380,6 +338,10 @@ namespace VLiveKit.Camera.Editor
             Undo.SetCurrentGroupName($"Rebuild Shot {slotIndex + 1} From Preset");
             int undoGroup = Undo.GetCurrentGroup();
             Undo.RecordObject(rig, $"Rebuild Shot {slotIndex + 1} From Preset");
+
+            Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
+            Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
+            Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
 
             if (slot.Shot == null || !IsShotOwnedByRig(rig, slot.Shot))
             {
@@ -389,13 +351,11 @@ namespace VLiveKit.Camera.Editor
                     slot.SetShot(null);
                 }
 
-                Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
-                Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
-                BuildNewShotForSlot(rig, slot.Preset, slotIndex, shotsContainer, splinesContainer, slot);
+                BuildNewShotForSlot(rig, slot.Preset, slotIndex, shotsContainer, splinesContainer, aimProxiesContainer, slot);
             }
             else
             {
-                RebuildExistingShot(rig, slot.Preset, slotIndex, slot.Shot);
+                RebuildExistingShot(rig, slot.Preset, slotIndex, slot.Shot, aimProxiesContainer, splinesContainer);
             }
 
             EditorUtility.SetDirty(rig);
@@ -408,7 +368,6 @@ namespace VLiveKit.Camera.Editor
         /// <summary>
         /// すべてのスロットのShotをPreset初期値から一括再構築します（手動調整は上書きされます）。
         /// </summary>
-        /// <param name="rig">対象のVLiveCameraRig。</param>
         public static void RebuildAllShotsFromPreset(VLiveCameraRig rig)
         {
             if (Application.isPlaying)
@@ -430,7 +389,7 @@ namespace VLiveKit.Camera.Editor
 
             if (!rig.IsForwardReferenceValid())
             {
-                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効（Custom Reference が未設定または垂直方向）のため Rebuild できません。");
+                Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効のため Rebuild できません。");
                 return;
             }
 
@@ -441,6 +400,7 @@ namespace VLiveKit.Camera.Editor
 
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
+            Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
 
             for (int i = 0; i < rig.Slots.Count; i++)
             {
@@ -458,11 +418,11 @@ namespace VLiveKit.Camera.Editor
                         slot.SetShot(null);
                     }
 
-                    BuildNewShotForSlot(rig, slot.Preset, i, shotsContainer, splinesContainer, slot);
+                    BuildNewShotForSlot(rig, slot.Preset, i, shotsContainer, splinesContainer, aimProxiesContainer, slot);
                 }
                 else
                 {
-                    RebuildExistingShot(rig, slot.Preset, i, slot.Shot);
+                    RebuildExistingShot(rig, slot.Preset, i, slot.Shot, aimProxiesContainer, splinesContainer);
                 }
             }
 
@@ -474,10 +434,8 @@ namespace VLiveKit.Camera.Editor
         }
 
         /// <summary>
-        /// 指定スロットに対応するShot GameObjectおよびSplineをSceneから明示的に削除し、スロットの参照をクリアします。
+        /// 指定スロットに対応するShot GameObject、Spline、Aim ProxyをSceneから明示的に削除し、スロット参照をクリアします。
         /// </summary>
-        /// <param name="rig">対象のVLiveCameraRig。</param>
-        /// <param name="slotIndex">削除対象のスロット番号（0始まり）。</param>
         public static void DeleteShotGameObject(VLiveCameraRig rig, int slotIndex)
         {
             if (Application.isPlaying)
@@ -516,16 +474,22 @@ namespace VLiveKit.Camera.Editor
 
             Undo.RecordObject(rig, "Delete Shot GameObject");
 
+            // Spline削除
             if (shot.SplineDolly != null && shot.SplineDolly.Spline != null)
             {
-                // Rig配下のSplineのみ削除（外部アセットの誤削除を防止）
                 if (shot.SplineDolly.Spline.transform.IsChildOf(rig.transform))
                 {
                     Undo.DestroyObjectImmediate(shot.SplineDolly.Spline.gameObject);
                 }
             }
 
-            // Rig配下のShot GameObjectのみ削除
+            // Aim Proxy削除
+            if (shot.AimProxy != null && shot.AimProxy.IsChildOf(rig.transform))
+            {
+                Undo.DestroyObjectImmediate(shot.AimProxy.gameObject);
+            }
+
+            // Shot GameObject削除
             if (shot.transform.IsChildOf(rig.transform))
             {
                 Undo.DestroyObjectImmediate(shot.gameObject);
@@ -537,15 +501,12 @@ namespace VLiveKit.Camera.Editor
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
 
-            Debug.Log($"[VLiveCameraRigBuilder] Shot {slotIndex + 1} のGameObjectを削除しました。");
+            Debug.Log($"[VLiveCameraRigBuilder] Shot {slotIndex + 1} のGameObjectを一式削除しました。");
         }
 
         /// <summary>
         /// 指定されたShotがこのRig配下に生成・所有されたものであるかを判定します。
         /// </summary>
-        /// <param name="rig">対象のVLiveCameraRig。</param>
-        /// <param name="shot">判定するVLiveCameraShot。</param>
-        /// <returns>Rig配下のオブジェクトであればtrue。</returns>
         public static bool IsShotOwnedByRig(VLiveCameraRig rig, VLiveCameraShot shot)
         {
             if (rig == null || shot == null)
@@ -554,23 +515,6 @@ namespace VLiveKit.Camera.Editor
             }
 
             return shot.transform.IsChildOf(rig.transform) && shot.gameObject != rig.gameObject;
-        }
-
-        /// <summary>
-        /// Rig設定とPresetオフセットに基づき、CinemachineRotationComposer用のTargetローカルオフセットを算出します。
-        /// </summary>
-        private static Vector3 CalculateTargetOffset(VLiveCameraRig rig, VLiveCameraMotionPreset preset)
-        {
-            if (rig == null)
-            {
-                return Vector3.zero;
-            }
-
-            Vector3 presetOffset = preset != null ? preset.TargetOffset : Vector3.zero;
-            Quaternion orientation = rig.GetReferenceOrientation();
-            Vector3 worldOffset = Vector3.up * rig.TargetHeight + orientation * presetOffset;
-            Quaternion targetRot = rig.PerformerTarget != null ? rig.PerformerTarget.rotation : Quaternion.identity;
-            return Quaternion.Inverse(targetRot) * worldOffset;
         }
 
         private static Transform EnsureContainer(Transform parent, string name)
@@ -593,6 +537,7 @@ namespace VLiveKit.Camera.Editor
             int slotIndex,
             Transform shotsContainer,
             Transform splinesContainer,
+            Transform aimProxiesContainer,
             VLiveCameraShotSlot slot)
         {
             string shotGoName = $"Shot {slotIndex + 1} ({preset.DisplayName})";
@@ -600,29 +545,51 @@ namespace VLiveKit.Camera.Editor
             shotGo.transform.SetParent(shotsContainer, false);
             Undo.RegisterCreatedObjectUndo(shotGo, "Create Shot GameObject");
 
-            Vector3[] points = preset.ControlPoints;
-            Vector3 p0 = (points != null && points.Length > 0) ? points[0] : new Vector3(0f, 1.3f, 3.5f);
-            Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
+            // 1. Aim Proxy生成
+            string aimProxyName = $"AimProxy_Shot {slotIndex + 1} ({preset.DisplayName})";
+            var aimProxyGo = new GameObject(aimProxyName);
+            aimProxyGo.transform.SetParent(aimProxiesContainer, false);
+            Undo.RegisterCreatedObjectUndo(aimProxyGo, "Create Aim Proxy GameObject");
 
             Quaternion orientation = rig.GetReferenceOrientation();
             Vector3 targetPos = rig.PerformerTarget.position;
+            Vector3 initialAimPos = targetPos + Vector3.up * rig.TargetHeight + orientation * preset.AimOffset;
+            aimProxyGo.transform.position = initialAimPos;
+
+            // 2. Camera配置計算
+            MotionKnot[] knots = preset.Knots;
+            Vector3 p0 = (knots != null && knots.Length > 0) ? knots[0].Position : new Vector3(0f, 1.3f, 3.5f);
+            Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
             Vector3 worldP0 = targetPos + orientation * scaledP0;
 
             shotGo.transform.position = worldP0;
-            Vector3 lookTarget = targetPos + Vector3.up * rig.TargetHeight + orientation * preset.TargetOffset;
-            shotGo.transform.LookAt(lookTarget);
+            shotGo.transform.LookAt(initialAimPos);
 
+            // 3. CinemachineCamera
             var cmCam = shotGo.AddComponent<CinemachineCamera>();
             cmCam.Target.TrackingTarget = rig.PerformerTarget;
-            cmCam.Target.LookAtTarget = rig.PerformerTarget;
+            cmCam.Target.LookAtTarget = aimProxyGo.transform;
             cmCam.Lens.FieldOfView = preset.FieldOfView;
             cmCam.Priority = (slotIndex == 0) ? 10 : 0;
             EditorUtility.SetDirty(cmCam);
 
+            // 4. CinemachineRotationComposer
             var composer = shotGo.AddComponent<CinemachineRotationComposer>();
-            composer.TargetOffset = CalculateTargetOffset(rig, preset);
+            composer.TargetOffset = Vector3.zero;
+            composer.Composition.ScreenPosition = preset.ScreenPosition;
+            composer.Composition.DeadZone.Enabled = preset.DeadZoneEnabled;
+            composer.Composition.DeadZone.Size = preset.DeadZoneSize;
+            composer.Composition.HardLimits.Enabled = preset.HardLimitsEnabled;
+            composer.Composition.HardLimits.Size = preset.HardLimitsSize;
+            composer.Composition.HardLimits.Offset = preset.HardLimitsOffset;
+            composer.Damping = preset.Damping;
+            composer.Lookahead.Enabled = preset.LookaheadEnabled;
+            composer.Lookahead.Time = preset.LookaheadTime;
+            composer.Lookahead.Smoothing = preset.LookaheadSmoothing;
+            composer.CenterOnActivate = preset.CenterOnActivate;
             EditorUtility.SetDirty(composer);
 
+            // 5. Spline Dolly
             CinemachineSplineDolly dolly = null;
             if (preset.ShotType == VLiveCameraShot.ShotType.Spline)
             {
@@ -636,148 +603,281 @@ namespace VLiveKit.Camera.Editor
 
                 dolly = shotGo.AddComponent<CinemachineSplineDolly>();
                 dolly.Spline = splineContainer;
-                dolly.PositionUnits = PathIndexUnit.Normalized;
+                dolly.PositionUnits = PathIndexUnit.Distance;
                 dolly.CameraPosition = 0f;
                 EditorUtility.SetDirty(dolly);
             }
 
+            // 6. Motion Player & Shot
+            var player = shotGo.AddComponent<VLiveCameraMotionPlayer>();
             var shot = shotGo.AddComponent<VLiveCameraShot>();
+
             shot.Configure(
                 preset.DisplayName,
                 cmCam,
                 preset.ShotType,
                 dolly,
-                preset.InitialSpeed,
-                preset.DecelerationDistance
+                composer,
+                aimProxyGo.transform,
+                player,
+                rig.PerformerTarget,
+                preset,
+                rig.TargetHeight,
+                orientation
             );
             EditorUtility.SetDirty(shot);
+            EditorUtility.SetDirty(player);
 
             slot.SetShot(shot);
+        }
+
+        private static int RepairExistingShotReferences(
+            VLiveCameraRig rig,
+            VLiveCameraShot shot,
+            int slotIndex,
+            Transform aimProxiesContainer,
+            Transform splinesContainer)
+        {
+            int repaired = 0;
+            Undo.RecordObject(shot, "Repair Shot References");
+
+            shot.PerformerTarget = rig.PerformerTarget;
+
+            // Aim Proxy修復
+            Transform aimProxy = shot.AimProxy;
+            if (aimProxy == null)
+            {
+                string aimProxyName = $"AimProxy_Shot {slotIndex + 1} ({shot.ShotName})";
+                var aimProxyGo = new GameObject(aimProxyName);
+                aimProxyGo.transform.SetParent(aimProxiesContainer, false);
+                Undo.RegisterCreatedObjectUndo(aimProxyGo, "Create Repaired Aim Proxy");
+                aimProxy = aimProxyGo.transform;
+                repaired++;
+            }
+
+            // CinemachineCamera修復
+            CinemachineCamera cmCam = shot.CinemachineCamera;
+            if (cmCam == null)
+            {
+                cmCam = Undo.AddComponent<CinemachineCamera>(shot.gameObject);
+                repaired++;
+            }
+
+            Undo.RecordObject(cmCam, "Update CinemachineCamera Targets");
+            cmCam.Target.TrackingTarget = rig.PerformerTarget;
+            cmCam.Target.LookAtTarget = aimProxy;
+            EditorUtility.SetDirty(cmCam);
+
+            // Rotation Composer修復
+            CinemachineRotationComposer composer = shot.RotationComposer;
+            if (composer == null)
+            {
+                composer = Undo.AddComponent<CinemachineRotationComposer>(shot.gameObject);
+                composer.TargetOffset = Vector3.zero;
+                repaired++;
+            }
+
+            // Spline Dolly修復
+            CinemachineSplineDolly dolly = shot.SplineDolly;
+            if (shot.Type == VLiveCameraShot.ShotType.Spline)
+            {
+                if (dolly == null)
+                {
+                    dolly = Undo.AddComponent<CinemachineSplineDolly>(shot.gameObject);
+                    dolly.PositionUnits = PathIndexUnit.Distance;
+                    repaired++;
+                }
+
+                if (dolly.Spline == null)
+                {
+                    string splineGoName = $"SplinePath_Shot {slotIndex + 1} ({shot.ShotName})";
+                    var splineGo = new GameObject(splineGoName);
+                    splineGo.transform.SetParent(splinesContainer, false);
+                    Undo.RegisterCreatedObjectUndo(splineGo, "Create Repaired Spline");
+
+                    var splineContainer = splineGo.AddComponent<SplineContainer>();
+                    if (shot.AppliedPreset != null)
+                    {
+                        PopulateSplineKnots(splineContainer, rig, shot.AppliedPreset);
+                    }
+
+                    dolly.Spline = splineContainer;
+                    dolly.PositionUnits = PathIndexUnit.Distance;
+                    repaired++;
+                }
+
+                if (dolly.PositionUnits != PathIndexUnit.Distance)
+                {
+                    Undo.RecordObject(dolly, "Set Spline Dolly PositionUnits Distance");
+                    dolly.PositionUnits = PathIndexUnit.Distance;
+                    EditorUtility.SetDirty(dolly);
+                }
+            }
+
+            // Motion Player修復
+            VLiveCameraMotionPlayer player = shot.MotionPlayer;
+            if (player == null)
+            {
+                player = Undo.AddComponent<VLiveCameraMotionPlayer>(shot.gameObject);
+                repaired++;
+            }
+
+            player.Configure(shot, cmCam, dolly, composer, aimProxy);
+            EditorUtility.SetDirty(player);
+            EditorUtility.SetDirty(shot);
+
+            return repaired;
         }
 
         private static void RebuildExistingShot(
             VLiveCameraRig rig,
             VLiveCameraMotionPreset preset,
             int slotIndex,
-            VLiveCameraShot shot)
+            VLiveCameraShot shot,
+            Transform aimProxiesContainer,
+            Transform splinesContainer)
         {
-            Vector3[] points = preset.ControlPoints;
-            Vector3 p0 = (points != null && points.Length > 0) ? points[0] : new Vector3(0f, 1.3f, 3.5f);
-            Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
+            Undo.RecordObject(shot, "Rebuild Shot");
 
             Quaternion orientation = rig.GetReferenceOrientation();
             Vector3 targetPos = rig.PerformerTarget.position;
+
+            // 1. Aim Proxy更新
+            Transform aimProxy = shot.AimProxy;
+            if (aimProxy == null)
+            {
+                string aimProxyName = $"AimProxy_Shot {slotIndex + 1} ({preset.DisplayName})";
+                var aimProxyGo = new GameObject(aimProxyName);
+                aimProxyGo.transform.SetParent(aimProxiesContainer, false);
+                Undo.RegisterCreatedObjectUndo(aimProxyGo, "Create Aim Proxy GameObject");
+                aimProxy = aimProxyGo.transform;
+            }
+
+            Undo.RecordObject(aimProxy, "Update Aim Proxy Position");
+            Vector3 aimPos = targetPos + Vector3.up * rig.TargetHeight + orientation * preset.AimOffset;
+            aimProxy.position = aimPos;
+
+            // 2. Camera Transform配置
+            MotionKnot[] knots = preset.Knots;
+            Vector3 p0 = (knots != null && knots.Length > 0) ? knots[0].Position : new Vector3(0f, 1.3f, 3.5f);
+            Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
             Vector3 worldP0 = targetPos + orientation * scaledP0;
 
             Undo.RecordObject(shot.transform, "Rebuild Shot Transform");
             shot.transform.position = worldP0;
-            Vector3 lookTarget = targetPos + Vector3.up * rig.TargetHeight + orientation * preset.TargetOffset;
-            shot.transform.LookAt(lookTarget);
+            shot.transform.LookAt(aimPos);
 
-            if (shot.CinemachineCamera != null)
+            // 3. CinemachineCamera
+            CinemachineCamera cmCam = shot.CinemachineCamera;
+            if (cmCam == null)
             {
-                Undo.RecordObject(shot.CinemachineCamera, "Rebuild CinemachineCamera Settings");
-                shot.CinemachineCamera.Target.TrackingTarget = rig.PerformerTarget;
-                shot.CinemachineCamera.Target.LookAtTarget = rig.PerformerTarget;
-                shot.CinemachineCamera.Lens.FieldOfView = preset.FieldOfView;
-                EditorUtility.SetDirty(shot.CinemachineCamera);
+                cmCam = Undo.AddComponent<CinemachineCamera>(shot.gameObject);
             }
 
-            var composer = shot.GetComponent<CinemachineRotationComposer>();
+            Undo.RecordObject(cmCam, "Rebuild CinemachineCamera");
+            cmCam.Target.TrackingTarget = rig.PerformerTarget;
+            cmCam.Target.LookAtTarget = aimProxy;
+            cmCam.Lens.FieldOfView = preset.FieldOfView;
+            EditorUtility.SetDirty(cmCam);
+
+            // 4. Rotation Composer
+            CinemachineRotationComposer composer = shot.RotationComposer;
             if (composer == null)
             {
                 composer = Undo.AddComponent<CinemachineRotationComposer>(shot.gameObject);
             }
-            else
-            {
-                Undo.RecordObject(composer, "Rebuild Rotation Composer");
-            }
 
-            composer.TargetOffset = CalculateTargetOffset(rig, preset);
+            Undo.RecordObject(composer, "Rebuild Rotation Composer");
+            composer.TargetOffset = Vector3.zero;
+            composer.Composition.ScreenPosition = preset.ScreenPosition;
+            composer.Composition.DeadZone.Enabled = preset.DeadZoneEnabled;
+            composer.Composition.DeadZone.Size = preset.DeadZoneSize;
+            composer.Composition.HardLimits.Enabled = preset.HardLimitsEnabled;
+            composer.Composition.HardLimits.Size = preset.HardLimitsSize;
+            composer.Composition.HardLimits.Offset = preset.HardLimitsOffset;
+            composer.Damping = preset.Damping;
+            composer.Lookahead.Enabled = preset.LookaheadEnabled;
+            composer.Lookahead.Time = preset.LookaheadTime;
+            composer.Lookahead.Smoothing = preset.LookaheadSmoothing;
+            composer.CenterOnActivate = preset.CenterOnActivate;
             EditorUtility.SetDirty(composer);
+
+            // 5. Spline
+            CinemachineSplineDolly dolly = shot.SplineDolly;
+            float resolvedSplineLength = 0f;
 
             if (preset.ShotType == VLiveCameraShot.ShotType.Spline)
             {
-                if (shot.SplineDolly != null && shot.SplineDolly.Spline != null && shot.SplineDolly.Spline.transform.IsChildOf(rig.transform))
+                SplineContainer splineContainer = null;
+                if (dolly != null && dolly.Spline != null && dolly.Spline.transform.IsChildOf(rig.transform))
                 {
-                    Undo.RecordObject(shot.SplineDolly.Spline, "Rebuild Spline Knots");
-                    PopulateSplineKnots(shot.SplineDolly.Spline, rig, preset);
-
-                    Undo.RecordObject(shot.SplineDolly, "Reset Spline Dolly");
-                    shot.SplineDolly.CameraPosition = 0f;
-                    EditorUtility.SetDirty(shot.SplineDolly);
+                    splineContainer = dolly.Spline;
                 }
                 else
                 {
-                    Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
-                    RepairSplineForShot(rig, preset, slotIndex, splinesContainer, shot);
+                    string splineGoName = $"SplinePath_Shot {slotIndex + 1} ({preset.DisplayName})";
+                    var splineGo = new GameObject(splineGoName);
+                    splineGo.transform.SetParent(splinesContainer, false);
+                    Undo.RegisterCreatedObjectUndo(splineGo, "Create Spline GameObject");
+                    splineContainer = splineGo.AddComponent<SplineContainer>();
                 }
-            }
-            else
-            {
-                // Fixed ShotへのRebuild時、残存しているSplineDollyと専用Splineをクリーンアップ
-                if (shot.SplineDolly != null)
+
+                Undo.RecordObject(splineContainer, "Rebuild Spline Knots");
+                PopulateSplineKnots(splineContainer, rig, preset);
+                resolvedSplineLength = splineContainer.Spline != null ? splineContainer.Spline.GetLength() : 0f;
+
+                if (dolly == null)
                 {
-                    if (shot.SplineDolly.Spline != null && shot.SplineDolly.Spline.transform.IsChildOf(rig.transform))
-                    {
-                        Undo.DestroyObjectImmediate(shot.SplineDolly.Spline.gameObject);
-                    }
-
-                    Undo.DestroyObjectImmediate(shot.SplineDolly);
+                    dolly = Undo.AddComponent<CinemachineSplineDolly>(shot.gameObject);
                 }
-            }
 
-            Undo.RecordObject(shot, "Rebuild Shot Settings");
-            shot.Configure(
-                preset.DisplayName,
-                shot.CinemachineCamera,
-                preset.ShotType,
-                shot.SplineDolly,
-                preset.InitialSpeed,
-                preset.DecelerationDistance
-            );
-            EditorUtility.SetDirty(shot);
-        }
-
-        private static void RepairSplineForShot(
-            VLiveCameraRig rig,
-            VLiveCameraMotionPreset preset,
-            int slotIndex,
-            Transform splinesContainer,
-            VLiveCameraShot shot)
-        {
-            string splineGoName = $"SplinePath_Shot {slotIndex + 1} ({preset.DisplayName})";
-            var splineGo = new GameObject(splineGoName);
-            splineGo.transform.SetParent(splinesContainer, false);
-            Undo.RegisterCreatedObjectUndo(splineGo, "Create Spline GameObject");
-
-            var splineContainer = splineGo.AddComponent<SplineContainer>();
-            PopulateSplineKnots(splineContainer, rig, preset);
-
-            CinemachineSplineDolly dolly = shot.SplineDolly;
-            if (dolly == null && shot.CinemachineCamera != null)
-            {
-                dolly = Undo.AddComponent<CinemachineSplineDolly>(shot.CinemachineCamera.gameObject);
-                Undo.RecordObject(shot, "Set Spline Dolly Reference");
-                shot.Configure(
-                    shot.ShotName,
-                    shot.CinemachineCamera,
-                    preset.ShotType,
-                    dolly,
-                    preset.InitialSpeed,
-                    preset.DecelerationDistance
-                );
-                EditorUtility.SetDirty(shot);
-            }
-
-            if (dolly != null)
-            {
-                Undo.RecordObject(dolly, "Repair Spline Dolly Reference");
+                Undo.RecordObject(dolly, "Rebuild Spline Dolly");
                 dolly.Spline = splineContainer;
-                dolly.PositionUnits = PathIndexUnit.Normalized;
+                dolly.PositionUnits = PathIndexUnit.Distance;
                 dolly.CameraPosition = 0f;
                 EditorUtility.SetDirty(dolly);
             }
+            else
+            {
+                // Fixed Shot: 余分なSplineを削除
+                if (dolly != null)
+                {
+                    if (dolly.Spline != null && dolly.Spline.transform.IsChildOf(rig.transform))
+                    {
+                        Undo.DestroyObjectImmediate(dolly.Spline.gameObject);
+                    }
+
+                    Undo.DestroyObjectImmediate(dolly);
+                    dolly = null;
+                }
+            }
+
+            // 6. Motion Player & Shot設定再同期
+            VLiveCameraMotionPlayer player = shot.MotionPlayer;
+            if (player == null)
+            {
+                player = Undo.AddComponent<VLiveCameraMotionPlayer>(shot.gameObject);
+            }
+
+            shot.Configure(
+                preset.DisplayName,
+                cmCam,
+                preset.ShotType,
+                dolly,
+                composer,
+                aimProxy,
+                player,
+                rig.PerformerTarget,
+                preset,
+                rig.TargetHeight,
+                orientation
+            );
+
+            player.Configure(shot, cmCam, dolly, composer, aimProxy);
+            player.PrepareStart();
+
+            EditorUtility.SetDirty(player);
+            EditorUtility.SetDirty(shot);
         }
 
         private static void PopulateSplineKnots(SplineContainer splineContainer, VLiveCameraRig rig, VLiveCameraMotionPreset preset)
@@ -785,40 +885,64 @@ namespace VLiveKit.Camera.Editor
             var spline = splineContainer.Spline;
             spline.Clear();
 
-            Vector3[] points = preset.ControlPoints;
-            if (points == null || points.Length == 0)
+            MotionKnot[] knots = preset.Knots;
+            if (knots == null || knots.Length == 0)
             {
-                points = new Vector3[]
+                knots = new MotionKnot[]
                 {
-                    new Vector3(0f, 1.3f, 4.5f),
-                    new Vector3(0f, 1.3f, 1.8f)
+                    new MotionKnot(new Vector3(0f, 1.3f, 4.5f)),
+                    new MotionKnot(new Vector3(0f, 1.3f, 1.8f))
                 };
             }
 
-            Vector3 p0 = points[0];
+            spline.Closed = preset.IsClosed;
+
+            Vector3 p0 = knots[0].Position;
             Vector3 scaledP0 = new Vector3(p0.x * rig.DistanceScale, p0.y, p0.z * rig.DistanceScale);
             Quaternion orientation = rig.GetReferenceOrientation();
             Vector3 targetPos = rig.PerformerTarget != null ? rig.PerformerTarget.position : Vector3.zero;
 
-            for (int p = 0; p < points.Length; p++)
+            for (int i = 0; i < knots.Length; i++)
             {
+                MotionKnot knotData = knots[i];
                 Vector3 scaledPoint;
-                if (p == 0)
+                if (i == 0)
                 {
                     scaledPoint = scaledP0;
                 }
                 else
                 {
-                    Vector3 delta = points[p] - p0;
+                    Vector3 delta = knotData.Position - p0;
                     scaledPoint = scaledP0 + delta * rig.MotionScale;
                 }
 
                 Vector3 worldPoint = targetPos + orientation * scaledPoint;
                 Vector3 localPoint = splineContainer.transform.InverseTransformPoint(worldPoint);
-                spline.Add(new BezierKnot((float3)localPoint));
+
+                // Tangents: MotionScaleを適用してローカルへ変換
+                Vector3 worldTanIn = orientation * (knotData.TangentIn * rig.MotionScale);
+                Vector3 localTanIn = splineContainer.transform.InverseTransformVector(worldTanIn);
+
+                Vector3 worldTanOut = orientation * (knotData.TangentOut * rig.MotionScale);
+                Vector3 localTanOut = splineContainer.transform.InverseTransformVector(worldTanOut);
+
+                // Rotation
+                Quaternion worldRot = orientation * knotData.Rotation;
+                Quaternion localRot = Quaternion.Inverse(splineContainer.transform.rotation) * worldRot;
+
+                var bezierKnot = new BezierKnot((float3)localPoint, (float3)localTanIn, (float3)localTanOut, (quaternion)localRot);
+                spline.Add(bezierKnot);
+
+                // 全KnotをAutoSmoothへ強制せず、Presetが定義したTangentModeを個別に設定
+                spline.SetTangentMode(i, knotData.TangentMode);
+
+                // AutoSmooth以外のモードでは指定された明示Tangent値を厳密に維持
+                if (knotData.TangentMode != TangentMode.AutoSmooth)
+                {
+                    spline[i] = bezierKnot;
+                }
             }
 
-            spline.SetTangentMode(TangentMode.AutoSmooth);
             EditorUtility.SetDirty(splineContainer);
         }
 

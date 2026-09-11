@@ -1,12 +1,10 @@
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.Splines;
 
 namespace VLiveKit.Camera
 {
     /// <summary>
-    /// 単一のカメラショットの構図と再生状態を管理するコンポーネント。
-    /// 各ショットは専用のCinemachineCameraを所有します。
+    /// 単一のカメラショットの所有物（専用Camera、Spline、Aim Proxy、適用済みMotion設定）とOn-Air/Off-Air lifecycleを管理するコンポーネント。
     /// </summary>
     [DisallowMultipleComponent]
     public class VLiveCameraShot : MonoBehaviour
@@ -27,78 +25,58 @@ namespace VLiveKit.Camera
         [SerializeField]
         private string _shotName = "Shot";
 
-        [Header("Camera References (カメラ参照)")]
-        [Tooltip("このショット専用のCinemachineCamera。")]
-        [SerializeField]
-        private CinemachineCamera _cinemachineCamera;
-
         [Tooltip("ショットの動作種別（Fixed: 固定構図, Spline: スプライン移動）。")]
         [SerializeField]
         private ShotType _shotType = ShotType.Fixed;
+
+        [Header("Owned Components & References (所有コンポーネントと参照)")]
+        [Tooltip("このショット専用のCinemachineCamera。")]
+        [SerializeField]
+        private CinemachineCamera _cinemachineCamera;
 
         [Tooltip("スプライン移動を行う場合のCinemachineSplineDolly。")]
         [SerializeField]
         private CinemachineSplineDolly _splineDolly;
 
-        [Header("Motion Settings (移動設定)")]
-        [Tooltip("スプライン上の初期進行速度（正規化位置/秒）。")]
-        [Min(0f)]
+        [Tooltip("構図・注視制御を行うCinemachineRotationComposer。")]
         [SerializeField]
-        private float _initialSpeed = 0.2f;
+        private CinemachineRotationComposer _rotationComposer;
 
-        [Tooltip("スプライン進行速度の最小値。")]
-        [Min(0f)]
+        [Tooltip("このショット専用のAim Proxy Transform。")]
         [SerializeField]
-        private float _minSpeed = 0.05f;
+        private Transform _aimProxy;
 
-        [Tooltip("スプライン進行速度の最大値。")]
-        [Min(0f)]
+        [Tooltip("このショット専用のMotion Player。")]
         [SerializeField]
-        private float _maxSpeed = 1.0f;
+        private VLiveCameraMotionPlayer _motionPlayer;
 
-        [Tooltip("Speed Up / Down操作による速度変化量。")]
-        [Min(0f)]
+        [Tooltip("注視・追従基準となる演者Target Transform。")]
         [SerializeField]
-        private float _speedStep = 0.05f;
+        private Transform _performerTarget;
 
-        [Tooltip("初期の進行方向（1: 正方向, -1: 逆方向）。")]
-        [Range(-1, 1)]
+        [Header("Applied Motion Settings (適用済み設定)")]
+        [Tooltip("このショットに適用されている再利用元Preset参照。")]
         [SerializeField]
-        private int _initialDirection = 1;
+        private VLiveCameraMotionPreset _appliedPreset;
 
-        [Tooltip("スプラインの開始位置（0.0〜1.0）。")]
-        [Range(0f, 1f)]
+        [Tooltip("このショットに適用済みのMotion設定実体。")]
         [SerializeField]
-        private float _startPosition = 0f;
+        private VLiveCameraAppliedMotion _appliedMotion = new VLiveCameraAppliedMotion();
 
-        [Tooltip("スプラインの終了位置（0.0〜1.0）。")]
-        [Range(0f, 1f)]
+        [Tooltip("Rebuild時に適用された注視基準高さ（メートル単位）。")]
         [SerializeField]
-        private float _endPosition = 1f;
+        private float _appliedTargetHeight = 1.3f;
 
-        [Tooltip("終端に近づいた際に減速を開始する距離（正規化単位）。")]
-        [Min(0f)]
+        [Tooltip("Rebuild時に適用されたリグ正面向きクォータニオン。")]
         [SerializeField]
-        private float _decelerationDistance = 0.25f;
-
-        private float _currentSpeed;
-        private int _currentDirection = 1;
-        private bool _isLive;
-        private bool _isPlaying;
-        private bool _isHolding;
-        private bool _isPrepared;
+        private Quaternion _appliedRigOrientation = Quaternion.identity;
 
 
         // Properties
 
-        /// <summary>
-        /// ショットの識別名を取得します。
-        /// </summary>
         public string ShotName => _shotName;
+        public ShotType Type => _shotType;
 
-        /// <summary>
-        /// このショット専用のCinemachineCameraを取得します。
-        /// </summary>
         public CinemachineCamera CinemachineCamera
         {
             get
@@ -112,14 +90,6 @@ namespace VLiveKit.Camera
             }
         }
 
-        /// <summary>
-        /// ショットの動作種別を取得します。
-        /// </summary>
-        public ShotType Type => _shotType;
-
-        /// <summary>
-        /// スプライン移動コンポーネントを取得します。
-        /// </summary>
         public CinemachineSplineDolly SplineDolly
         {
             get
@@ -133,21 +103,60 @@ namespace VLiveKit.Camera
             }
         }
 
+        public CinemachineRotationComposer RotationComposer
+        {
+            get
+            {
+                if (_rotationComposer == null && CinemachineCamera != null)
+                {
+                    _rotationComposer = CinemachineCamera.GetComponent<CinemachineRotationComposer>();
+                }
+
+                return _rotationComposer;
+            }
+        }
+
+        public Transform AimProxy => _aimProxy;
+
+        public VLiveCameraMotionPlayer MotionPlayer
+        {
+            get
+            {
+                if (_motionPlayer == null)
+                {
+                    _motionPlayer = GetComponent<VLiveCameraMotionPlayer>();
+                }
+
+                return _motionPlayer;
+            }
+        }
+
+        public Transform PerformerTarget
+        {
+            get => _performerTarget;
+            set => _performerTarget = value;
+        }
+
+        public VLiveCameraMotionPreset AppliedPreset => _appliedPreset;
+        public VLiveCameraAppliedMotion AppliedMotion => _appliedMotion;
+        public float AppliedTargetHeight => _appliedTargetHeight;
+        public Quaternion AppliedRigOrientation => _appliedRigOrientation;
+
         /// <summary>
-        /// このショットが正常にProgramとして動作可能であるか（必須コンポーネントおよび参照の有無）を取得します。
+        /// このショットが正常にProgramとして動作可能であるかを取得します。
         /// </summary>
         public bool IsValid
         {
             get
             {
-                if (CinemachineCamera == null)
+                if (CinemachineCamera == null || MotionPlayer == null)
                 {
                     return false;
                 }
 
                 if (_shotType == ShotType.Spline)
                 {
-                    if (SplineDolly == null || SplineDolly.Spline == null)
+                    if (SplineDolly == null || SplineDolly.Spline == null || _appliedMotion == null)
                     {
                         return false;
                     }
@@ -157,158 +166,32 @@ namespace VLiveKit.Camera
             }
         }
 
-        /// <summary>
-        /// 現在ProgramとしてLive出力中であるかを取得します。
-        /// </summary>
-        public bool IsLive => _isLive;
-
-        /// <summary>
-        /// スプライン移動が再生中であるかを取得します。
-        /// </summary>
-        public bool IsPlaying => _isPlaying;
-
-        /// <summary>
-        /// スプライン移動が一時停止中であるかを取得します。
-        /// </summary>
-        public bool IsHolding => _isHolding;
-
-        /// <summary>
-        /// Off-Air中に始点での準備が完了しているかを取得します。
-        /// </summary>
-        public bool IsPrepared => _isPrepared;
-
-        /// <summary>
-        /// 現在の進行速度を取得します。
-        /// </summary>
-        public float CurrentSpeed => _currentSpeed;
-
-        /// <summary>
-        /// 現在の進行方向（1または-1）を取得します。
-        /// </summary>
-        public int CurrentDirection => _currentDirection;
-
-        /// <summary>
-        /// 現在のスプライン上のカメラ位置（正規化位置）を取得します。
-        /// </summary>
-        public float CurrentPosition
-        {
-            get
-            {
-                if (_splineDolly != null)
-                {
-                    return _splineDolly.CameraPosition;
-                }
-
-                return 0f;
-            }
-        }
+        public bool IsLive => MotionPlayer != null && MotionPlayer.IsLive;
+        public bool IsPlaying => MotionPlayer != null && MotionPlayer.IsPlaying;
+        public bool IsHolding => MotionPlayer != null && MotionPlayer.IsHolding;
+        public bool IsPrepared => MotionPlayer != null && MotionPlayer.IsPrepared;
+        public float CurrentSpeedMultiplier => MotionPlayer != null ? MotionPlayer.CurrentSpeedMultiplier : 0f;
+        public int CurrentDirection => MotionPlayer != null ? MotionPlayer.CurrentDirection : 1;
+        public float CurrentTime => MotionPlayer != null ? MotionPlayer.CurrentTime : 0f;
+        public float CurrentSplineDistance => MotionPlayer != null ? MotionPlayer.CurrentSplineDistance : 0f;
 
 
         // Methods
 
         private void Awake()
         {
-            if (_cinemachineCamera == null)
-            {
-                _cinemachineCamera = GetComponent<CinemachineCamera>();
-            }
-
-            if (_splineDolly == null && _cinemachineCamera != null)
-            {
-                _splineDolly = _cinemachineCamera.GetComponent<CinemachineSplineDolly>();
-            }
-
-            if (_splineDolly != null && _splineDolly.PositionUnits != PathIndexUnit.Normalized)
-            {
-                _splineDolly.PositionUnits = PathIndexUnit.Normalized;
-            }
-
-            _currentSpeed = Mathf.Clamp(_initialSpeed, _minSpeed, _maxSpeed);
-            _currentDirection = (_initialDirection < 0) ? -1 : 1;
-            _isPrepared = true;
-        }
-
-        private void Update()
-        {
-            if (!_isLive || !_isPlaying || _isHolding)
-            {
-                return;
-            }
-
-            if (_shotType != ShotType.Spline || _splineDolly == null || _splineDolly.Spline == null)
-            {
-                return;
-            }
-
-            float currentPos = _splineDolly.CameraPosition;
-            if (_currentDirection > 0 && currentPos >= _endPosition)
-            {
-                _splineDolly.CameraPosition = _endPosition;
-                _isPlaying = false;
-                return;
-            }
-
-            if (_currentDirection < 0 && currentPos <= _startPosition)
-            {
-                _splineDolly.CameraPosition = _startPosition;
-                _isPlaying = false;
-                return;
-            }
-
-            float targetEnd = (_currentDirection > 0) ? _endPosition : _startPosition;
-            float dist = Mathf.Abs(targetEnd - currentPos);
-
-            if (dist <= 0.0001f)
-            {
-                _splineDolly.CameraPosition = targetEnd;
-                _isPlaying = false;
-                return;
-            }
-
-            float factor = 1.0f;
-            if (_decelerationDistance > 0f && dist < _decelerationDistance)
-            {
-                factor = Mathf.SmoothStep(0.05f, 1.0f, dist / _decelerationDistance);
-            }
-
-            float delta = _currentSpeed * factor * _currentDirection * Time.deltaTime;
-            float nextPos = currentPos + delta;
-
-            if (_currentDirection > 0 && nextPos >= _endPosition)
-            {
-                nextPos = _endPosition;
-                _isPlaying = false;
-            }
-            else if (_currentDirection < 0 && nextPos <= _startPosition)
-            {
-                nextPos = _startPosition;
-                _isPlaying = false;
-            }
-
-            _splineDolly.CameraPosition = nextPos;
+            EnsureComponentReferences();
         }
 
         /// <summary>
-        /// Off-Air中に次回再生用の始点へカメラを復帰させます。Live中は無視されます。
+        /// Off-Air中に次回再生用の始点へカメラを復帰させます。
         /// </summary>
         public void PrepareStart()
         {
-            if (_isLive)
+            if (MotionPlayer != null)
             {
-                return;
+                MotionPlayer.PrepareStart();
             }
-
-            _isPlaying = false;
-            _isHolding = false;
-            _currentSpeed = Mathf.Clamp(_initialSpeed, _minSpeed, _maxSpeed);
-            _currentDirection = (_initialDirection < 0) ? -1 : 1;
-
-            if (_shotType == ShotType.Spline && _splineDolly != null)
-            {
-                _splineDolly.CameraPosition = _startPosition;
-            }
-
-            _isPrepared = true;
         }
 
         /// <summary>
@@ -316,13 +199,9 @@ namespace VLiveKit.Camera
         /// </summary>
         public void OnEnterProgram()
         {
-            _isLive = true;
-            _isPrepared = false;
-
-            if (_shotType == ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                _isPlaying = true;
-                _isHolding = false;
+                MotionPlayer.OnEnterProgram();
             }
         }
 
@@ -331,140 +210,172 @@ namespace VLiveKit.Camera
         /// </summary>
         public void OnExitProgram()
         {
-            _isLive = false;
-            _isPlaying = false;
-
-            if (_shotType == ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                PrepareStart();
+                MotionPlayer.OnExitProgram();
             }
         }
 
         /// <summary>
-        /// スプライン進行速度を1段階上昇させます。
+        /// 進行速度を1段階上昇させます。
         /// </summary>
         public void SpeedUp()
         {
-            if (!_isLive || _shotType != ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                return;
+                MotionPlayer.SpeedUp();
             }
-
-            _currentSpeed = Mathf.Clamp(_currentSpeed + _speedStep, _minSpeed, _maxSpeed);
         }
 
         /// <summary>
-        /// スプライン進行速度を1段階下降させます。
+        /// 進行速度を1段階下降させます。
         /// </summary>
         public void SpeedDown()
         {
-            if (!_isLive || _shotType != ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                return;
+                MotionPlayer.SpeedDown();
             }
-
-            _currentSpeed = Mathf.Clamp(_currentSpeed - _speedStep, _minSpeed, _maxSpeed);
         }
 
         /// <summary>
-        /// 現在位置を保持したまま進行方向を反転します。
+        /// 進行方向を安全に反転します。
         /// </summary>
         public void Reverse()
         {
-            if (!_isLive || _shotType != ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                return;
-            }
-
-            _currentDirection = -_currentDirection;
-            if (!_isHolding)
-            {
-                _isPlaying = true;
+                MotionPlayer.Reverse();
             }
         }
 
         /// <summary>
-        /// 現在位置でスプライン移動を一時停止します。
+        /// 移動を一時停止します。
         /// </summary>
         public void Hold()
         {
-            if (!_isLive || _shotType != ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                return;
+                MotionPlayer.Hold();
             }
-
-            _isHolding = true;
         }
 
         /// <summary>
-        /// 一時停止中のスプライン移動を再開します。
+        /// 一時停止中の移動を再開します。
         /// </summary>
         public void Resume()
         {
-            if (!_isLive || _shotType != ShotType.Spline)
+            if (MotionPlayer != null)
             {
-                return;
+                MotionPlayer.Resume();
             }
-
-            _isHolding = false;
-            _isPlaying = true;
         }
 
         /// <summary>
-        /// ショットの初期設定値を適用します。
+        /// 緊急時に即時停止します。
+        /// </summary>
+        public void Freeze()
+        {
+            if (MotionPlayer != null)
+            {
+                MotionPlayer.Freeze();
+            }
+        }
+
+        /// <summary>
+        /// ショットの構成要素を一括設定します（Builder用）。
         /// </summary>
         public void Configure(
             string shotName,
             CinemachineCamera cmCam,
             ShotType shotType,
             CinemachineSplineDolly splineDolly,
-            float initialSpeed,
-            float decelerationDistance)
+            CinemachineRotationComposer composer,
+            Transform aimProxy,
+            VLiveCameraMotionPlayer motionPlayer,
+            Transform performerTarget,
+            VLiveCameraMotionPreset preset,
+            float targetHeight,
+            Quaternion rigOrientation)
         {
             _shotName = shotName;
             _cinemachineCamera = cmCam;
             _shotType = shotType;
             _splineDolly = splineDolly;
-            _initialSpeed = initialSpeed;
-            _decelerationDistance = decelerationDistance;
+            _rotationComposer = composer;
+            _aimProxy = aimProxy;
+            _motionPlayer = motionPlayer;
+            _performerTarget = performerTarget;
+            _appliedPreset = preset;
+            _appliedTargetHeight = targetHeight;
+            _appliedRigOrientation = rigOrientation;
 
-            if (_splineDolly != null)
+            if (_appliedMotion == null)
             {
-                _splineDolly.PositionUnits = PathIndexUnit.Normalized;
+                _appliedMotion = new VLiveCameraAppliedMotion();
+            }
+
+            float splineLen = 0f;
+            if (_splineDolly != null && _splineDolly.Spline != null && _splineDolly.Spline.Spline != null)
+            {
+                splineLen = _splineDolly.Spline.Spline.GetLength();
+            }
+
+            if (preset != null)
+            {
+                _appliedMotion.ApplyFromPreset(preset, splineLen, preset.RigProfile);
+            }
+
+            if (_motionPlayer != null)
+            {
+                _motionPlayer.Configure(this, _cinemachineCamera, _splineDolly, _rotationComposer, _aimProxy);
             }
         }
 
-#if UNITY_EDITOR
-        private void OnValidate()
+        /// <summary>
+        /// 適用済みMotion設定の内部値をPresetから再同期します（Rebuild用）。
+        /// </summary>
+        public void SyncAppliedMotion(VLiveCameraMotionPreset preset, float splineLength, float targetHeight, Quaternion rigOrientation)
         {
-            if (_minSpeed < 0f)
+            _appliedPreset = preset;
+            _appliedTargetHeight = targetHeight;
+            _appliedRigOrientation = rigOrientation;
+
+            if (_appliedMotion == null)
             {
-                _minSpeed = 0f;
+                _appliedMotion = new VLiveCameraAppliedMotion();
             }
 
-            if (_maxSpeed < _minSpeed)
+            if (preset != null)
             {
-                _maxSpeed = _minSpeed;
-            }
-
-            if (_speedStep < 0f)
-            {
-                _speedStep = 0f;
-            }
-
-            _initialSpeed = Mathf.Clamp(_initialSpeed, _minSpeed, _maxSpeed);
-            _initialDirection = (_initialDirection < 0) ? -1 : 1;
-
-            if (_endPosition < _startPosition)
-            {
-                _endPosition = _startPosition;
-            }
-
-            if (_decelerationDistance < 0f)
-            {
-                _decelerationDistance = 0f;
+                _appliedMotion.ApplyFromPreset(preset, splineLength, preset.RigProfile);
             }
         }
-#endif
+
+        private void EnsureComponentReferences()
+        {
+            if (_cinemachineCamera == null)
+            {
+                _cinemachineCamera = GetComponent<CinemachineCamera>();
+            }
+
+            if (_motionPlayer == null)
+            {
+                _motionPlayer = GetComponent<VLiveCameraMotionPlayer>();
+            }
+
+            if (_cinemachineCamera != null)
+            {
+                if (_splineDolly == null)
+                {
+                    _splineDolly = _cinemachineCamera.GetComponent<CinemachineSplineDolly>();
+                }
+
+                if (_rotationComposer == null)
+                {
+                    _rotationComposer = _cinemachineCamera.GetComponent<CinemachineRotationComposer>();
+                }
+            }
+        }
     }
 }

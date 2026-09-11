@@ -10,31 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4f85e2b01c34172a912e73527a0b3f1, type: 3}
-  m_Name: PushIn
-  m_EditorClassIdentifier: toshi.VLiveKit.Camera::VLiveCameraMotionPreset
-  _displayName: Push In
+  m_Name: PushInRolling
+  m_EditorClassIdentifier: VLiveCameraUnit.Runtime::VLiveKit.Camera.VLiveCameraMotionPreset
+  _displayName: Push In (Rolling)
   _shotType: 1
   _motionFamily: 1
   _shotSize: 2
-  _energy: 1
-  _description: "\u88AB\u5199\u4F53\u6B63\u9762\u304B\u3089\u5BC4\u3063\u3066\u3044\u304F\u30C9\u30EA\u30FC\u30D7\u30C3\u30B7\u30E5\u3002"
+  _energy: 2
+  _description: "\u975E\u30BC\u30ED\u901F\u5EA6\u3067\u52A9\u8D70\u533A\u9593\u304B\u3089\u9032\u884C\u4E2D\u306E\u72B6\u614B\u3067Cut\u30A4\u30F3\u3059\u308B\u30ED\u30FC\u30EA\u30F3\u30B0\u30D7\u30C3\u30B7\u30E5\u3002"
   _rigProfile: {fileID: 11400000, guid: 54ec1dd82cf3c4f4da191f1ff7d58230, type: 2}
   _knots:
-  - Position: {x: 0, y: 1.3, z: 4.5}
+  - Position: {x: 0, y: 1.3, z: 5}
     TangentIn: {x: 0, y: 0, z: 0}
-    TangentOut: {x: 0, y: 0, z: -0.9}
+    TangentOut: {x: 0, y: 0, z: -1}
     TangentMode: 3
     Rotation: {x: 0, y: 0, z: 0, w: 1}
-  - Position: {x: 0, y: 1.3, z: 1.8}
-    TangentIn: {x: 0, y: 0, z: 0.9}
+  - Position: {x: 0, y: 1.3, z: 1.6}
+    TangentIn: {x: 0, y: 0, z: 1}
     TangentOut: {x: 0, y: 0, z: 0}
     TangentMode: 3
     Rotation: {x: 0, y: 0, z: 0, w: 1}
   _isClosed: 0
-  _referenceSplineLength: 2.7
+  _referenceSplineLength: 3.4
   _startDistance: 0
   _endDistance: 0
-  _clipDuration: 5
+  _clipDuration: 6
   _progressCurve:
     serializedVersion: 2
     m_Curve:
@@ -42,7 +42,7 @@ MonoBehaviour:
       time: 0
       value: 0
       inSlope: 0
-      outSlope: 0
+      outSlope: 1
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -50,7 +50,7 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 0
+      inSlope: 1
       outSlope: 0
       tangentMode: 0
       weightedMode: 0
@@ -128,7 +128,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  _entryMode: 0
-  _inTime: 0
-  _outTime: 5
+  _entryMode: 1
+  _inTime: 1
+  _outTime: 5.5
   _exitBehavior: 0

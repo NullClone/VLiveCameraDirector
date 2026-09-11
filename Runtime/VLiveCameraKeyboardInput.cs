@@ -128,6 +128,10 @@ namespace VLiveKit.Camera
         [Tooltip("Spline進行を再開するキー。")]
         [SerializeField]
         private Key _resumeKey = Key.Space;
+
+        [Tooltip("緊急即時停止キー（既定では未割り当て）。")]
+        [SerializeField]
+        private Key _freezeKey = Key.None;
 #endif
 
 
@@ -230,8 +234,12 @@ namespace VLiveKit.Camera
                 _switcher.Reverse();
             }
 
-            // Hold / Resume (mutually exclusive, Hold takes priority if both pressed in same frame)
-            if (IsPressed(keyboard, _holdKey))
+            // Hold / Resume / Freeze (Freeze takes highest priority, then Hold, then Resume)
+            if (IsPressed(keyboard, _freezeKey))
+            {
+                _switcher.Freeze();
+            }
+            else if (IsPressed(keyboard, _holdKey))
             {
                 _switcher.Hold();
             }

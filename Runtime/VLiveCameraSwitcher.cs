@@ -231,6 +231,17 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
+        /// 現在のProgram Shotの進行を即時停止します。
+        /// </summary>
+        public void Freeze()
+        {
+            if (_currentProgramShot != null)
+            {
+                _currentProgramShot.Freeze();
+            }
+        }
+
+        /// <summary>
         /// 管理対象のVLiveCameraRig参照を設定します。
         /// </summary>
         /// <param name="rig">設定するVLiveCameraRig。</param>
