@@ -4,11 +4,6 @@ VLive Camera Director is a Unity 6.3+ / Cinemachine 3 package for performing
 prepared live-camera shots with operator control and reliable composition
 assistance.
 
-The current implementation may still contain the legacy `VLiveCameraUnit`
-folder, package, assembly, and documentation identifiers. The active migration is
-defined by `Docs/roadmap.md`. Do not add compatibility wrappers for those
-pre-release identifiers.
-
 ## Read first
 
 Use this priority when instructions conflict:

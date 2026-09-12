@@ -1,7 +1,5 @@
-# VLive Camera Unit
+# VLive Camera Director
 
-ライブ制作向けのカメラ制御、プリセット、キャラクター追従、Timeline 連携をまとめた Unity package です。
+ライブ制作向けのカメラ制御、プリセット、キャラクター 追従、Timeline 連携
 
-## License
-
-この package 独自のコードと asset は repository の `LICENSE` に従います。third-party asset を含む場合は、それぞれの license / README を確認してください。
+本プロジェクトは、[toshi-kundesu](https://github.com/toshi-kundesu) によって制作された [VLiveCameraUnit](https://github.com/toshi-kundesu/VLiveCameraUnit) をベースに、機能の追加・改修を行ったリポジトリです。

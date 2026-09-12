@@ -1,12 +1,12 @@
 {
-    "name": "VLiveCameraUnit.Editor",
+    "name": "VLiveCameraDirector.Editor",
     "rootNamespace": "VLiveKit.Camera.Editor",
     "references": [
-        "Unity.Cinemachine",
-        "Unity.Splines",
-        "Unity.Mathematics",
-        "Unity.InputSystem",
-        "VLiveCameraUnit.Runtime"
+        "GUID:4307f53044263cf4b835bd812fc161a4",
+        "GUID:21d1eb854b91ade49bc69a263d12bee2",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:46a9eff06b8ea4049be4862d2c6b3afa"
     ],
     "includePlatforms": [
         "Editor"
