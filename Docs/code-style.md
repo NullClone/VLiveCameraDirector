@@ -1,6 +1,6 @@
 # C# and Inspector Style
 
-This document defines the default style for new or touched VLiveCameraUnit code.
+This document defines the default style for new or touched VLive Camera Director code.
 It is based on `Assets/PrismLipSync/Runtime/PrismLipSync.cs`. Follow the intent
 below rather than copying incidental inconsistencies from that file.
 

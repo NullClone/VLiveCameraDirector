@@ -2,17 +2,30 @@
 
 ## 1. 役割
 
-- ユーザー: 製品判断と、自身の作業用Sceneでの操作感確認
-- 仕様担当Codex: 現状調査、仕様更新、実装プロンプト、diff Review
+- ユーザー: 製品判断と、自身の作業用Sceneでの映像・操作受け入れ
+- 仕様担当: 現状調査、仕様更新、実装タスク、diff Review
 - 実装エージェントとサブエージェント: 承認された縦切り実装
 
-通常のコード構成、命名、Inspector配置は実装エージェントが自律的に決める。製品挙動、データ所有権、公開API、破壊的な範囲変更が必要な場合だけ停止して確認する。
+通常のコード構成、命名、Inspector配置はエージェントが自律的に決める。製品挙動、データ所有権、公開API、破壊的範囲が仕様を越える場合だけ停止して確認する。
 
-## 2. 実装タスク
+## 2. 読む文書
 
-1回の依頼は、独立してCompileできる1つの縦切りとする。密接したRuntime、Editor、Presetは1つの体験を完成させるために一括で依頼してよい。
+実装エージェントは次だけを読む。
 
-実装プロンプトには次を含める。
+1. `AGENTS.md`
+2. [roadmap.md](roadmap.md)のCurrentとNext
+3. 今回に関係する機能仕様
+4. C#またはEditorを変更する場合は[code-style.md](code-style.md)
+5. チャットで渡された実装タスク
+6. 今回使用するAgent Skill
+
+全仕様書を毎回読む必要はない。文書の役割は[README.md](README.md)を参照する。
+
+## 3. 実装タスク
+
+1回の依頼は、独立してCompileできる1つの縦切りとする。密接したRuntime、Editor、Presetは、1つの体験を完成させるために一括で依頼してよい。
+
+実装タスクには次を含める。
 
 ```text
 目的:
@@ -25,66 +38,38 @@
 停止条件:
 ```
 
-実装用プロンプトはチャットでユーザーへ渡し、`Docs/`へ保存しない。繰り返し適用する製品判断だけを仕様へ反映する。
+実装用プロンプトはチャットでユーザーへ渡し、`Docs/`へ保存しない。繰り返し適用する製品判断だけを仕様書へ反映する。
 
-実装エージェントが読むもの:
+## 4. Agent Skills
 
-1. `AGENTS.md`
-2. 今回に関係する仕様書
-3. C#またはEditorを変更する場合は`Docs/code-style.md`
-4. チャットで渡された実装タスク
-5. 今回使用するAgent Skill
+Project Skillは`E:\Unity\Project\MMD\.agents\skills`を使用する。ユーザー指定またはdescriptionが一致するSkillを、受任した各エージェントが全文読む。親エージェントの確認をサブエージェントへ流用しない。
 
-## 3. Agent Skills
-
-Agent Skillsは`E:\Unity\Project\MMD\.agents\skills`を使用する。ユーザー指定またはdescriptionが一致するSkillを、受任したエージェント自身が全文読む。親の確認をサブエージェントへ流用しない。
-
-Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用する。UPM Packageの外部変更では`unity-package-management`を使用する。Skillが要求する確認を実行できない場合は未確認として報告する。
-
-## 4. 現在の縦切り実装
-
-`Docs/phases.md`のStep 4.6 3D Motion Palette Refactorを現在の基準とする。
-
-1. `git status --short`と関係するRuntime、Editor、Presetを確認する。
-2. `unity-cli`と`ui-imgui` Skillを読む。
-3. Camera PerformanceをIdentity / Body / Timing / Aim / Lens / Roll / Activationへ分離する。
-4. 全Spline KnotのY値とTangentを保持し、水平・垂直スケールを独立適用する。
-5. RigのMaster Playback SpeedとShotごとの手動Speed Multiplierを別レイヤーとして扱う。
-6. 同梱PresetはUnity Editor APIで再生成し、YAMLを直接編集しない。
-7. 1ファイル1型、統一namespace、英語IMGUI、日本語Tooltipを確認する。
-8. Import、Compile、Console、diffを簡易確認する。
-
-App UI、MIDI、Preview / Take、専用テストScene、汎用frameworkは同時に追加しない。
+Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用する。UPM Packageの追加、削除、更新では`unity-package-management`を使用する。Skillが要求する確認を実行できない場合は未確認として報告する。
 
 ## 5. 実装規則
 
+- 最初に`git status --short`を確認し、ユーザーの無関係な変更を保持する。
 - 依頼範囲だけを変更する。
-- Package直下の`README.md`を変更しない。
-- 既存Tests Sceneを変更、削除、ステージしない。
-- 1 Shotにつき1つのCinemachineCameraを使用する。
-- Preset原本、Shotへ具体化した設定、Motion PlayerのRuntime状態を混同しない。
-- PresetやSlot参照の変更を、Applyだけで生成済みShotへ暗黙伝播しない。
-- Shot順とSlotの正本は`VLiveCameraRig`だけに置く。
-- Motion再生状態の正本は`VLiveCameraMotionPlayer`だけに置く。
-- Live中のCameraへ別Shot設定を上書きしない。
-- `OnValidate`やInspector変更だけでSceneオブジェクトを生成、削除、再配置しない。
-- 通常のApplyと、手動調整を上書きするRebuildを分ける。
-- Scene上のShotからPresetを作る場合は新規保存を既定とし、既存Assetを暗黙に上書きしない。
-- Validatorは既定で診断だけを行い、Spline、Aim、Lens、Durationを変更しない。
-- interface、Manager、Registry、Command Bus、DIを現在の必要性なく追加しない。
-- Gold Master量産、Preview、App UI、MIDI、Runtime AI、検索、カテゴリ、サムネイルを先行実装しない。
-- `Docs/code-style.md`へ従う。
+- Package直下の`README.md`を明示依頼なしに変更しない。
+- ユーザーSceneを変更、保存、削除しない。
+- [architecture.md](architecture.md)の状態所有権とCinemachine境界を崩さない。
+- [motion.md](motion.md)のMotionデータと計算契約を崩さない。
+- Apply、Rebuild、削除、Preset保存を暗黙に統合しない。
+- Inspector変更や`OnValidate`だけでScene、Spline、Assetを変更しない。
+- Validatorは既定で診断だけを行う。
+- 現在必要のないinterface、Manager、Registry、Command Bus、DIを追加しない。
+- [roadmap.md](roadmap.md)のLaterとFutureを先行実装しない。
+- C#とInspectorは[code-style.md](code-style.md)へ従う。
 - 複数エージェントが同じファイルを同時編集しない。
 
 ## 6. 既定の確認
 
-実装エージェントは次だけを既定で行う。
+実装エージェントは次を既定で行う。
 
-- 今回のパスだけを対象にしたdiffと参照の簡易Review
-- 末尾空白、namespace、asmdef、Tooltip、Editor分離の確認
+- 今回のパスに限定したdiffと参照の簡易Review
+- 末尾空白、namespace、asmdef、Tooltip、Runtime / Editor分離の確認
 - Unity Import、Domain Reload、Compile
 - Consoleに新しいCompile Errorや明白な例外がないこと
-- Motion Preset、Rig Profile、Evaluator、Player、Editor codeがImport、Compileされること
 
 次はユーザーが明示しない限り行わない。
 
@@ -94,37 +79,33 @@ App UI、MIDI、Preview / Take、専用テストScene、汎用frameworkは同時
 - Game Viewでの構図やカメラワーク評価
 - 性能計測
 
-実際のSetup実行、キー操作、構図、動きはユーザーが作業用Sceneで受け入れる。エージェントは未実施の項目を確認済みと報告しない。
+Compile、Validatorの数値、Scene上の映像確認を同じ証拠として扱わない。実際のSetup、キー操作、構図、Motionはユーザーが作業用Sceneで受け入れる。
 
 ## 7. Review
 
-仕様担当は次をざっと確認する。
+仕様担当は今回の契約に関係する次の点だけを確認する。
 
-- 完成条件に必要なファイルが揃っている。
-- 対象外の機能や抽象化が増えていない。
-- Rig作成とBuilder操作がUndo対応で、重複生成と自動保存を行わない。
-- Applyが既存のLens、Spline、Camera調整を上書きしない。
-- Rebuildと生成物削除が明示的で、対象外のSceneオブジェクトを変更しない。
-- Save Shot As New Presetが既存Assetを暗黙に上書きしない。
-- 同じPresetを複数Slotで使用してもShot参照が混線しない。
+- 必要なRuntime、Editor、Asset変更が揃っている。
+- 対象外の機能と抽象化が増えていない。
+- 状態の正本が重複していない。
 - 各Shotが専用CinemachineCameraを持つ。
-- 各Motion Shotが専用Spline、Aim Proxy、Motion Playerを持つ。
-- Preset原本、Shotの適用済み設定、Motion PlayerのRuntime状態の所有権が分かれている。
-- Body、Aim、Composition、Lensが同じPlayback Timeを使用する。
-- ValidatorがAssetやSceneを暗黙変更しない。
-- 表示されるSerializedFieldにTooltipがある。
+- Scene変更が明示操作とUndoを伴う。
+- Applyが既存のScene調整を上書きしない。
+- Rebuildと削除の対象が明確である。
+- Preset保存が既存Assetを暗黙上書きしない。
+- ValidatorがAssetやSceneを変更しない。
+- 表示するSerializedFieldにTooltipがある。
 - ユーザー向けMonoBehaviourに有用なCustomEditorがある。
-- Inspectorの固定表示が英語で、標準IMGUI中心の外観になっている。
-- Repaint中にGUIStyleを生成せず、不要な常時Repaintがない。
-- 無効な選択でProgramを失わない。
+- Inspectorが標準IMGUI中心の英語UIである。
+- 無効な選択で現在のProgramを失わない。
 
 ## 8. Git
 
 - 作業前後に`git status --short`を確認する。
-- 許可されたパスだけを明示的にステージする。
-- ユーザーの無関係な変更を保持する。
-- Commit messageは`<type>: <変更内容>`とする。
+- 許可されたパスだけを明示的にStageする。
 - Branch、Push、Pull Requestは明示依頼がある場合だけ行う。
+- Commit messageは`<type>: <変更内容>`とする。
+- Commitを依頼された場合は、無関係な変更を含めない。
 
 ## 9. 完了報告
 
@@ -133,4 +114,4 @@ App UI、MIDI、Preview / Take、専用テストScene、汎用frameworkは同時
 - 実施した確認
 - ユーザーのSceneで確認する項目
 - 対象外として残した内容
-- Commit ID
+- Commit ID。Commitしていない場合はその旨

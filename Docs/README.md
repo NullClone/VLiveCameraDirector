@@ -1,27 +1,39 @@
-# VLiveCameraUnit 仕様書
+# VLive Camera Director Documentation
 
-このディレクトリはVLiveCameraUnitの製品方針、初期実装、実装順序を定義する。
+このディレクトリは、VLive Camera Directorの製品判断、技術契約、現在の開発範囲を定義する。
 
-初めて読む場合:
+## 読む順番
 
-1. [overview.md](overview.md) — 製品コンセプトと最初に作る体験
-2. [architecture.md](architecture.md) — Rig、Shot、Motion Player、Evaluator、Switcher、Editorの責務と所有権
-3. [phases.md](phases.md) — 現在地と次の実装
+初めて読む場合は次の順とする。
 
-機能別仕様:
+1. [product.md](product.md) — 製品コンセプト、原則、対象範囲
+2. [architecture.md](architecture.md) — 責務、状態所有権、Cinemachine統合
+3. [roadmap.md](roadmap.md) — 現在地、次、将来
 
-- [spec-operation.md](spec-operation.md) — キーボード操作と将来のMIDI
-- [spec-camera.md](spec-camera.md) — Camera Performance、Spline、Timing、Aim、Lens、初期Palette
-- [spec-setup.md](spec-setup.md) — Rig作成、Inspector Authoring、Scene同期
-- [spec-assistance.md](spec-assistance.md) — Cinemachineによる初期支援
-- [spec-switching.md](spec-switching.md) — 複数ShotのDirect Cut
+## 機能仕様
 
-開発手順:
+| 関心 | 正本 |
+| --- | --- |
+| Motion Preset、Spline、Timing、Aim、Lens、Roll、支援 | [motion.md](motion.md) |
+| Direct Cut、Shot lifecycle、Keyboard、手動介入 | [operation.md](operation.md) |
+| Rig作成、Inspector、Apply、Rebuild、Preset保存 | [authoring.md](authoring.md) |
 
-- [workflow.md](workflow.md) — Antigravityへの実装委譲、Review、検証
-- [code-style.md](code-style.md) — C#、Tooltip、コメント、Custom Inspectorの規則
-- [AGENTS.md](../AGENTS.md) — エージェント向け入口と変更境界
+## 開発規則
 
-実装エージェントは全仕様書を読む必要はない。`AGENTS.md`、今回の担当仕様書、チャットで渡された短い実装タスク、該当するAgent Skillだけを使用する。実装用プロンプトは一時的な依頼であり、仕様書としてこのディレクトリへ保存しない。
+| 関心 | 正本 |
+| --- | --- |
+| C#、Tooltip、コメント、Custom Inspector | [code-style.md](code-style.md) |
+| エージェント委譲、確認、Review、Git | [workflow.md](workflow.md) |
+| エージェント向け入口と変更境界 | [AGENTS.md](../AGENTS.md) |
 
-将来構想は現在の実装要求ではない。実装済みの範囲は必ず[phases.md](phases.md)で確認する。
+## 文書所有の規則
+
+- 製品として何を目指すかは`product.md`だけが所有する。
+- 状態の正本、依存方向、Cinemachineとの境界は`architecture.md`だけが所有する。
+- 数式、データ契約、機能固有の異常時動作は該当する機能仕様が所有する。
+- 実装済み・次・将来の区別は`roadmap.md`だけが所有する。
+- 完了済み作業の履歴はGitとCHANGELOGが所有し、RoadmapへStep履歴を蓄積しない。
+- コードコメントは局所的な理由、仕様書は複数ファイルにまたがる契約、Commit messageは変更理由を所有する。
+- 同じ規則を複数文書へコピーせず、正本へリンクする。
+
+実装エージェントは全仕様書を読む必要はない。`AGENTS.md`、担当仕様書、C#またはEditorを触る場合の`code-style.md`、チャットで渡された実装タスク、該当するAgent Skillだけを読む。実装用プロンプトは`Docs/`へ保存しない。
