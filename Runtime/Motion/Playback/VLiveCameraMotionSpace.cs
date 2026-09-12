@@ -7,8 +7,6 @@ namespace VLiveKit.Camera
     /// </summary>
     public static class VLiveCameraMotionSpace
     {
-        // Methods
-
         /// <summary>
         /// Shot開始位置へ水平距離スケールを適用します。
         /// </summary>

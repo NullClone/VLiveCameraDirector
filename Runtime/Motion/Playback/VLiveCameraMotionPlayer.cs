@@ -11,8 +11,6 @@ namespace VLiveKit.Camera
     [DisallowMultipleComponent]
     public class VLiveCameraMotionPlayer : MonoBehaviour
     {
-        // Fields
-
         [Header("Target Shot & Components")]
         [Tooltip("このプレイヤーが属するVLiveCameraShot。")]
         [SerializeField]
@@ -33,6 +31,7 @@ namespace VLiveKit.Camera
         [Tooltip("注視点制御用のAim Proxy Transform。")]
         [SerializeField]
         private Transform _aimProxy;
+
 
         // Runtime Playback States (再生状態の正本)
         private float _currentTime;
@@ -100,11 +99,8 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
-            if (motion == null)
-            {
-                return;
-            }
+            var motion = GetAppliedMotion();
+            if (motion == null) return;
 
             if (_isPlaying && motion.ShotType == VLiveCameraShotType.Spline)
             {
@@ -120,6 +116,7 @@ namespace VLiveKit.Camera
             EvaluateAndApply(motion);
         }
 
+
         /// <summary>
         /// Off-Air中にIn Pointの位置、Aim、Lensへショットを準備します。Live中は無視されます。
         /// </summary>
@@ -132,7 +129,7 @@ namespace VLiveKit.Camera
 
             InitializeReferences();
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             _isPlaying = false;
             _isHolding = false;
             _isReversing = false;
@@ -163,7 +160,7 @@ namespace VLiveKit.Camera
             _isLive = true;
             _isPrepared = false;
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             if (motion != null)
             {
                 if (motion.ShotType == VLiveCameraShotType.Spline)
@@ -203,6 +200,7 @@ namespace VLiveKit.Camera
         {
             _isLive = false;
             _isPlaying = false;
+
             PrepareStart();
         }
 
@@ -216,7 +214,7 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
@@ -239,7 +237,7 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
@@ -262,7 +260,7 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
@@ -298,7 +296,7 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
@@ -319,7 +317,7 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            VLiveCameraAppliedMotion motion = GetAppliedMotion();
+            var motion = GetAppliedMotion();
             if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
@@ -369,6 +367,7 @@ namespace VLiveKit.Camera
                 _splineDolly.PositionUnits = PathIndexUnit.Distance;
             }
         }
+
 
         private void InitializeReferences()
         {

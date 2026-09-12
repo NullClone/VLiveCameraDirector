@@ -19,20 +19,6 @@ namespace VLiveKit.Camera.Editor
         public const string SplinesContainerName = "Splines";
         public const string AimProxiesContainerName = "Aim Proxies";
 
-        private static readonly string[] DefaultPresetNames = new string[]
-        {
-            "FixedMedium",
-            "PushIn",
-            "PullOut",
-            "TruckLeft",
-            "TruckRight",
-            "ArcAround",
-            "PushInRolling",
-            "CraneRise",
-            "CraneDrop",
-            "PedestalRise"
-        };
-
 
         // Methods
 
@@ -42,7 +28,7 @@ namespace VLiveKit.Camera.Editor
         [MenuItem("GameObject/VLiveKit/" + RigGameObjectName, false, 10)]
         public static void CreateRigFromMenu()
         {
-            CreateRig(null, null);
+            CreateRig();
         }
 
         /// <summary>
@@ -87,12 +73,6 @@ namespace VLiveKit.Camera.Editor
             var aimProxiesGo = new GameObject(AimProxiesContainerName);
             aimProxiesGo.transform.SetParent(rigGo.transform, false);
             Undo.RegisterCreatedObjectUndo(aimProxiesGo, "Create Aim Proxies Container");
-
-            List<VLiveCameraMotionPreset> presets = LoadDefaultPresets();
-            foreach (var preset in presets)
-            {
-                rig.AddSlot(new VLiveCameraShotSlot(preset, null));
-            }
 
             EditorUtility.SetDirty(rig);
             EditorUtility.SetDirty(switcher);
@@ -539,42 +519,6 @@ namespace VLiveKit.Camera.Editor
             }
 
             return child;
-        }
-
-        private static List<VLiveCameraMotionPreset> LoadDefaultPresets()
-        {
-            var list = new List<VLiveCameraMotionPreset>();
-
-            foreach (string presetName in DefaultPresetNames)
-            {
-                string path = $"{VLiveCameraPresetAssetCreator.MotionPresetFolderPath}/{presetName}.asset";
-                var preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(path);
-                if (preset != null)
-                {
-                    list.Add(preset);
-                }
-            }
-
-            if (list.Count < DefaultPresetNames.Length)
-            {
-                VLiveCameraPresetAssetCreator.CreateMissingDefaultPresets();
-                list.Clear();
-                foreach (string presetName in DefaultPresetNames)
-                {
-                    string path = $"{VLiveCameraPresetAssetCreator.MotionPresetFolderPath}/{presetName}.asset";
-                    var preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(path);
-                    if (preset != null)
-                    {
-                        list.Add(preset);
-                    }
-                    else
-                    {
-                        Debug.LogError($"[VLiveCameraRigBuilder] 既定 Preset '{presetName}' をロードできませんでした（パス: {path}）。");
-                    }
-                }
-            }
-
-            return list;
         }
     }
 }

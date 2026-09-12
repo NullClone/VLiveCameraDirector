@@ -16,7 +16,50 @@ namespace VLiveKit.Camera
         [SerializeField]
         private VLiveCameraSwitcher _switcher;
 
+
 #if ENABLE_INPUT_SYSTEM
+        [Header("Keyboard Bindings - Shot Cut")]
+        [Tooltip("ショット1〜9へ直接Cutするためのキー割り当て一覧。")]
+        [SerializeField]
+        private Key[] _cutKeys = new Key[]
+        {
+            Key.Digit1,
+            Key.Digit2,
+            Key.Digit3,
+            Key.Digit4,
+            Key.Digit5,
+            Key.Digit6,
+            Key.Digit7,
+            Key.Digit8,
+            Key.Digit9
+        };
+
+        [Header("Keyboard Bindings - Motion Control")]
+        [Tooltip("Spline進行速度を上げるキー。")]
+        [SerializeField]
+        private Key _speedUpKey = Key.UpArrow;
+
+        [Tooltip("Spline進行速度を下げるキー。")]
+        [SerializeField]
+        private Key _speedDownKey = Key.DownArrow;
+
+        [Tooltip("Spline進行方向を反転するキー。")]
+        [SerializeField]
+        private Key _reverseKey = Key.R;
+
+        [Tooltip("Spline進行を一時停止するキー。")]
+        [SerializeField]
+        private Key _holdKey = Key.H;
+
+        [Tooltip("Spline進行を再開するキー。")]
+        [SerializeField]
+        private Key _resumeKey = Key.Space;
+
+        [Tooltip("緊急即時停止キー（既定では未割り当て）。")]
+        [SerializeField]
+        private Key _freezeKey = Key.None;
+
+
         public static readonly Key[] ImplicitNumpadCutKeys = new Key[]
         {
             Key.Numpad1,
@@ -41,7 +84,29 @@ namespace VLiveKit.Camera
             Key.Minus,
             Key.NumpadMinus
         };
+#endif
 
+
+        // Properties
+
+        /// <summary>
+        /// 制御対象のスイッチャーを取得します。
+        /// </summary>
+        public VLiveCameraSwitcher Switcher => _switcher;
+
+
+        // Methods
+
+        /// <summary>
+        /// 制御対象のスイッチャー参照を設定します。
+        /// </summary>
+        public void SetSwitcher(VLiveCameraSwitcher switcher)
+        {
+            _switcher = switcher;
+        }
+
+
+#if ENABLE_INPUT_SYSTEM
         /// <summary>
         /// 指定されたキーがランタイム暗黙 Cut キー（テンキー1〜9）であるかを判定します。
         /// </summary>
@@ -92,58 +157,6 @@ namespace VLiveKit.Camera
             return false;
         }
 
-        [Header("Keyboard Bindings - Shot Cut")]
-        [Tooltip("ショット1〜9へ直接Cutするためのキー割り当て一覧。")]
-        [SerializeField]
-        private Key[] _cutKeys = new Key[]
-        {
-            Key.Digit1,
-            Key.Digit2,
-            Key.Digit3,
-            Key.Digit4,
-            Key.Digit5,
-            Key.Digit6,
-            Key.Digit7,
-            Key.Digit8,
-            Key.Digit9
-        };
-
-        [Header("Keyboard Bindings - Motion Control")]
-        [Tooltip("Spline進行速度を上げるキー。")]
-        [SerializeField]
-        private Key _speedUpKey = Key.UpArrow;
-
-        [Tooltip("Spline進行速度を下げるキー。")]
-        [SerializeField]
-        private Key _speedDownKey = Key.DownArrow;
-
-        [Tooltip("Spline進行方向を反転するキー。")]
-        [SerializeField]
-        private Key _reverseKey = Key.R;
-
-        [Tooltip("Spline進行を一時停止するキー。")]
-        [SerializeField]
-        private Key _holdKey = Key.H;
-
-        [Tooltip("Spline進行を再開するキー。")]
-        [SerializeField]
-        private Key _resumeKey = Key.Space;
-
-        [Tooltip("緊急即時停止キー（既定では未割り当て）。")]
-        [SerializeField]
-        private Key _freezeKey = Key.None;
-#endif
-
-
-        // Properties
-
-        /// <summary>
-        /// 制御対象のスイッチャーを取得します。
-        /// </summary>
-        public VLiveCameraSwitcher Switcher => _switcher;
-
-
-        // Methods
 
         private void Awake()
         {
@@ -157,7 +170,6 @@ namespace VLiveKit.Camera
             }
         }
 
-#if ENABLE_INPUT_SYSTEM
         private static bool IsPressed(Keyboard keyboard, Key key)
         {
             if (key == Key.None)
@@ -209,7 +221,7 @@ namespace VLiveKit.Camera
 
             for (int i = 0; i < maxSlots; i++)
             {
-                bool mainPressed = (i < cutKeyCount) && IsPressed(keyboard, _cutKeys[i]);
+                bool mainPressed = (i < cutKeyCount) && _cutKeys != null && IsPressed(keyboard, _cutKeys[i]);
                 bool numpadPressed = (i < ImplicitNumpadCutKeys.Length) && IsPressed(keyboard, ImplicitNumpadCutKeys[i]);
                 if (mainPressed || numpadPressed)
                 {
@@ -284,14 +296,6 @@ namespace VLiveKit.Camera
                 _switcher.Resume();
             }
 #endif
-        }
-
-        /// <summary>
-        /// 制御対象のスイッチャー参照を設定します。
-        /// </summary>
-        public void SetSwitcher(VLiveCameraSwitcher switcher)
-        {
-            _switcher = switcher;
         }
     }
 }

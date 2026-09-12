@@ -7,8 +7,6 @@ namespace VLiveKit.Camera
     /// </summary>
     public static class VLiveCameraCurveUtility
     {
-        // Methods
-
         /// <summary>
         /// AnimationCurveをWrap Modeを含めて複製します。
         /// </summary>

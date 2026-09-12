@@ -8,8 +8,6 @@ namespace VLiveKit.Camera
     /// </summary>
     public static class VLiveCameraMotionEvaluator
     {
-        // Methods
-
         /// <summary>
         /// 適用済みMotion設定、再生時刻、実スプライン長からMotion Sampleを評価します。
         /// </summary>

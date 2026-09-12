@@ -171,33 +171,23 @@ namespace VLiveKit.Camera.Editor
 
             EditorGUILayout.LabelField("Shot Actions", EditorStyles.boldLabel);
 
-            var rig = shot.GetComponentInParent<VLiveCameraRig>();
-
-            using (new EditorGUILayout.HorizontalScope())
+            bool canRebuild = !Application.isPlaying && shot.PerformerTarget != null && shot.AppliedPreset != null;
+            using (new EditorGUI.DisabledScope(!canRebuild))
             {
-                bool canRebuild = !Application.isPlaying && shot.PerformerTarget != null && shot.AppliedPreset != null;
-                using (new EditorGUI.DisabledScope(!canRebuild))
+                if (GUILayout.Button("Rebuild From Preset", GUILayout.Height(24)))
                 {
-                    if (GUILayout.Button("Rebuild From Preset", GUILayout.Height(24)))
+                    string presetName = shot.AppliedPreset != null ? shot.AppliedPreset.DisplayName : "Preset";
+                    if (EditorUtility.DisplayDialog(
+                            "Rebuild Shot From Preset",
+                            $"Rebuild camera position, lens, aim, spline, and motion configuration for '{shot.ShotName}' from '{presetName}'?\nManual adjustments will be overwritten.",
+                            "Rebuild",
+                            "Cancel"))
                     {
-                        string presetName = shot.AppliedPreset != null ? shot.AppliedPreset.DisplayName : "Preset";
-                        if (EditorUtility.DisplayDialog(
-                                "Rebuild Shot From Preset",
-                                $"Rebuild camera position, lens, aim, spline, and motion configuration for '{shot.ShotName}' from '{presetName}'?\nManual adjustments will be overwritten.",
-                                "Rebuild",
-                                "Cancel"))
-                        {
-                            serializedObject.ApplyModifiedProperties();
-                            VLiveCameraRigBuilder.RebuildShotFromPreset(shot);
-                            serializedObject.Update();
-                            GUIUtility.ExitGUI();
-                        }
+                        serializedObject.ApplyModifiedProperties();
+                        VLiveCameraRigBuilder.RebuildShotFromPreset(shot);
+                        serializedObject.Update();
+                        GUIUtility.ExitGUI();
                     }
-                }
-
-                if (GUILayout.Button("Save As New Preset", GUILayout.Height(24)))
-                {
-                    VLiveCameraPresetBaker.BakePresetFromShot(rig, shot);
                 }
             }
 
