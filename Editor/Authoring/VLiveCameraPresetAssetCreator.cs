@@ -13,7 +13,9 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        public const string PresetFolderPath = "Assets/toshi.VLiveKit/VLiveCameraUnit/Presets";
+        public const string MotionPresetFolderPath = "Assets/toshi.VLiveKit/VLiveCameraUnit/Presets/Motion";
+
+        public const string RigProfileFolderPath = "Assets/toshi.VLiveKit/VLiveCameraUnit/Presets/RigProfiles";
 
 
         // Methods
@@ -37,7 +39,7 @@ namespace VLiveKit.Camera.Editor
 
         private static void CreateDefaultPresetsInternal(bool overwriteExisting)
         {
-            EnsurePresetFolder();
+            EnsurePresetFolders();
             VLiveCameraRigProfile profile = GetOrCreateDefaultProfile();
 
             CreateOrUpdatePreset("FixedMedium.asset", CreateFixedMedium(profile), overwriteExisting);
@@ -56,20 +58,26 @@ namespace VLiveKit.Camera.Editor
             Debug.Log("[VLiveCameraPresetAssetCreator] Default Camera Performance presets updated.");
         }
 
-        private static void EnsurePresetFolder()
+        private static void EnsurePresetFolders()
         {
-            if (Directory.Exists(PresetFolderPath))
+            EnsureFolder(MotionPresetFolderPath);
+            EnsureFolder(RigProfileFolderPath);
+        }
+
+        private static void EnsureFolder(string folderPath)
+        {
+            if (Directory.Exists(folderPath))
             {
                 return;
             }
 
-            Directory.CreateDirectory(PresetFolderPath);
+            Directory.CreateDirectory(folderPath);
             AssetDatabase.Refresh();
         }
 
         private static VLiveCameraRigProfile GetOrCreateDefaultProfile()
         {
-            string profilePath = $"{PresetFolderPath}/DefaultRigProfile.asset";
+            string profilePath = $"{RigProfileFolderPath}/DefaultRigProfile.asset";
             VLiveCameraRigProfile profile = AssetDatabase.LoadAssetAtPath<VLiveCameraRigProfile>(profilePath);
             if (profile != null)
             {
@@ -468,7 +476,7 @@ namespace VLiveKit.Camera.Editor
 
         private static void CreateOrUpdatePreset(string fileName, VLiveCameraMotionPresetData data, bool overwriteExisting)
         {
-            string assetPath = $"{PresetFolderPath}/{fileName}";
+            string assetPath = $"{MotionPresetFolderPath}/{fileName}";
             VLiveCameraMotionPreset preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(assetPath);
             if (preset != null && !overwriteExisting)
             {

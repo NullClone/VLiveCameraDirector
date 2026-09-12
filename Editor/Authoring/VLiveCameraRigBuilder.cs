@@ -547,7 +547,7 @@ namespace VLiveKit.Camera.Editor
 
             foreach (string presetName in DefaultPresetNames)
             {
-                string path = $"{VLiveCameraPresetAssetCreator.PresetFolderPath}/{presetName}.asset";
+                string path = $"{VLiveCameraPresetAssetCreator.MotionPresetFolderPath}/{presetName}.asset";
                 var preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(path);
                 if (preset != null)
                 {
@@ -561,7 +561,7 @@ namespace VLiveKit.Camera.Editor
                 list.Clear();
                 foreach (string presetName in DefaultPresetNames)
                 {
-                    string path = $"{VLiveCameraPresetAssetCreator.PresetFolderPath}/{presetName}.asset";
+                    string path = $"{VLiveCameraPresetAssetCreator.MotionPresetFolderPath}/{presetName}.asset";
                     var preset = AssetDatabase.LoadAssetAtPath<VLiveCameraMotionPreset>(path);
                     if (preset != null)
                     {

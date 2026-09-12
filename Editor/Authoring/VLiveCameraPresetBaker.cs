@@ -14,7 +14,7 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        public const string DefaultPresetFolder = "Assets/toshi.VLiveKit/VLiveCameraUnit/Presets";
+        public const string DefaultMotionPresetFolder = "Assets/toshi.VLiveKit/VLiveCameraUnit/Presets/Motion";
 
 
         // Methods
@@ -255,13 +255,13 @@ namespace VLiveKit.Camera.Editor
 
             if (string.IsNullOrEmpty(targetAssetPath))
             {
-                if (!Directory.Exists(DefaultPresetFolder))
+                if (!Directory.Exists(DefaultMotionPresetFolder))
                 {
-                    Directory.CreateDirectory(DefaultPresetFolder);
+                    Directory.CreateDirectory(DefaultMotionPresetFolder);
                 }
 
                 string safeShotName = string.IsNullOrEmpty(shot.ShotName) ? "NewPreset" : shot.ShotName.Replace(" ", "_");
-                targetAssetPath = $"{DefaultPresetFolder}/{safeShotName}_Preset.asset";
+                targetAssetPath = $"{DefaultMotionPresetFolder}/{safeShotName}_Preset.asset";
             }
 
             targetAssetPath = AssetDatabase.GenerateUniqueAssetPath(targetAssetPath);

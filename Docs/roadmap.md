@@ -23,6 +23,7 @@
 - 10種の初期3D Motion Palette
 - 標準IMGUIを使った英語Custom Inspector
 - Editor Motion Validator
+- Runtime、Editor、Presetの責務別フォルダ構成
 
 ユーザーの作業用SceneでRig作成と基本的な切り替えは確認済みである。初期Presetは評価候補であり、Gold Masterではない。
 
@@ -35,7 +36,6 @@
 - ルートフォルダを`VLiveCameraDirector`へ変更する。
 - asmdefを`VLiveKit.Camera.Runtime`と`VLiveKit.Camera.Editor`へ変更する。
 - namespaceと`VLiveCamera`型接頭辞は維持する。
-- [architecture.md](architecture.md)の目標構成へRuntime、Editor、Presetを移動する。
 - `.cs`、Asset、フォルダと各`.meta`を対で移動しGUIDを維持する。
 - Preset CreatorとBakerの固定パスを新構成へ更新する。
 - Menu、CreateAssetMenu、文書、表示名から旧製品名を除去する。
