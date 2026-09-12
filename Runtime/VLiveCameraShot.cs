@@ -151,6 +151,7 @@ namespace VLiveKit.Camera
         public float AppliedDistanceScale => _appliedDistanceScale > 0.001f ? _appliedDistanceScale : 1.0f;
         public float AppliedMotionScale => _appliedMotionScale > 0.001f ? _appliedMotionScale : 1.0f;
         public float AppliedVerticalMotionScale => Mathf.Max(0f, _appliedVerticalMotionScale);
+
         public float MasterPlaybackSpeed
         {
             get

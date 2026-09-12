@@ -37,11 +37,35 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public MotionKnot[] Knots { get => _knots; set => _knots = value ?? Array.Empty<MotionKnot>(); }
-        public bool IsClosed { get => _isClosed; set => _isClosed = value; }
-        public float ReferenceSplineLength { get => _referenceSplineLength; set => _referenceSplineLength = Mathf.Max(0f, value); }
-        public float StartDistance { get => _startDistance; set => _startDistance = Mathf.Max(0f, value); }
-        public float EndDistance { get => _endDistance; set => _endDistance = Mathf.Max(0f, value); }
+        public MotionKnot[] Knots
+        {
+            get => _knots;
+            set => _knots = value ?? Array.Empty<MotionKnot>();
+        }
+
+        public bool IsClosed
+        {
+            get => _isClosed;
+            set => _isClosed = value;
+        }
+
+        public float ReferenceSplineLength
+        {
+            get => _referenceSplineLength;
+            set => _referenceSplineLength = Mathf.Max(0f, value);
+        }
+
+        public float StartDistance
+        {
+            get => _startDistance;
+            set => _startDistance = Mathf.Max(0f, value);
+        }
+
+        public float EndDistance
+        {
+            get => _endDistance;
+            set => _endDistance = Mathf.Max(0f, value);
+        }
 
 
         // Methods

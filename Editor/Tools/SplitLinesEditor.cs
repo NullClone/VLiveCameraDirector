@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEngine;
 
 namespace VLiveKit.Camera.Editor
 {
@@ -38,23 +39,23 @@ namespace VLiveKit.Camera.Editor
             serializedObject.Update();
 
             EditorGUILayout.LabelField("Composition Guides", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_drawGuidesProp, new UnityEngine.GUIContent("Draw Guides"));
+            EditorGUILayout.PropertyField(_drawGuidesProp, new GUIContent("Draw Guides"));
 
             using (new EditorGUI.DisabledScope(!_drawGuidesProp.boolValue))
             {
-                EditorGUILayout.PropertyField(_guideModeProp, new UnityEngine.GUIContent("Guide Mode"));
+                EditorGUILayout.PropertyField(_guideModeProp, new GUIContent("Guide Mode"));
                 EditorGUILayout.PropertyField(_lineColorProp);
                 EditorGUILayout.PropertyField(_lineWidthProp);
             }
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Letterbox", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_letterboxEnabledProp, new UnityEngine.GUIContent("Enabled"));
+            EditorGUILayout.PropertyField(_letterboxEnabledProp, new GUIContent("Enabled"));
 
             using (new EditorGUI.DisabledScope(!_letterboxEnabledProp.boolValue))
             {
-                EditorGUILayout.PropertyField(_letterboxColorProp, new UnityEngine.GUIContent("Color"));
-                EditorGUILayout.PropertyField(_letterboxRatioProp, new UnityEngine.GUIContent("Ratio"));
+                EditorGUILayout.PropertyField(_letterboxColorProp, new GUIContent("Color"));
+                EditorGUILayout.PropertyField(_letterboxRatioProp, new GUIContent("Ratio"));
             }
 
             serializedObject.ApplyModifiedProperties();

@@ -150,7 +150,6 @@ namespace VLiveKit.Camera.Editor
                     GUI.enabled = true;
                 }
             }
-
         }
 
         private void DrawDebugSection()
@@ -176,7 +175,6 @@ namespace VLiveKit.Camera.Editor
 
                 EditorGUI.indentLevel--;
             }
-
         }
     }
 }

@@ -22,8 +22,17 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public RollMode Mode { get => _rollMode; set => _rollMode = value; }
-        public AnimationCurve Curve { get => _rollCurve; set => _rollCurve = VLiveCameraCurveUtility.Clone(value); }
+        public RollMode Mode
+        {
+            get => _rollMode;
+            set => _rollMode = value;
+        }
+
+        public AnimationCurve Curve
+        {
+            get => _rollCurve;
+            set => _rollCurve = VLiveCameraCurveUtility.Clone(value);
+        }
 
 
         // Methods

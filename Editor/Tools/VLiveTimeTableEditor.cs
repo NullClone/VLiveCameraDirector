@@ -31,13 +31,13 @@ namespace VLiveKit.Camera.Editor
         {
             serializedObject.Update();
 
-            EditorGUILayout.PropertyField(_masterTimelineProp, new UnityEngine.GUIContent("Master Timeline"));
-            EditorGUILayout.PropertyField(_sectionTimelinesProp, new UnityEngine.GUIContent("Section Timelines"), true);
+            EditorGUILayout.PropertyField(_masterTimelineProp, new GUIContent("Master Timeline"));
+            EditorGUILayout.PropertyField(_sectionTimelinesProp, new GUIContent("Section Timelines"), true);
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Auto Collection", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_autoFindOnAwakeProp, new UnityEngine.GUIContent("Auto Find On Awake"));
-            EditorGUILayout.PropertyField(_includeInactiveProp, new UnityEngine.GUIContent("Include Inactive"));
+            EditorGUILayout.PropertyField(_autoFindOnAwakeProp, new GUIContent("Auto Find On Awake"));
+            EditorGUILayout.PropertyField(_includeInactiveProp, new GUIContent("Include Inactive"));
 
             serializedObject.ApplyModifiedProperties();
 

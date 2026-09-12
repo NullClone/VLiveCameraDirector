@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEngine;
 
 namespace VLiveKit.Camera.Editor
 {
@@ -26,8 +27,8 @@ namespace VLiveKit.Camera.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.PropertyField(_performerAnimatorProp, new UnityEngine.GUIContent("Performer Animator"));
-            EditorGUILayout.PropertyField(_performerNameProp, new UnityEngine.GUIContent("Performer Name"));
+            EditorGUILayout.PropertyField(_performerAnimatorProp, new GUIContent("Performer Animator"));
+            EditorGUILayout.PropertyField(_performerNameProp, new GUIContent("Performer Name"));
 
             if (!_performerAnimatorProp.hasMultipleDifferentValues && _performerAnimatorProp.objectReferenceValue == null)
             {

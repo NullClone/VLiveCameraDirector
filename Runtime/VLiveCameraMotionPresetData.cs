@@ -46,14 +46,53 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public VLiveCameraMotionIdentity Identity { get => _identity; set => _identity = value ?? new VLiveCameraMotionIdentity(); }
-        public VLiveCameraBodyTrack Body { get => _body; set => _body = value ?? new VLiveCameraBodyTrack(); }
-        public VLiveCameraTimingTrack Timing { get => _timing; set => _timing = value ?? new VLiveCameraTimingTrack(); }
-        public VLiveCameraAimTrack Aim { get => _aim; set => _aim = value ?? new VLiveCameraAimTrack(); }
-        public VLiveCameraLensTrack Lens { get => _lens; set => _lens = value ?? new VLiveCameraLensTrack(); }
-        public VLiveCameraRollTrack Roll { get => _roll; set => _roll = value ?? new VLiveCameraRollTrack(); }
-        public VLiveCameraActivationTrack Activation { get => _activation; set => _activation = value ?? new VLiveCameraActivationTrack(); }
-        public VLiveCameraRigProfile RigProfile { get => _rigProfile; set => _rigProfile = value; }
+        public VLiveCameraMotionIdentity Identity
+        {
+            get => _identity;
+            set => _identity = value ?? new VLiveCameraMotionIdentity();
+        }
+
+        public VLiveCameraBodyTrack Body
+        {
+            get => _body;
+            set => _body = value ?? new VLiveCameraBodyTrack();
+        }
+
+        public VLiveCameraTimingTrack Timing
+        {
+            get => _timing;
+            set => _timing = value ?? new VLiveCameraTimingTrack();
+        }
+
+        public VLiveCameraAimTrack Aim
+        {
+            get => _aim;
+            set => _aim = value ?? new VLiveCameraAimTrack();
+        }
+
+        public VLiveCameraLensTrack Lens
+        {
+            get => _lens;
+            set => _lens = value ?? new VLiveCameraLensTrack();
+        }
+
+        public VLiveCameraRollTrack Roll
+        {
+            get => _roll;
+            set => _roll = value ?? new VLiveCameraRollTrack();
+        }
+
+        public VLiveCameraActivationTrack Activation
+        {
+            get => _activation;
+            set => _activation = value ?? new VLiveCameraActivationTrack();
+        }
+
+        public VLiveCameraRigProfile RigProfile
+        {
+            get => _rigProfile;
+            set => _rigProfile = value;
+        }
 
 
         // Methods

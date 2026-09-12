@@ -378,6 +378,5 @@ namespace VLiveKit.Camera.Editor
                 ? CinemachineSplineDolly.RotationMode.Spline
                 : CinemachineSplineDolly.RotationMode.Default;
         }
-
     }
 }

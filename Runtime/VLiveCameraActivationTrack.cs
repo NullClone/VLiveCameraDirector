@@ -32,10 +32,29 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public EntryMode EntryMode { get => _entryMode; set => _entryMode = value; }
-        public float InTime { get => _inTime; set => _inTime = Mathf.Max(0f, value); }
-        public float OutTime { get => _outTime; set => _outTime = Mathf.Max(0f, value); }
-        public ExitBehavior ExitBehavior { get => _exitBehavior; set => _exitBehavior = value; }
+        public EntryMode EntryMode
+        {
+            get => _entryMode;
+            set => _entryMode = value;
+        }
+
+        public float InTime
+        {
+            get => _inTime;
+            set => _inTime = Mathf.Max(0f, value);
+        }
+
+        public float OutTime
+        {
+            get => _outTime;
+            set => _outTime = Mathf.Max(0f, value);
+        }
+
+        public ExitBehavior ExitBehavior
+        {
+            get => _exitBehavior;
+            set => _exitBehavior = value;
+        }
 
 
         // Methods

@@ -22,7 +22,12 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public VLiveCameraMotionPreset Preset { get => _preset; set => _preset = value; }
+        public VLiveCameraMotionPreset Preset
+        {
+            get => _preset;
+            set => _preset = value;
+        }
+
         public VLiveCameraShot Shot => _shot;
 
 

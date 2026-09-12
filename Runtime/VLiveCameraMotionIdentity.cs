@@ -38,12 +38,41 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public string DisplayName { get => _displayName; set => _displayName = string.IsNullOrWhiteSpace(value) ? "Motion Preset" : value; }
-        public VLiveCameraShotType ShotType { get => _shotType; set => _shotType = value; }
-        public MotionFamily Family { get => _motionFamily; set => _motionFamily = value; }
-        public ShotSize Size { get => _shotSize; set => _shotSize = value; }
-        public ShotEnergy Energy { get => _energy; set => _energy = value; }
-        public string Description { get => _description; set => _description = value ?? string.Empty; }
+        public string DisplayName
+        {
+            get => _displayName;
+            set => _displayName = string.IsNullOrWhiteSpace(value) ? "Motion Preset" : value;
+        }
+
+        public VLiveCameraShotType ShotType
+        {
+            get => _shotType;
+            set => _shotType = value;
+        }
+
+        public MotionFamily Family
+        {
+            get => _motionFamily;
+            set => _motionFamily = value;
+        }
+
+        public ShotSize Size
+        {
+            get => _shotSize;
+            set => _shotSize = value;
+        }
+
+        public ShotEnergy Energy
+        {
+            get => _energy;
+            set => _energy = value;
+        }
+
+        public string Description
+        {
+            get => _description;
+            set => _description = value ?? string.Empty;
+        }
 
 
         // Methods

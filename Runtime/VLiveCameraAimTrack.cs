@@ -84,23 +84,107 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public Vector3 AimOffset { get => _aimOffset; set => _aimOffset = value; }
-        public AnimationCurve AimOffsetXCurve { get => _aimOffsetXCurve; set => _aimOffsetXCurve = VLiveCameraCurveUtility.Clone(value); }
-        public AnimationCurve AimOffsetYCurve { get => _aimOffsetYCurve; set => _aimOffsetYCurve = VLiveCameraCurveUtility.Clone(value); }
-        public AnimationCurve AimOffsetZCurve { get => _aimOffsetZCurve; set => _aimOffsetZCurve = VLiveCameraCurveUtility.Clone(value); }
-        public Vector2 ScreenPosition { get => _screenPosition; set => _screenPosition = value; }
-        public AnimationCurve ScreenPositionXCurve { get => _screenPositionXCurve; set => _screenPositionXCurve = VLiveCameraCurveUtility.Clone(value); }
-        public AnimationCurve ScreenPositionYCurve { get => _screenPositionYCurve; set => _screenPositionYCurve = VLiveCameraCurveUtility.Clone(value); }
-        public bool DeadZoneEnabled { get => _deadZoneEnabled; set => _deadZoneEnabled = value; }
-        public Vector2 DeadZoneSize { get => _deadZoneSize; set => _deadZoneSize = value; }
-        public bool HardLimitsEnabled { get => _hardLimitsEnabled; set => _hardLimitsEnabled = value; }
-        public Vector2 HardLimitsSize { get => _hardLimitsSize; set => _hardLimitsSize = value; }
-        public Vector2 HardLimitsOffset { get => _hardLimitsOffset; set => _hardLimitsOffset = value; }
-        public Vector2 Damping { get => _damping; set => _damping = value; }
-        public bool LookaheadEnabled { get => _lookaheadEnabled; set => _lookaheadEnabled = value; }
-        public float LookaheadTime { get => _lookaheadTime; set => _lookaheadTime = Mathf.Clamp01(value); }
-        public float LookaheadSmoothing { get => _lookaheadSmoothing; set => _lookaheadSmoothing = Mathf.Clamp(value, 0f, 30f); }
-        public bool CenterOnActivate { get => _centerOnActivate; set => _centerOnActivate = value; }
+        public Vector3 AimOffset
+        {
+            get => _aimOffset;
+            set => _aimOffset = value;
+        }
+
+        public AnimationCurve AimOffsetXCurve
+        {
+            get => _aimOffsetXCurve;
+            set => _aimOffsetXCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public AnimationCurve AimOffsetYCurve
+        {
+            get => _aimOffsetYCurve;
+            set => _aimOffsetYCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public AnimationCurve AimOffsetZCurve
+        {
+            get => _aimOffsetZCurve;
+            set => _aimOffsetZCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public Vector2 ScreenPosition
+        {
+            get => _screenPosition;
+            set => _screenPosition = value;
+        }
+
+        public AnimationCurve ScreenPositionXCurve
+        {
+            get => _screenPositionXCurve;
+            set => _screenPositionXCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public AnimationCurve ScreenPositionYCurve
+        {
+            get => _screenPositionYCurve;
+            set => _screenPositionYCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public bool DeadZoneEnabled
+        {
+            get => _deadZoneEnabled;
+            set => _deadZoneEnabled = value;
+        }
+
+        public Vector2 DeadZoneSize
+        {
+            get => _deadZoneSize;
+            set => _deadZoneSize = value;
+        }
+
+        public bool HardLimitsEnabled
+        {
+            get => _hardLimitsEnabled;
+            set => _hardLimitsEnabled = value;
+        }
+
+        public Vector2 HardLimitsSize
+        {
+            get => _hardLimitsSize;
+            set => _hardLimitsSize = value;
+        }
+
+        public Vector2 HardLimitsOffset
+        {
+            get => _hardLimitsOffset;
+            set => _hardLimitsOffset = value;
+        }
+
+        public Vector2 Damping
+        {
+            get => _damping;
+            set => _damping = value;
+        }
+
+        public bool LookaheadEnabled
+        {
+            get => _lookaheadEnabled;
+            set => _lookaheadEnabled = value;
+        }
+
+        public float LookaheadTime
+        {
+            get => _lookaheadTime;
+            set => _lookaheadTime = Mathf.Clamp01(value);
+        }
+
+        public float LookaheadSmoothing
+        {
+            get => _lookaheadSmoothing;
+            set => _lookaheadSmoothing = Mathf.Clamp(value, 0f, 30f);
+        }
+
+        public bool CenterOnActivate
+        {
+            get => _centerOnActivate;
+            set => _centerOnActivate = value;
+        }
 
 
         // Methods

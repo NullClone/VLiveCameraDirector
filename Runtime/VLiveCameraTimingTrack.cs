@@ -42,12 +42,41 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public float ClipDuration { get => _clipDuration; set => _clipDuration = Mathf.Max(0.1f, value); }
-        public AnimationCurve ProgressCurve { get => _progressCurve; set => _progressCurve = VLiveCameraCurveUtility.CloneOrDefault(value, AnimationCurve.Linear(0f, 0f, 1f, 1f)); }
-        public ScaleTimingMode ScaleMode { get => _scaleTimingMode; set => _scaleTimingMode = value; }
-        public float MinSpeedMultiplier { get => _minSpeedMultiplier; set => _minSpeedMultiplier = Mathf.Max(0f, value); }
-        public float MaxSpeedMultiplier { get => _maxSpeedMultiplier; set => _maxSpeedMultiplier = Mathf.Max(0.1f, value); }
-        public float SpeedStep { get => _speedStep; set => _speedStep = Mathf.Max(0.01f, value); }
+        public float ClipDuration
+        {
+            get => _clipDuration;
+            set => _clipDuration = Mathf.Max(0.1f, value);
+        }
+
+        public AnimationCurve ProgressCurve
+        {
+            get => _progressCurve;
+            set => _progressCurve = VLiveCameraCurveUtility.CloneOrDefault(value, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        }
+
+        public ScaleTimingMode ScaleMode
+        {
+            get => _scaleTimingMode;
+            set => _scaleTimingMode = value;
+        }
+
+        public float MinSpeedMultiplier
+        {
+            get => _minSpeedMultiplier;
+            set => _minSpeedMultiplier = Mathf.Max(0f, value);
+        }
+
+        public float MaxSpeedMultiplier
+        {
+            get => _maxSpeedMultiplier;
+            set => _maxSpeedMultiplier = Mathf.Max(0.1f, value);
+        }
+
+        public float SpeedStep
+        {
+            get => _speedStep;
+            set => _speedStep = Mathf.Max(0.01f, value);
+        }
 
 
         // Methods

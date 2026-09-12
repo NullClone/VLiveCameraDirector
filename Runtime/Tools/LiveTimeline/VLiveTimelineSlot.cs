@@ -28,8 +28,22 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public string SectionName { get => _sectionName; set => _sectionName = value; }
-        public PlayableDirector Director { get => _director; set => _director = value; }
-        public string Note { get => _note; set => _note = value; }
+        public string SectionName
+        {
+            get => _sectionName;
+            set => _sectionName = value;
+        }
+
+        public PlayableDirector Director
+        {
+            get => _director;
+            set => _director = value;
+        }
+
+        public string Note
+        {
+            get => _note;
+            set => _note = value;
+        }
     }
 }

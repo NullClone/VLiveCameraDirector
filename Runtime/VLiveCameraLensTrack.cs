@@ -40,12 +40,41 @@ namespace VLiveKit.Camera
 
         // Properties
 
-        public LensMode Mode { get => _lensMode; set => _lensMode = value; }
-        public float FieldOfView { get => _fieldOfView; set => _fieldOfView = Mathf.Clamp(value, 1f, 179f); }
-        public AnimationCurve FieldOfViewCurve { get => _fieldOfViewCurve; set => _fieldOfViewCurve = VLiveCameraCurveUtility.Clone(value); }
-        public float FocalLength { get => _focalLength; set => _focalLength = Mathf.Max(1f, value); }
-        public AnimationCurve FocalLengthCurve { get => _focalLengthCurve; set => _focalLengthCurve = VLiveCameraCurveUtility.Clone(value); }
-        public Vector2 SensorSize { get => _sensorSize; set => _sensorSize = new Vector2(Mathf.Max(0.1f, value.x), Mathf.Max(0.1f, value.y)); }
+        public LensMode Mode
+        {
+            get => _lensMode;
+            set => _lensMode = value;
+        }
+
+        public float FieldOfView
+        {
+            get => _fieldOfView;
+            set => _fieldOfView = Mathf.Clamp(value, 1f, 179f);
+        }
+
+        public AnimationCurve FieldOfViewCurve
+        {
+            get => _fieldOfViewCurve;
+            set => _fieldOfViewCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public float FocalLength
+        {
+            get => _focalLength;
+            set => _focalLength = Mathf.Max(1f, value);
+        }
+
+        public AnimationCurve FocalLengthCurve
+        {
+            get => _focalLengthCurve;
+            set => _focalLengthCurve = VLiveCameraCurveUtility.Clone(value);
+        }
+
+        public Vector2 SensorSize
+        {
+            get => _sensorSize;
+            set => _sensorSize = new Vector2(Mathf.Max(0.1f, value.x), Mathf.Max(0.1f, value.y));
+        }
 
 
         // Methods
