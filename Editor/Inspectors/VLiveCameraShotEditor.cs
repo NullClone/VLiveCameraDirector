@@ -5,7 +5,7 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraShot用のカスタムインスペクター。
-    /// 所有コンポーネント、適用済みMotion設定、再構築・Preset保存・診断・削除操作、実行時再生状態の表示を提供します。
+    /// ショット設定、適用済みMotionプロファイル、再構築・診断・削除操作、および実行時再生状態の表示を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraShot))]
     [CanEditMultipleObjects]
@@ -23,12 +23,10 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _motionPlayerProp;
         private SerializedProperty _performerTargetProp;
         private SerializedProperty _appliedPresetProp;
-        private SerializedProperty _appliedTargetHeightProp;
-        private SerializedProperty _appliedDistanceScaleProp;
-        private SerializedProperty _appliedMotionScaleProp;
-        private SerializedProperty _appliedVerticalMotionScaleProp;
 
         private VLiveCameraMotionValidationReport _report;
+        private bool _showMotionProfile = true;
+        private bool _showInternalReferences = false;
 
 
         // Methods
@@ -45,10 +43,6 @@ namespace VLiveKit.Camera.Editor
             _motionPlayerProp = serializedObject.FindProperty("_motionPlayer");
             _performerTargetProp = serializedObject.FindProperty("_performerTarget");
             _appliedPresetProp = serializedObject.FindProperty("_appliedPreset");
-            _appliedTargetHeightProp = serializedObject.FindProperty("_appliedTargetHeight");
-            _appliedDistanceScaleProp = serializedObject.FindProperty("_appliedDistanceScale");
-            _appliedMotionScaleProp = serializedObject.FindProperty("_appliedMotionScale");
-            _appliedVerticalMotionScaleProp = serializedObject.FindProperty("_appliedVerticalMotionScale");
         }
 
         public override bool RequiresConstantRepaint()
@@ -63,9 +57,7 @@ namespace VLiveKit.Camera.Editor
             var shot = (VLiveCameraShot)target;
 
             DrawIdentificationSection(shot);
-            EditorGUILayout.Space(6);
-
-            DrawComponentsSection();
+            CheckMissingReferences();
             EditorGUILayout.Space(6);
 
             DrawAppliedMotionSection(shot);
@@ -74,7 +66,13 @@ namespace VLiveKit.Camera.Editor
             DrawOperationsSection(shot);
             EditorGUILayout.Space(6);
 
-            DrawRuntimeSection(shot);
+            DrawInternalReferencesSection();
+
+            if (Application.isPlaying)
+            {
+                EditorGUILayout.Space(6);
+                DrawRuntimeSection(shot);
+            }
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -85,29 +83,23 @@ namespace VLiveKit.Camera.Editor
 
             EditorGUILayout.PropertyField(_shotNameProp);
             EditorGUILayout.PropertyField(_shotTypeProp);
+            EditorGUILayout.PropertyField(_appliedPresetProp, new GUIContent("Source Preset"));
 
-            EditorGUILayout.LabelField("Status", shot.IsLive ? "Live (Program)" : "Off-Air");
+            // Status and Slot identification
+            int slotIndex = GetSlotIndex(shot, out VLiveCameraMotionPreset slotPreset);
+            string slotText = slotIndex >= 0 ? $"Slot {slotIndex + 1} (Key {slotIndex + 1})" : "Not in Rig Slots";
+            string statusText = shot.IsLive ? $"Live [Program]  •  {slotText}" : $"Off-Air  •  {slotText}";
+
+            EditorGUILayout.LabelField("Status", statusText, EditorStyles.miniLabel);
+
+            if (slotPreset != null && shot.AppliedPreset != null && slotPreset != shot.AppliedPreset)
+            {
+                EditorGUILayout.HelpBox($"Rig slot specifies '{slotPreset.DisplayName}', but this shot is using '{shot.AppliedPreset.DisplayName}'. Click 'Rebuild From Preset' below to sync.", MessageType.Warning);
+            }
         }
 
-        private void DrawComponentsSection()
+        private void CheckMissingReferences()
         {
-            EditorGUILayout.LabelField("Component References", EditorStyles.boldLabel);
-
-            using (new EditorGUI.DisabledScope(true))
-            {
-                EditorGUILayout.PropertyField(_rigProp);
-                EditorGUILayout.PropertyField(_cinemachineCameraProp);
-                if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShotType.Spline)
-                {
-                    EditorGUILayout.PropertyField(_splineDollyProp);
-                }
-
-                EditorGUILayout.PropertyField(_rotationComposerProp);
-                EditorGUILayout.PropertyField(_aimProxyProp);
-                EditorGUILayout.PropertyField(_motionPlayerProp);
-                EditorGUILayout.PropertyField(_performerTargetProp);
-            }
-
             if (_cinemachineCameraProp.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("CinemachineCamera is missing. Run Apply / Sync on the Rig to resolve.", MessageType.Warning);
@@ -121,45 +113,27 @@ namespace VLiveKit.Camera.Editor
 
         private void DrawAppliedMotionSection(VLiveCameraShot shot)
         {
-            EditorGUILayout.LabelField("Applied Motion", EditorStyles.boldLabel);
-
-            using (new EditorGUI.DisabledScope(true))
+            _showMotionProfile = EditorGUILayout.Foldout(_showMotionProfile, "Applied Motion Profile", true);
+            if (!_showMotionProfile)
             {
-                EditorGUILayout.PropertyField(_appliedPresetProp, new GUIContent("Source Preset"));
-                EditorGUILayout.PropertyField(_appliedTargetHeightProp, new GUIContent("Applied Target Height"));
-                EditorGUILayout.PropertyField(_appliedDistanceScaleProp, new GUIContent("Applied Distance Scale"));
-                EditorGUILayout.PropertyField(_appliedMotionScaleProp, new GUIContent("Applied Horizontal Scale"));
-                EditorGUILayout.PropertyField(_appliedVerticalMotionScaleProp, new GUIContent("Applied Vertical Scale"));
+                return;
             }
+
+            EditorGUI.indentLevel++;
 
             VLiveCameraAppliedMotion applied = shot.AppliedMotion;
             if (applied != null)
             {
-                EditorGUILayout.LabelField($"Duration: {applied.EffectiveDuration:F2}s | Timing: {applied.ScaleMode}");
-                EditorGUILayout.LabelField($"Entry: {applied.EntryMode} (In: {applied.InTime:F2}s, Out: {applied.OutTime:F2}s) | Exit: {applied.ExitBehavior}");
-                EditorGUILayout.LabelField($"Aim Offset: {applied.AimOffset} | Screen Pos: ({applied.ScreenPosition.x:F2}, {applied.ScreenPosition.y:F2})");
-                EditorGUILayout.LabelField($"FOV: {applied.FieldOfView:F1}° ({applied.LensMode}) | Roll: {applied.RollMode}");
+                EditorGUILayout.LabelField("Timing", $"{applied.EffectiveDuration:F2}s ({applied.ScaleMode})  |  Entry: {applied.EntryMode}  |  Exit: {applied.ExitBehavior}");
+                EditorGUILayout.LabelField("Framing", $"Aim Offset: {applied.AimOffset}  |  Screen Pos: ({applied.ScreenPosition.x:F2}, {applied.ScreenPosition.y:F2})");
+                EditorGUILayout.LabelField("Lens & Roll", $"FOV: {applied.FieldOfView:F1}° ({applied.LensMode})  |  Roll: {applied.RollMode}");
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Motion", "(Not applied. Run 'Rebuild From Preset' below.)", EditorStyles.miniLabel);
             }
 
-            // Check if slot preset differs from applied preset
-            var rig = shot.GetComponentInParent<VLiveCameraRig>();
-            VLiveCameraMotionPreset slotPreset = null;
-            if (rig != null && rig.Slots != null)
-            {
-                for (int i = 0; i < rig.Slots.Count; i++)
-                {
-                    if (rig.Slots[i] != null && rig.Slots[i].Shot == shot)
-                    {
-                        slotPreset = rig.Slots[i].Preset;
-                        break;
-                    }
-                }
-            }
-
-            if (slotPreset != null && shot.AppliedPreset != null && slotPreset != shot.AppliedPreset)
-            {
-                EditorGUILayout.HelpBox($"Slot Preset ('{slotPreset.DisplayName}') differs from Applied Preset ('{shot.AppliedPreset.DisplayName}'). Click 'Rebuild From Preset' below to update.", MessageType.Warning);
-            }
+            EditorGUI.indentLevel--;
         }
 
         private void DrawOperationsSection(VLiveCameraShot shot)
@@ -174,12 +148,12 @@ namespace VLiveKit.Camera.Editor
             bool canRebuild = !Application.isPlaying && shot.PerformerTarget != null && shot.AppliedPreset != null;
             using (new EditorGUI.DisabledScope(!canRebuild))
             {
-                if (GUILayout.Button("Rebuild From Preset", GUILayout.Height(24)))
+                if (GUILayout.Button("Rebuild From Preset", GUILayout.Height(26)))
                 {
                     string presetName = shot.AppliedPreset != null ? shot.AppliedPreset.DisplayName : "Preset";
                     if (EditorUtility.DisplayDialog(
                             "Rebuild Shot From Preset",
-                            $"Rebuild camera position, lens, aim, spline, and motion configuration for '{shot.ShotName}' from '{presetName}'?\nManual adjustments will be overwritten.",
+                            $"Rebuild camera position, lens, aim, spline, and motion configuration for '{shot.ShotName}' from '{presetName}'?\n\nManual adjustments made on the camera and spline will be overwritten.",
                             "Rebuild",
                             "Cancel"))
                     {
@@ -195,18 +169,18 @@ namespace VLiveKit.Camera.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Validate Motion", GUILayout.Height(22)))
+                if (GUILayout.Button("Validate Motion", EditorStyles.miniButtonLeft, GUILayout.Height(22)))
                 {
                     _report = VLiveCameraMotionValidator.ValidateShot(shot);
                 }
 
                 using (new EditorGUI.DisabledScope(Application.isPlaying))
                 {
-                    if (GUILayout.Button("Delete Shot", GUILayout.Height(22)))
+                    if (GUILayout.Button("Delete Shot", EditorStyles.miniButtonRight, GUILayout.Height(22)))
                     {
                         if (EditorUtility.DisplayDialog(
                                 "Delete Shot GameObject",
-                                $"Delete Shot GameObject '{shot.name}', Spline, and Aim Proxy from the Scene?\nThis action can be undone.",
+                                $"Delete Shot GameObject '{shot.name}', Spline, and Aim Proxy from the Scene?\n\nThis action can be undone.",
                                 "Delete",
                                 "Cancel"))
                         {
@@ -221,17 +195,17 @@ namespace VLiveKit.Camera.Editor
             if (_report != null)
             {
                 EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField(
-                    $"Diagnostics: Duration {_report.Duration:F2}s, Spline {_report.SplineLength:F2}m, Speed {_report.MaxSpeed:F2} m/s, Acc {_report.MaxAcceleration:F2} m/s², Jerk {_report.MaxJerk:F2} m/s³",
-                    EditorStyles.miniLabel
-                );
-
                 if (_report.Messages.Count == 0)
                 {
-                    EditorGUILayout.HelpBox("No issues found.", MessageType.Info);
+                    EditorGUILayout.HelpBox($"Validated: Duration {_report.Duration:F2}s, Spline {_report.SplineLength:F2}m, Max Speed {_report.MaxSpeed:F2}m/s. No issues found.", MessageType.Info);
                 }
                 else
                 {
+                    EditorGUILayout.LabelField(
+                        $"Diagnostics: Duration {_report.Duration:F2}s, Spline {_report.SplineLength:F2}m, Speed {_report.MaxSpeed:F2}m/s",
+                        EditorStyles.miniLabel
+                    );
+
                     foreach (var msg in _report.Messages)
                     {
                         MessageType msgType = msg.Severity switch
@@ -247,68 +221,108 @@ namespace VLiveKit.Camera.Editor
             }
         }
 
-        private void DrawRuntimeSection(VLiveCameraShot shot)
+        private void DrawInternalReferencesSection()
         {
-            EditorGUILayout.LabelField("Runtime Playback", EditorStyles.boldLabel);
-
-            if (targets.Length > 1)
+            _showInternalReferences = EditorGUILayout.Foldout(_showInternalReferences, "Internal References", false);
+            if (!_showInternalReferences)
             {
-                EditorGUILayout.HelpBox("Runtime controls are unavailable when multiple shots are selected.", MessageType.None);
                 return;
             }
 
-            EditorGUILayout.LabelField("State", $"Live: {shot.IsLive} | Playing: {shot.IsPlaying} | Hold: {shot.IsHolding} | Prepared: {shot.IsPrepared}");
+            EditorGUI.indentLevel++;
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.PropertyField(_rigProp);
+                EditorGUILayout.PropertyField(_cinemachineCameraProp);
+                if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShotType.Spline)
+                {
+                    EditorGUILayout.PropertyField(_splineDollyProp);
+                }
+
+                EditorGUILayout.PropertyField(_rotationComposerProp);
+                EditorGUILayout.PropertyField(_aimProxyProp);
+                EditorGUILayout.PropertyField(_motionPlayerProp);
+                EditorGUILayout.PropertyField(_performerTargetProp);
+            }
+            EditorGUI.indentLevel--;
+        }
+
+        private void DrawRuntimeSection(VLiveCameraShot shot)
+        {
+            EditorGUILayout.LabelField("Live Playback", EditorStyles.boldLabel);
+
+            if (targets.Length > 1)
+            {
+                EditorGUILayout.HelpBox("Playback controls are unavailable during multi-selection.", MessageType.None);
+                return;
+            }
 
             float duration = shot.AppliedMotion != null ? shot.AppliedMotion.EffectiveDuration : 0f;
             float progress = duration > 0.001f ? Mathf.Clamp01(shot.CurrentTime / duration) : 0f;
 
-            EditorGUI.ProgressBar(
-                EditorGUILayout.GetControlRect(false, 18),
-                progress,
-                $"Time: {shot.CurrentTime:F2}s / {duration:F2}s (Shot: {shot.CurrentSpeedMultiplier:F2}x, Master: {shot.MasterPlaybackSpeed:F2}x, Dist: {shot.CurrentSplineDistance:F2}m)"
-            );
+            string progressText = $"Time: {shot.CurrentTime:F2}s / {duration:F2}s  ({shot.CurrentSpeedMultiplier:F2}x, {shot.CurrentSplineDistance:F1}m)";
+            EditorGUI.ProgressBar(EditorGUILayout.GetControlRect(false, 18), progress, progressText);
 
-            if (Application.isPlaying && shot.IsLive)
+            if (shot.IsLive)
             {
-                EditorGUILayout.Space(4);
+                EditorGUILayout.Space(2);
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Speed -"))
+                    if (GUILayout.Button("Speed -", EditorStyles.miniButtonLeft))
                     {
                         shot.SpeedDown();
                     }
 
-                    if (GUILayout.Button("Speed +"))
+                    if (GUILayout.Button("Speed +", EditorStyles.miniButtonMid))
                     {
                         shot.SpeedUp();
                     }
 
-                    if (GUILayout.Button("Reverse"))
+                    if (GUILayout.Button("Reverse", EditorStyles.miniButtonMid))
                     {
                         shot.Reverse();
                     }
 
                     if (shot.IsHolding)
                     {
-                        if (GUILayout.Button("Resume"))
+                        if (GUILayout.Button("Resume", EditorStyles.miniButtonMid))
                         {
                             shot.Resume();
                         }
                     }
                     else
                     {
-                        if (GUILayout.Button("Hold"))
+                        if (GUILayout.Button("Hold", EditorStyles.miniButtonMid))
                         {
                             shot.Hold();
                         }
                     }
 
-                    if (GUILayout.Button("Freeze"))
+                    if (GUILayout.Button("Freeze", EditorStyles.miniButtonRight))
                     {
                         shot.Freeze();
                     }
                 }
             }
+        }
+
+        private static int GetSlotIndex(VLiveCameraShot shot, out VLiveCameraMotionPreset slotPreset)
+        {
+            slotPreset = null;
+            var rig = shot.GetComponentInParent<VLiveCameraRig>();
+            if (rig != null && rig.Slots != null)
+            {
+                for (int i = 0; i < rig.Slots.Count; i++)
+                {
+                    if (rig.Slots[i] != null && rig.Slots[i].Shot == shot)
+                    {
+                        slotPreset = rig.Slots[i].Preset;
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
         }
     }
 }

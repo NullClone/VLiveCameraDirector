@@ -55,7 +55,7 @@ namespace VLiveKit.Camera
 
         [Tooltip("番号順に管理されるShotスロット一覧。これがShot順の唯一の正本です。")]
         [SerializeField]
-        private List<VLiveCameraShotSlot> _slots = new List<VLiveCameraShotSlot>();
+        private List<VLiveCameraShotSlot> _slots = new();
 
 
         // Properties
@@ -176,10 +176,7 @@ namespace VLiveKit.Camera
         /// </summary>
         public void AddSlot(VLiveCameraShotSlot slot)
         {
-            if (_slots == null)
-            {
-                _slots = new List<VLiveCameraShotSlot>();
-            }
+            _slots ??= new List<VLiveCameraShotSlot>();
 
             _slots.Add(slot);
         }

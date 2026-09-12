@@ -108,8 +108,6 @@ namespace VLiveKit.Camera
                 initialShot.CinemachineCamera.Prioritize();
                 _currentProgramShot = initialShot;
                 initialShot.OnEnterProgram();
-
-                Debug.Log($"[VLiveCameraSwitcher] Program: {initialShot.ShotName}");
             }
         }
 

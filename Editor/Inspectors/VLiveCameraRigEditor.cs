@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace VLiveKit.Camera.Editor
@@ -12,6 +13,10 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
+        private static readonly GUIContent s_arrowContent = new GUIContent("→");
+        private static readonly GUIContent s_warningContent = new GUIContent("⚠", "Slot Preset differs from Applied Preset on Shot. Rebuild Shot to apply.");
+        private static readonly GUIContent s_motionScaleContent = new GUIContent("Horizontal Motion Scale");
+
         private SerializedProperty _performerTargetProp;
         private SerializedProperty _programCameraProp;
         private SerializedProperty _forwardReferenceModeProp;
@@ -22,6 +27,9 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _verticalMotionScaleProp;
         private SerializedProperty _masterPlaybackSpeedProp;
         private SerializedProperty _slotsProp;
+
+        private ReorderableList _slotsList;
+        private bool _showFramingSettings;
 
 
         // Methods
@@ -38,6 +46,8 @@ namespace VLiveKit.Camera.Editor
             _verticalMotionScaleProp = serializedObject.FindProperty("_verticalMotionScale");
             _masterPlaybackSpeedProp = serializedObject.FindProperty("_masterPlaybackSpeed");
             _slotsProp = serializedObject.FindProperty("_slots");
+
+            InitializeSlotsList();
         }
 
         public override void OnInspectorGUI()
@@ -46,38 +56,40 @@ namespace VLiveKit.Camera.Editor
 
             var rig = (VLiveCameraRig)target;
 
-            DrawSetupAndFramingSection(rig);
-            EditorGUILayout.Space(8);
-
-            DrawShotSlotsSection(rig);
-            EditorGUILayout.Space(8);
-
+            DrawSetupSection();
+            DrawFramingAndScalingSection();
+            DrawShotSlotsSection();
             DrawActionsSection(rig);
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawSetupAndFramingSection(VLiveCameraRig rig)
+        private void InitializeSlotsList()
         {
-            EditorGUILayout.PropertyField(_performerTargetProp);
-            EditorGUILayout.PropertyField(_programCameraProp);
+            _slotsList = new ReorderableList(serializedObject, _slotsProp, true, true, true, true)
+            {
+                drawHeaderCallback = DrawSlotsHeader,
+                drawElementCallback = DrawSlotElement,
+                elementHeightCallback = GetSlotElementHeight,
+                onAddCallback = OnAddSlot,
+                onRemoveCallback = OnRemoveSlot
+            };
+        }
 
-            EditorGUILayout.Space(4);
-            EditorGUILayout.PropertyField(_forwardReferenceModeProp);
-
+        private void DrawSetupSection()
+        {
+            EditorGUILayout.PropertyField(_programCameraProp, new GUIContent("Camera"));
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(_performerTargetProp, new GUIContent("Performer Target"));
+            EditorGUILayout.PropertyField(_forwardReferenceModeProp, new GUIContent("Forward Mode"));
             if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.CustomReference)
             {
+                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(_customReferenceProp);
+                EditorGUI.indentLevel--;
             }
 
-            EditorGUILayout.Space(4);
-            EditorGUILayout.PropertyField(_targetHeightProp);
-            EditorGUILayout.PropertyField(_distanceScaleProp);
-            EditorGUILayout.PropertyField(_motionScaleProp, new GUIContent("Horizontal Motion Scale"));
-            EditorGUILayout.PropertyField(_verticalMotionScaleProp);
-            EditorGUILayout.PropertyField(_masterPlaybackSpeedProp);
-
-            // Validation messages
+            // Actionable validation messages
             if (_performerTargetProp.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("Performer Target is unassigned. Assign a target Transform before running Apply / Sync.", MessageType.Warning);
@@ -93,11 +105,6 @@ namespace VLiveKit.Camera.Editor
                         EditorGUILayout.HelpBox("Target forward projected on XZ plane is near-zero. World +Z will be used.", MessageType.Warning);
                     }
                 }
-            }
-
-            if (_programCameraProp.objectReferenceValue == null)
-            {
-                EditorGUILayout.HelpBox("Program Camera is unassigned. Assign a Unity Camera to output program video.", MessageType.Info);
             }
 
             if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.CustomReference)
@@ -116,147 +123,196 @@ namespace VLiveKit.Camera.Editor
                     }
                 }
             }
+        }
+
+        private void DrawFramingAndScalingSection()
+        {
+            _showFramingSettings = EditorGUILayout.Foldout(_showFramingSettings, "Motion Settings", true);
+            if (!_showFramingSettings)
+            {
+                return;
+            }
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(_targetHeightProp);
+            EditorGUILayout.PropertyField(_distanceScaleProp);
+            EditorGUILayout.PropertyField(_motionScaleProp, s_motionScaleContent);
+            EditorGUILayout.PropertyField(_verticalMotionScaleProp);
+            EditorGUILayout.PropertyField(_masterPlaybackSpeedProp);
 
             if (_distanceScaleProp.floatValue <= 0f || _motionScaleProp.floatValue <= 0f || _verticalMotionScaleProp.floatValue < 0f)
             {
                 EditorGUILayout.HelpBox("Distance and horizontal motion scales must be greater than zero. Vertical motion scale cannot be negative.", MessageType.Warning);
             }
+
+            EditorGUI.indentLevel--;
         }
 
-        private void DrawShotSlotsSection(VLiveCameraRig rig)
+        private void DrawShotSlotsSection()
         {
-            EditorGUILayout.LabelField("Shot Slots", EditorStyles.boldLabel);
+            EditorGUILayout.Space();
 
-            int slotCount = _slotsProp.arraySize;
+            _slotsList.draggable = !Application.isPlaying;
+            _slotsList.displayAdd = !Application.isPlaying;
+            _slotsList.displayRemove = !Application.isPlaying;
 
-            for (int i = 0; i < slotCount; i++)
+            _slotsList.DoLayoutList();
+
+            // Outdated preset summary check
+            bool anyMismatch = false;
+            for (int i = 0; i < _slotsProp.arraySize; i++)
             {
                 SerializedProperty slotElem = _slotsProp.GetArrayElementAtIndex(i);
-                SerializedProperty presetProp = slotElem.FindPropertyRelative("_preset");
-                SerializedProperty shotProp = slotElem.FindPropertyRelative("_shot");
-
-                EditorGUILayout.BeginHorizontal();
-                string slotTitle = $"Slot {i + 1} (Key {i + 1})";
-                EditorGUILayout.LabelField(slotTitle, EditorStyles.boldLabel, GUILayout.Width(110));
-
-                GUILayout.FlexibleSpace();
-
-                using (new EditorGUI.DisabledScope(i == 0 || Application.isPlaying))
+                var preset = (VLiveCameraMotionPreset)slotElem.FindPropertyRelative("_preset").objectReferenceValue;
+                var shot = (VLiveCameraShot)slotElem.FindPropertyRelative("_shot").objectReferenceValue;
+                if (shot != null && preset != null && shot.AppliedPreset != null && shot.AppliedPreset != preset)
                 {
-                    if (GUILayout.Button("Up", EditorStyles.miniButtonLeft, GUILayout.Width(38)))
-                    {
-                        _slotsProp.MoveArrayElement(i, i - 1);
-                        serializedObject.ApplyModifiedProperties();
-                        GUIUtility.ExitGUI();
-                    }
+                    anyMismatch = true;
+                    break;
                 }
-
-                using (new EditorGUI.DisabledScope(i == slotCount - 1 || Application.isPlaying))
-                {
-                    if (GUILayout.Button("Down", EditorStyles.miniButtonMid, GUILayout.Width(44)))
-                    {
-                        _slotsProp.MoveArrayElement(i, i + 1);
-                        serializedObject.ApplyModifiedProperties();
-                        GUIUtility.ExitGUI();
-                    }
-                }
-
-                using (new EditorGUI.DisabledScope(Application.isPlaying))
-                {
-                    if (GUILayout.Button("Remove", EditorStyles.miniButtonRight, GUILayout.Width(58)))
-                    {
-                        int prevCount = _slotsProp.arraySize;
-                        _slotsProp.DeleteArrayElementAtIndex(i);
-                        if (_slotsProp.arraySize == prevCount)
-                        {
-                            _slotsProp.DeleteArrayElementAtIndex(i);
-                        }
-
-                        serializedObject.ApplyModifiedProperties();
-                        GUIUtility.ExitGUI();
-                    }
-                }
-
-                EditorGUILayout.EndHorizontal();
-
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(presetProp, new GUIContent("Preset"));
-
-                using (new EditorGUI.DisabledScope(true))
-                {
-                    EditorGUILayout.PropertyField(shotProp, new GUIContent("Shot"));
-                }
-
-                var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
-                var presetObj = (VLiveCameraMotionPreset)presetProp.objectReferenceValue;
-
-                if (shotObj != null && presetObj != null && shotObj.AppliedPreset != null && shotObj.AppliedPreset != presetObj)
-                {
-                    EditorGUILayout.HelpBox($"Slot Preset differs from Applied Motion on Shot ({shotObj.AppliedPreset.DisplayName}). Rebuild the Shot in its Inspector to update.", MessageType.Warning);
-                }
-
-                EditorGUI.indentLevel--;
-                EditorGUILayout.Space(4);
             }
 
-            EditorGUILayout.Space(2);
-
-            using (new EditorGUI.DisabledScope(Application.isPlaying))
+            if (anyMismatch)
             {
-                if (GUILayout.Button("+ Add Shot Slot", GUILayout.Height(22)))
+                EditorGUILayout.HelpBox("One or more slots have an updated Preset. Click 'Rebuild All' or rebuild the individual Shot to apply changes.", MessageType.Warning);
+            }
+        }
+
+        private void DrawSlotsHeader(Rect rect)
+        {
+            int count = _slotsProp.arraySize;
+            EditorGUI.LabelField(rect, $"Shot Slots  ({count})", EditorStyles.boldLabel);
+        }
+
+        private float GetSlotElementHeight(int index)
+        {
+            return EditorGUIUtility.singleLineHeight + 4f;
+        }
+
+        private void DrawSlotElement(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            if (index < 0 || index >= _slotsProp.arraySize)
+            {
+                return;
+            }
+
+            SerializedProperty slotElem = _slotsProp.GetArrayElementAtIndex(index);
+            SerializedProperty presetProp = slotElem.FindPropertyRelative("_preset");
+            SerializedProperty shotProp = slotElem.FindPropertyRelative("_shot");
+
+            rect.y += 2f;
+            rect.height = EditorGUIUtility.singleLineHeight;
+
+            float indexWidth = 24f;
+            float arrowWidth = 16f;
+            float spacing = 4f;
+            float contentWidth = rect.width - indexWidth - arrowWidth - (spacing * 3f);
+            float presetWidth = contentWidth * 0.48f;
+            float shotWidth = contentWidth * 0.52f;
+
+            Rect indexRect = new Rect(rect.x, rect.y, indexWidth, rect.height);
+            Rect presetRect = new Rect(indexRect.xMax + spacing, rect.y, presetWidth, rect.height);
+            Rect arrowRect = new Rect(presetRect.xMax + spacing, rect.y, arrowWidth, rect.height);
+            Rect shotRect = new Rect(arrowRect.xMax + spacing, rect.y, shotWidth, rect.height);
+
+            string slotLabel = $"{index + 1}";
+            string tooltip = index < 9 ? $"Slot {index + 1} (Direct Cut Key: {index + 1})" : $"Slot {index + 1}";
+            EditorGUI.LabelField(indexRect, new GUIContent(slotLabel, tooltip), EditorStyles.miniBoldLabel);
+
+            EditorGUI.PropertyField(presetRect, presetProp, GUIContent.none);
+
+            var shotObj = (VLiveCameraShot)shotProp.objectReferenceValue;
+            var presetObj = (VLiveCameraMotionPreset)presetProp.objectReferenceValue;
+            bool hasMismatch = shotObj != null && presetObj != null && shotObj.AppliedPreset != null && shotObj.AppliedPreset != presetObj;
+
+            if (hasMismatch)
+            {
+                GUI.Label(arrowRect, s_warningContent, EditorStyles.centeredGreyMiniLabel);
+            }
+            else
+            {
+                GUI.Label(arrowRect, s_arrowContent, EditorStyles.centeredGreyMiniLabel);
+            }
+
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUI.PropertyField(shotRect, shotProp, GUIContent.none);
+            }
+        }
+
+        private void OnAddSlot(ReorderableList list)
+        {
+            int newIndex = _slotsProp.arraySize;
+            _slotsProp.InsertArrayElementAtIndex(newIndex);
+            SerializedProperty newElem = _slotsProp.GetArrayElementAtIndex(newIndex);
+            newElem.FindPropertyRelative("_preset").objectReferenceValue = null;
+            newElem.FindPropertyRelative("_shot").objectReferenceValue = null;
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        private void OnRemoveSlot(ReorderableList list)
+        {
+            int targetIndex = (list.index >= 0 && list.index < _slotsProp.arraySize)
+                ? list.index
+                : _slotsProp.arraySize - 1;
+
+            if (targetIndex >= 0 && targetIndex < _slotsProp.arraySize)
+            {
+                int prevCount = _slotsProp.arraySize;
+                _slotsProp.DeleteArrayElementAtIndex(targetIndex);
+                if (_slotsProp.arraySize == prevCount)
                 {
-                    _slotsProp.InsertArrayElementAtIndex(_slotsProp.arraySize);
-                    SerializedProperty newElem = _slotsProp.GetArrayElementAtIndex(_slotsProp.arraySize - 1);
-                    newElem.FindPropertyRelative("_preset").objectReferenceValue = null;
-                    newElem.FindPropertyRelative("_shot").objectReferenceValue = null;
-                    serializedObject.ApplyModifiedProperties();
-                    GUIUtility.ExitGUI();
+                    _slotsProp.DeleteArrayElementAtIndex(targetIndex);
                 }
+
+                serializedObject.ApplyModifiedProperties();
             }
         }
 
         private void DrawActionsSection(VLiveCameraRig rig)
         {
-            EditorGUILayout.LabelField("Actions", EditorStyles.boldLabel);
-
             if (Application.isPlaying)
             {
                 EditorGUILayout.HelpBox("Rig generation, sync, and rebuild operations are disabled in Play Mode.", MessageType.Info);
+                return;
             }
 
-            bool hasTarget = _performerTargetProp.objectReferenceValue != null;
-            bool isForwardValid = rig.IsForwardReferenceValid();
-            bool canApply = !Application.isPlaying && hasTarget && isForwardValid;
+            EditorGUILayout.Space();
 
-            using (new EditorGUI.DisabledScope(!canApply))
+            using (new GUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Apply / Sync", GUILayout.Height(26)))
+                bool hasTarget = _performerTargetProp.objectReferenceValue != null;
+                bool isForwardValid = rig.IsForwardReferenceValid();
+                bool canApply = hasTarget && isForwardValid;
+
+
+                using (new EditorGUI.DisabledScope(!canApply))
                 {
-                    serializedObject.ApplyModifiedProperties();
-                    VLiveCameraRigBuilder.ApplySync(rig);
-                    serializedObject.Update();
-                    GUIUtility.ExitGUI();
-                }
-            }
-
-            EditorGUILayout.Space(4);
-
-            bool canRebuildAll = !Application.isPlaying && hasTarget && isForwardValid && _slotsProp.arraySize > 0;
-
-            using (new EditorGUI.DisabledScope(!canRebuildAll))
-            {
-                if (GUILayout.Button("Rebuild All From Presets", GUILayout.Height(24)))
-                {
-                    if (EditorUtility.DisplayDialog(
-                            "Rebuild All Shots From Presets",
-                            "Rebuild camera position, lens, aim, spline, and motion configuration for all shots from their presets?\nManual adjustments will be overwritten.",
-                            "Rebuild All",
-                            "Cancel"))
+                    if (GUILayout.Button("Apply", GUILayout.Height(22)))
                     {
                         serializedObject.ApplyModifiedProperties();
-                        VLiveCameraRigBuilder.RebuildAllShotsFromPreset(rig);
+                        VLiveCameraRigBuilder.ApplySync(rig);
                         serializedObject.Update();
                         GUIUtility.ExitGUI();
+                    }
+                }
+
+                bool canRebuildAll = hasTarget && isForwardValid && _slotsProp.arraySize > 0;
+                using (new EditorGUI.DisabledScope(!canRebuildAll))
+                {
+                    if (GUILayout.Button("Rebuild", GUILayout.Height(22)))
+                    {
+                        if (EditorUtility.DisplayDialog(
+                                "Rebuild All Shots From Presets",
+                                "Rebuild camera position, lens, aim, spline, and motion configuration for all shots from their presets?\n\nManual adjustments made on scene cameras and splines will be overwritten.",
+                                "Rebuild All",
+                                "Cancel"))
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            VLiveCameraRigBuilder.RebuildAllShotsFromPreset(rig);
+                            serializedObject.Update();
+                            GUIUtility.ExitGUI();
+                        }
                     }
                 }
             }
