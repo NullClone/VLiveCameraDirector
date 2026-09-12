@@ -15,6 +15,7 @@ namespace VLiveKit.Camera.Editor
 
         private SerializedProperty _shotNameProp;
         private SerializedProperty _shotTypeProp;
+        private SerializedProperty _rigProp;
         private SerializedProperty _cinemachineCameraProp;
         private SerializedProperty _splineDollyProp;
         private SerializedProperty _rotationComposerProp;
@@ -23,8 +24,11 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _performerTargetProp;
         private SerializedProperty _appliedPresetProp;
         private SerializedProperty _appliedTargetHeightProp;
+        private SerializedProperty _appliedDistanceScaleProp;
+        private SerializedProperty _appliedMotionScaleProp;
+        private SerializedProperty _appliedVerticalMotionScaleProp;
 
-        private VLiveCameraMotionValidator.ValidationReport _report;
+        private VLiveCameraMotionValidationReport _report;
 
 
         // Methods
@@ -33,6 +37,7 @@ namespace VLiveKit.Camera.Editor
         {
             _shotNameProp = serializedObject.FindProperty("_shotName");
             _shotTypeProp = serializedObject.FindProperty("_shotType");
+            _rigProp = serializedObject.FindProperty("_rig");
             _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
             _splineDollyProp = serializedObject.FindProperty("_splineDolly");
             _rotationComposerProp = serializedObject.FindProperty("_rotationComposer");
@@ -41,6 +46,9 @@ namespace VLiveKit.Camera.Editor
             _performerTargetProp = serializedObject.FindProperty("_performerTarget");
             _appliedPresetProp = serializedObject.FindProperty("_appliedPreset");
             _appliedTargetHeightProp = serializedObject.FindProperty("_appliedTargetHeight");
+            _appliedDistanceScaleProp = serializedObject.FindProperty("_appliedDistanceScale");
+            _appliedMotionScaleProp = serializedObject.FindProperty("_appliedMotionScale");
+            _appliedVerticalMotionScaleProp = serializedObject.FindProperty("_appliedVerticalMotionScale");
         }
 
         public override bool RequiresConstantRepaint()
@@ -87,8 +95,9 @@ namespace VLiveKit.Camera.Editor
 
             using (new EditorGUI.DisabledScope(true))
             {
+                EditorGUILayout.PropertyField(_rigProp);
                 EditorGUILayout.PropertyField(_cinemachineCameraProp);
-                if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShot.ShotType.Spline)
+                if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShotType.Spline)
                 {
                     EditorGUILayout.PropertyField(_splineDollyProp);
                 }
@@ -104,7 +113,7 @@ namespace VLiveKit.Camera.Editor
                 EditorGUILayout.HelpBox("CinemachineCamera is missing. Run Apply / Sync on the Rig to resolve.", MessageType.Warning);
             }
 
-            if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShot.ShotType.Spline && _splineDollyProp.objectReferenceValue == null)
+            if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShotType.Spline && _splineDollyProp.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("Spline Dolly is missing. Run Apply / Sync on the Rig to resolve.", MessageType.Warning);
             }
@@ -118,6 +127,9 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorGUILayout.PropertyField(_appliedPresetProp, new GUIContent("Source Preset"));
                 EditorGUILayout.PropertyField(_appliedTargetHeightProp, new GUIContent("Applied Target Height"));
+                EditorGUILayout.PropertyField(_appliedDistanceScaleProp, new GUIContent("Applied Distance Scale"));
+                EditorGUILayout.PropertyField(_appliedMotionScaleProp, new GUIContent("Applied Horizontal Scale"));
+                EditorGUILayout.PropertyField(_appliedVerticalMotionScaleProp, new GUIContent("Applied Vertical Scale"));
             }
 
             VLiveCameraAppliedMotion applied = shot.AppliedMotion;
@@ -234,8 +246,8 @@ namespace VLiveKit.Camera.Editor
                     {
                         MessageType msgType = msg.Severity switch
                         {
-                            VLiveCameraMotionValidator.DiagnosticSeverity.Error => MessageType.Error,
-                            VLiveCameraMotionValidator.DiagnosticSeverity.Warning => MessageType.Warning,
+                            VLiveCameraDiagnosticSeverity.Error => MessageType.Error,
+                            VLiveCameraDiagnosticSeverity.Warning => MessageType.Warning,
                             _ => MessageType.Info
                         };
 
@@ -263,7 +275,7 @@ namespace VLiveKit.Camera.Editor
             EditorGUI.ProgressBar(
                 EditorGUILayout.GetControlRect(false, 18),
                 progress,
-                $"Time: {shot.CurrentTime:F2}s / {duration:F2}s (Speed: {shot.CurrentSpeedMultiplier:F2}x, Dist: {shot.CurrentSplineDistance:F2}m)"
+                $"Time: {shot.CurrentTime:F2}s / {duration:F2}s (Shot: {shot.CurrentSpeedMultiplier:F2}x, Master: {shot.MasterPlaybackSpeed:F2}x, Dist: {shot.CurrentSplineDistance:F2}m)"
             );
 
             if (Application.isPlaying && shot.IsLive)

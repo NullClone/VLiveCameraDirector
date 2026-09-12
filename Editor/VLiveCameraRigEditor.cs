@@ -19,6 +19,8 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _targetHeightProp;
         private SerializedProperty _distanceScaleProp;
         private SerializedProperty _motionScaleProp;
+        private SerializedProperty _verticalMotionScaleProp;
+        private SerializedProperty _masterPlaybackSpeedProp;
         private SerializedProperty _slotsProp;
 
 
@@ -33,6 +35,8 @@ namespace VLiveKit.Camera.Editor
             _targetHeightProp = serializedObject.FindProperty("_targetHeight");
             _distanceScaleProp = serializedObject.FindProperty("_distanceScale");
             _motionScaleProp = serializedObject.FindProperty("_motionScale");
+            _verticalMotionScaleProp = serializedObject.FindProperty("_verticalMotionScale");
+            _masterPlaybackSpeedProp = serializedObject.FindProperty("_masterPlaybackSpeed");
             _slotsProp = serializedObject.FindProperty("_slots");
         }
 
@@ -69,7 +73,9 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.Space(4);
             EditorGUILayout.PropertyField(_targetHeightProp);
             EditorGUILayout.PropertyField(_distanceScaleProp);
-            EditorGUILayout.PropertyField(_motionScaleProp);
+            EditorGUILayout.PropertyField(_motionScaleProp, new GUIContent("Horizontal Motion Scale"));
+            EditorGUILayout.PropertyField(_verticalMotionScaleProp);
+            EditorGUILayout.PropertyField(_masterPlaybackSpeedProp);
 
             // Validation messages
             if (_performerTargetProp.objectReferenceValue == null)
@@ -111,9 +117,9 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            if (_distanceScaleProp.floatValue <= 0f || _motionScaleProp.floatValue <= 0f)
+            if (_distanceScaleProp.floatValue <= 0f || _motionScaleProp.floatValue <= 0f || _verticalMotionScaleProp.floatValue < 0f)
             {
-                EditorGUILayout.HelpBox("Distance Scale and Motion Scale must be greater than 0.", MessageType.Warning);
+                EditorGUILayout.HelpBox("Distance and horizontal motion scales must be greater than zero. Vertical motion scale cannot be negative.", MessageType.Warning);
             }
         }
 
@@ -137,7 +143,7 @@ namespace VLiveKit.Camera.Editor
 
                 using (new EditorGUI.DisabledScope(i == 0 || Application.isPlaying))
                 {
-                    if (GUILayout.Button("▲", GUILayout.Width(22), GUILayout.Height(18)))
+                    if (GUILayout.Button("Up", EditorStyles.miniButtonLeft, GUILayout.Width(38)))
                     {
                         _slotsProp.MoveArrayElement(i, i - 1);
                         serializedObject.ApplyModifiedProperties();
@@ -147,7 +153,7 @@ namespace VLiveKit.Camera.Editor
 
                 using (new EditorGUI.DisabledScope(i == slotCount - 1 || Application.isPlaying))
                 {
-                    if (GUILayout.Button("▼", GUILayout.Width(22), GUILayout.Height(18)))
+                    if (GUILayout.Button("Down", EditorStyles.miniButtonMid, GUILayout.Width(44)))
                     {
                         _slotsProp.MoveArrayElement(i, i + 1);
                         serializedObject.ApplyModifiedProperties();
@@ -157,7 +163,7 @@ namespace VLiveKit.Camera.Editor
 
                 using (new EditorGUI.DisabledScope(Application.isPlaying))
                 {
-                    if (GUILayout.Button("✕", GUILayout.Width(22), GUILayout.Height(18)))
+                    if (GUILayout.Button("Remove", EditorStyles.miniButtonRight, GUILayout.Width(58)))
                     {
                         int prevCount = _slotsProp.arraySize;
                         _slotsProp.DeleteArrayElementAtIndex(i);

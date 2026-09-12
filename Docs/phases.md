@@ -6,29 +6,23 @@
 
 ## 2. 現在の実装
 
-2026-09-11時点:
+2026-09-12時点:
 
 - Unity 6000.3、Cinemachine 3.1.7、Input System 1.19.0を使用している。
 - ProjectではUnity Splines 2.9.0が解決されている。
 - `VLiveCameraRig`と順序付きShot SlotがScene Authoringの正本である。
-- Rig InspectorからTarget、正面基準、Distance Scale、Motion Scale、Shot Slotを編集できる。
-- Setup WindowとGameObject MenuからCameraを含まない初期Rig骨格を作成できる。
+- Rig InspectorからTarget、正面基準、Distance Scale、Horizontal / Vertical Motion Scale、Master Playback Speed、Shot Slotを編集できる。
+- `GameObject/VLiveKit/Virtual Camera`からCameraを含まない初期Rig骨格を作成できる。Setup WindowとStep UIは廃止済みである。
 - `Apply / Sync`、Selected / All Rebuild、明示的な生成物削除が分かれている。
 - 各Shotは別々のCinemachineCameraを持つ。
 - `VLiveCameraSwitcher`、`VLiveCameraShot`、`VLiveCameraKeyboardInput`がある。
-- 6つの標準Motion Presetとキーによる直接Cutがある。
+- 10種の標準3D Motion Presetとキーによる直接Cutがある。
 - Spline ShotはSpeed、Reverse、Hold、Resumeを持つ。
-- Motion Presetは完全なKnot、Timing、Aim、Composition、Lens、Roll、Activationを持つ。
+- Motion PresetはIdentity、Body、Timing、Aim、Lens、Roll、Activationへ分割され、完全な3D Knotを持つ。
 - Motion EvaluatorとMotion Playerが同じPlayback Timeから各Trackを評価する。
 - ユーザーの作業用SceneでRig作成と現在の切り替え動作が確認済みである。
 
-現在のEditor UXには次の課題がある。
-
-- Inspectorへ独自Banner、暗色背景、色付きBadge、常設説明が多い。
-- 固定表示へ英語と日本語が混在している。
-- Rig InspectorへShot固有操作、診断、Live状態が集中している。
-- Repaint中に`GUIStyle`を生成するInspectorがある。
-- 機能増加に伴いInspectorコードの可読性が低下している。
+現在のコードとAssetは3D Motion Palette Refactorまで実装済みである。映像上の構図、速度、Y移動、各Presetの採否はユーザーの作業用Sceneで未確認であり、Gold Master認定は行わない。
 
 ## 3. 完了済み
 
@@ -67,7 +61,7 @@
 
 - `VLiveCameraRig`とShot Slot
 - Rig Inspector主導のTarget、正面、Scale、Shot構成
-- Setup Window簡略化
+- Setup WindowとStep UIの廃止
 - GameObject Menu
 - Editor専用Builder
 - Apply / SyncとRebuildの分離
@@ -173,7 +167,9 @@ Preset数の量産より先に、1つのShotをプロ品質へ調整できるデ
 7. Scene上で調整したShotを新しいPresetとして保存できる。
 8. Validatorの警告と実映像を比較できる。
 
-## 5. Step 4.5 — 現在の実装対象: Inspector Refresh
+## 5. Step 4.5 — Inspector Refresh
+
+状態: 完了。
 
 ### 目的
 
@@ -182,7 +178,7 @@ Preset数の量産より先に、1つのShotをプロ品質へ調整できるデ
 ### 対象
 
 - Rig、Shot、Motion Preset、Rig Profile、Motion Player、Switcher、Keyboard InputのCustom Inspector
-- Setup Windowの表示と、Cameraを生成しないSetup説明
+- GameObject MenuとCameraを生成しない初期作成説明
 - Inspector固定表示の英語化
 - 日本語Tooltipの維持
 - 標準PropertyField、EditorStyles、Foldout、HelpBox、DisabledScopeへの置き換え
@@ -203,14 +199,55 @@ Preset数の量産より先に、1つのShotをプロ品質へ調整できるデ
 2. 独自Banner、暗色背景、絵文字、色付きBadge、装飾目的のBoxがない。
 3. SerializedProperty、Undo、Prefab Overrideを維持する。
 4. Rig、Shot、Switcher、Input、Player、Preset、Profileの表示責務が仕様どおり分かれている。
-5. SetupがCameraを生成、探索、割り当て、変更しないことをUIが正しく説明する。
+5. GameObject MenuがCameraを生成、探索、割り当て、変更しないことをUIが正しく説明する。
 6. Inspector操作だけでSceneやAssetを暗黙変更しない。
 7. Unity ImportとCompileで新しいエラーがない。
 8. Runtime、Preset Asset、ユーザーScene、Package直下READMEを変更していない。
 
-## 6. Step 5 — Rig CharacterとGold Master
+## 6. Step 4.6 — 現在の実装対象: 3D Motion Palette Refactor
 
-Inspector Refreshをユーザーが確認した後に行う。
+状態: 実装済み。ユーザーSceneでの映像確認待ち。
+
+### 対象
+
+- `VLiveCameraMotionPresetData`とIdentity / Body / Timing / Aim / Lens / Roll / Activationの一責務型
+- enum、struct、Serializable helperを含む1ファイル1型
+- `VLiveKit.Camera`と`VLiveKit.Camera.Editor`へのnamespace統一
+- Preset始点を基準にした水平差分と垂直差分の独立スケール
+- Rig全体へ非破壊に掛けるMaster Playback Speed
+- Rolling Entry時にCut直後から巡航速度で進む再生
+- Y移動、旋回、距離変化、Lens変化を持つ10種の初期Palette
+- Unity Editor APIによる同梱Preset再生成
+- Motion Playerと補助Toolsの標準IMGUI化および毎フレームGUI Texture生成の除去
+
+### 対象外
+
+- App UI、MIDI、Preview / Take / Tally
+- Runtime AIと自動Take
+- 専用テストScene
+- Gold Master認定
+- ユーザーSceneの保存または自動変更
+
+### エージェント完了条件
+
+1. Unity ImportとRuntime / Editor Compileにエラーがない。
+2. 全Spline Presetに意図のあるY差分があり、Vertical Motion Scale 0で垂直差分だけを無効化できる。
+3. Master Playback SpeedがPreset Assetと個別Speed Multiplierを書き換えない。
+4. PresetからShotへ適用したデータとRuntime再生状態が分離されている。
+5. 同梱PresetをYAML直接編集せずUnity Editor APIで生成している。
+6. 1ファイル1型、namespace、Tooltip、英語Inspectorの規約を満たす。
+
+### ユーザー受け入れ
+
+1. 作業用Sceneで10 Shotを切り替え、Cut直後から十分な速度を感じる。
+2. Push、Pull、Truck、Arc、Crane、PedestalでY方向を含む軌道差が読める。
+3. Vertical Motion ScaleとMaster Playback Speedがライブ調整として直感的である。
+4. Lens変化とBody移動が同じ時間軸で自然に同期する。
+5. 各PresetをGold / Experimental / Rejectへ分類できる。
+
+## 7. Step 5 — Rig CharacterとGold Master
+
+3D Motion Paletteをユーザーが確認した後に行う。
 
 - Dolly、Fluid Head、Crane、Gimbal、Handheld、Robotic等のRig Profile調整
 - RollとHorizon
@@ -222,7 +259,7 @@ Inspector Refreshをユーザーが確認した後に行う。
 
 数値はメーカー公称値や調査値をそのまま固定せず、映像確認から調整する。
 
-## 7. Step 6 — Palette運用
+## 8. Step 6 — Palette運用
 
 - Gold Masterからの左右、距離、Duration、Lens、Energy Variant
 - AIによるPreset候補生成
@@ -232,7 +269,7 @@ Inspector Refreshをユーザーが確認した後に行う。
 
 AIはUnity Editor APIから人と同じMotion Preset Assetを作成する。YAML直接編集やAI専用Runtime形式を使用しない。
 
-## 8. Step 7 — 現場操作
+## 9. Step 7 — 現場操作
 
 - App UIによるCamera PaletteとProgram表示
 - Preview / Take / Tally
@@ -243,7 +280,7 @@ AIはUnity Editor APIから人と同じMotion Preset Assetを作成する。YAML
 
 キーボードによるDirect Cutを維持し、MIDIを必須にしない。
 
-## 9. 将来
+## 10. 将来
 
 - Focus / Iris / Exposure Track
 - Timeline / BPM Cue
@@ -253,10 +290,10 @@ AIはUnity Editor APIから人と同じMotion Preset Assetを作成する。YAML
 - 必要性が映像で確認されたJerk-Limited Solver
 - 必要性が確認されたAim Response拡張
 
-## 10. 実装順序の規則
+## 11. 実装順序の規則
 
-- Step 4.5はEditor表示だけの独立した縦切りとして一括依頼できる。
-- Runtime、Preset Asset、Camera挙動を同じ差分で変更しない。
+- Step 4.6はRuntime、Editor、同梱Presetを同じCamera Performance契約へ揃える1つの縦切りとして扱う。
+- Step 5以降はユーザーの映像確認結果を入力として進める。
 - 実装中の通常判断はエージェントに任せる。
 - 製品挙動、データ所有権、公開API、破壊的な範囲変更が仕様を越える場合だけ確認する。
 - Step 5以降のAsset、UI、空interfaceを先に追加しない。

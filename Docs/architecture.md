@@ -9,7 +9,7 @@
 ## 2. 全体構成
 
 ```text
-Create Menu / Setup Window (Editor)
+GameObject Create Menu (Editor)
              |
              v
       VLiveCameraRig <--- Motion Preset Assets
@@ -28,7 +28,7 @@ Motion Evaluator --> Base Motion Sample
 Operator Input ----------+--> Motion Player --> Cinemachine
                                               Spline Dolly
                                               Rotation Composer
-                                              Lens / Noise
+                                              Lens / Roll
 
 Keyboard Input ---> Switcher ---> Cinemachine Brain ---> Program Camera
 ```
@@ -52,18 +52,22 @@ Rig Inspector / Shot Inspector
 | 型 | 責務 |
 | --- | --- |
 | `VLiveCameraRig` | Target、Program Camera、正面基準、Scale、順序付きShot SlotをScene上の正本として保持する |
-| `VLiveCameraMotionPreset` | Body、Timing、Aim、Composition、Lens、Roll、Activationの再利用可能な設定を保持する |
-| `VLiveCameraRigProfile` | 機材固有の応答、推奨制約、Horizon、Noise初期値を複数Presetで共有する |
+| `VLiveCameraMotionPreset` | Camera Performance Assetとしてトラック集合だけを所有する |
+| `VLiveCameraMotionPresetData` | Identity、Body、Timing、Aim、Lens、Roll、Activationを単一時間軸で束ねる |
+| `VLiveCameraBodyTrack`ほか各Track型 | 各チャンネルの再利用可能な値を一責務で保持する |
+| `VLiveCameraRigProfile` | 機材固有の操作応答とValidator推奨制約を複数Presetで共有する |
 | `VLiveCameraShot` | 専用Camera、Spline、Aim Proxy、適用済みMotion設定とOn-Air / Off-Air lifecycleを所有する |
 | `VLiveCameraMotionPlayer` | 現在時刻、方向、Speed Multiplier、Hold、完了状態を所有し、自身のShotだけへ評価結果を適用する |
 | `VLiveCameraMotionEvaluator` | 解決済みのMotion設定と時刻からMotion Sampleを決定的に計算する |
 | `VLiveCameraSwitcher` | RigのSlot順を使用し、現在のProgramとCutだけを管理する |
 | `VLiveCameraKeyboardInput` | キーボード入力をSwitcherの公開操作へ渡す |
-| `VLiveCameraRigBuilder` | Editor上でRig、Shot、Camera、Spline、Aim Proxyを明示的に生成、同期、再構築する |
+| `VLiveCameraMotionSpace` | Preset座標へ水平・垂直の独立スケールを適用する |
+| `VLiveCameraRigBuilder` | Rig初期作成とSlot単位の同期、再構築、削除操作を調整する |
+| `VLiveCameraShotBuilder` | 1 Shot分のCamera、Spline、Aim Proxy、Motion Playerを生成、修復、再構築する |
+| `VLiveCameraSplineBuilder` | Presetの3D Knotを軸別Scaleと正面基準でScene Splineへ具体化する |
 | `VLiveCameraPresetBaker` | Scene上のShotから完全なSplineと各Trackを新しいPreset Assetへ保存する |
 | `VLiveCameraMotionValidator` | PresetまたはShotの運動値と構図値を診断し、結果をEditorへ返す |
 | `VLiveCameraRigEditor` | Rig設定、Shot Slot、同期、全Shot再構築を簡潔なInspectorへ提示する |
-| `VLiveCameraSetupWindow` | 初期Rig作成だけを行う入口を提供する |
 
 `VLiveCameraMotionEvaluator`はRuntime再生とEditor診断で同じ結果を得る必要があるため共通化する。汎用Animation frameworkにはせず、VLiveCameraUnitのPresetだけを評価する具体型とする。
 
@@ -83,6 +87,8 @@ Switcherに別のPreset一覧やShot一覧を正本として重複保持しな�
 ### Motion Preset
 
 Motion Preset Assetは人またはAIが作るCamera Performanceの正本である。
+
+Preset本体へ全フィールドを平坦に置かず、Identity、Body、Timing、Aim、Lens、Roll、ActivationのSerializable型を1ファイル1型で保持する。各Trackは再利用可能な値だけを持ち、Runtime再生状態を持たない。
 
 - 完全なSpline定義
 - Timing
@@ -117,7 +123,7 @@ Motion PlayerはPreset Assetを毎フレーム直接評価せず、Shotに適用
 | --- | --- | --- |
 | Body geometry | Motion Preset | `SplineContainer` |
 | Timing、Progress、Entry、Activation | Motion Preset | Shotの適用済みMotion設定 |
-| Aim、Composition、Lens、Roll、NoiseのCurve | Motion Preset | Shotの適用済みMotion設定 |
+| Aim、Composition、Lens、RollのCurve | Motion Preset | Shotの適用済みMotion設定 |
 | Rig応答 | Rig Profile | Rebuild時に解決したShotの適用済みMotion設定 |
 | 現在時刻、速度、方向、Hold | なし | Motion Playerだけ |
 
@@ -154,7 +160,6 @@ Resolved Shot Motion + Playback Time
        - Screen Position
        - Lens
        - Roll
-       - Noise Gain
             |
             v
        Operator Trim
@@ -167,7 +172,7 @@ Resolved Shot Motion + Playback Time
 ```
 
 - Motion評価は同じ解決済み入力に対して同じ結果を返す。
-- Distance Scale、Motion Scale、正面基準、Rig ProfileはRebuild時に解決し、Runtime Evaluatorへ生のRig設定を渡さない。
+- Distance Scale、Horizontal Motion Scale、Vertical Motion Scale、正面基準、Rig ProfileはRebuild時に解決する。Master Playback Speedだけはライブ中にRig全体へ掛ける非破壊倍率とし、PresetやSplineを書き換えない。
 - Motion EvaluatorはUnity Input、Program状態、Scene生成を扱わない。
 - Operator TrimはAssetを書き換えない。
 - RuntimeのHard SafetyはNaN、Infinity、無効参照などの破綻だけを拒否する。
@@ -189,7 +194,7 @@ PrepareはShotに適用済みのIn TimeへCamera、Aim、Lensを準備する。R
 
 ### Motion Player
 
-Motion PlayerはShotに適用済みの時間を進め、Motion Evaluatorの結果を自身のCinemachineCamera、Spline Dolly、Aim Proxy、Rotation Composer、Lens、Noiseへ適用する。
+Motion PlayerはShotに適用済みの時間を進め、Motion Evaluatorの結果を自身のCinemachineCamera、Spline Dolly、Aim Proxy、Rotation Composer、Lens、Rollへ適用する。
 
 - UpdateでSceneやAssetを生成、削除しない。
 - 他ShotのCameraやSplineへ書き込まない。
@@ -207,7 +212,7 @@ Motion PlayerはShotに適用済みの時間を進め、Motion Evaluatorの結�
 
 ### Create
 
-メニューまたはSetup Windowは、Cameraを含まない新しいRig骨格をUndo可能な1操作で作成し、生成したRigを選択する。Camera、Cinemachine Brain、既存Switcherを探索、生成、割り当て、変更しない。
+`GameObject/VLiveKit/Virtual Camera`は、Cameraを含まない新しいRig骨格をUndo可能な1操作で作成し、生成したRigを選択する。独立したSetup WindowやStep UIは持たない。Camera、Cinemachine Brain、既存Switcherを探索、生成、割り当て、変更しない。
 
 ### Inspector
 
@@ -267,7 +272,7 @@ Slotから外す操作とSceneオブジェクトの削除を分ける。生成�
 
 Program出力は1台のUnity Cameraと、そのCameraに付属するCinemachine Brainを使用する。ShotのCinemachineCameraを切り替え、Unity CameraのTransformやLensを毎フレームコピーしない。
 
-SetupはProgram Cameraを生成せず、`Camera.main`を自動割り当てせず、CameraやTagを変更しない。Program CameraはユーザーがRig Inspectorで明示的に指定する。`Apply / Sync`は明示指定されたCameraにCinemachine BrainがなければUndo対応で追加できる。
+GameObject Menuによる初期作成はProgram Cameraを生成せず、`Camera.main`を自動割り当てせず、CameraやTagを変更しない。Program CameraはユーザーがRig Inspectorで明示的に指定する。`Apply / Sync`は明示指定されたCameraにCinemachine BrainがなければUndo対応で追加できる。
 
 現在はCutだけを扱う。Preview、Take、Blend、映像CrossfadeをMotion Foundationへ含めない。
 
@@ -324,7 +329,6 @@ Editor:
 - Builder
 - Preset Baker
 - Motion Validator表示
-- Setup Window
 - IMGUI Custom Editors
 
 ## 12. 互換性
@@ -345,3 +349,4 @@ Editor:
 8. 無効な選択でProgramを失わない。
 9. 現在不要な汎用frameworkや将来用interfaceが追加されていない。
 10. Preset Assetの変更が生成済みShotまたはLive中のMotionへ暗黙伝播しない。
+11. C#ソースはenum、struct、Serializable helperを含め1ファイル1型である。

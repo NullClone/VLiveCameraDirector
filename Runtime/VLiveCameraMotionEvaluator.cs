@@ -44,7 +44,6 @@ namespace VLiveKit.Camera
             float phase = Mathf.Clamp01(clampedTime / duration);
             sample.Phase = phase;
 
-            // 1. Body Track / Progress
             float progress = phase;
             if (motion.ProgressCurve != null && motion.ProgressCurve.length > 0)
             {
@@ -53,46 +52,42 @@ namespace VLiveKit.Camera
 
             sample.Progress = progress;
 
-            // distance = startDistance + travelDistance * progress
             float startDist = Mathf.Clamp(motion.StartDistance, 0f, splineLength);
             float endDist = (motion.EndDistance > startDist) ? Mathf.Min(motion.EndDistance, splineLength) : splineLength;
             float travelDist = Mathf.Max(0f, endDist - startDist);
             sample.SplineDistance = Mathf.Clamp(startDist + travelDist * Mathf.Clamp01(progress), 0f, splineLength);
 
-            // 2. Aim Offset
             Vector3 aimOffset = motion.AimOffset;
             if (motion.AimOffsetXCurve != null && motion.AimOffsetXCurve.length > 0)
             {
-                aimOffset.x = motion.AimOffsetXCurve.Evaluate(phase);
+                aimOffset.x += motion.AimOffsetXCurve.Evaluate(phase);
             }
 
             if (motion.AimOffsetYCurve != null && motion.AimOffsetYCurve.length > 0)
             {
-                aimOffset.y = motion.AimOffsetYCurve.Evaluate(phase);
+                aimOffset.y += motion.AimOffsetYCurve.Evaluate(phase);
             }
 
             if (motion.AimOffsetZCurve != null && motion.AimOffsetZCurve.length > 0)
             {
-                aimOffset.z = motion.AimOffsetZCurve.Evaluate(phase);
+                aimOffset.z += motion.AimOffsetZCurve.Evaluate(phase);
             }
 
             sample.AimOffset = aimOffset;
 
-            // 3. Screen Position
             Vector2 screenPos = motion.ScreenPosition;
             if (motion.ScreenPositionXCurve != null && motion.ScreenPositionXCurve.length > 0)
             {
-                screenPos.x = motion.ScreenPositionXCurve.Evaluate(phase);
+                screenPos.x += motion.ScreenPositionXCurve.Evaluate(phase);
             }
 
             if (motion.ScreenPositionYCurve != null && motion.ScreenPositionYCurve.length > 0)
             {
-                screenPos.y = motion.ScreenPositionYCurve.Evaluate(phase);
+                screenPos.y += motion.ScreenPositionYCurve.Evaluate(phase);
             }
 
             sample.ScreenPosition = screenPos;
 
-            // 4. Lens Track
             float fov = motion.FieldOfView;
             if (motion.FieldOfViewCurve != null && motion.FieldOfViewCurve.length > 0)
             {
@@ -114,7 +109,6 @@ namespace VLiveKit.Camera
             sample.FieldOfView = Mathf.Clamp(fov, 1f, 179f);
             sample.FocalLength = Mathf.Max(1f, focal);
 
-            // 5. Roll Track
             float roll = 0f;
             if (motion.RollMode == RollMode.RollCurve && motion.RollCurve != null && motion.RollCurve.length > 0)
             {
@@ -123,7 +117,6 @@ namespace VLiveKit.Camera
 
             sample.Roll = roll;
 
-            // 6. Hard Safety Check
             if (float.IsNaN(sample.Phase) || float.IsInfinity(sample.Phase) ||
                 float.IsNaN(sample.Progress) || float.IsInfinity(sample.Progress) ||
                 float.IsNaN(sample.SplineDistance) || float.IsInfinity(sample.SplineDistance) ||

@@ -17,7 +17,8 @@ of an unrelated task.
 ## File and naming conventions
 
 - Use four spaces and braces for every control-flow body.
-- Keep one primary type per file and match its filename.
+- Keep exactly one source type per file, including serializable helper classes,
+  structs, and enums, and match its filename.
 - Use block-scoped namespaces.
 - Use `PascalCase` for types, methods, properties, constants, and public members.
 - Use `_camelCase` for private fields.
@@ -101,9 +102,8 @@ fields inside nested serializable types.
 
 ## Inspector presentation
 
-Custom Inspectors and the current Setup Window deliberately use IMGUI. Do not
-migrate them to UI Toolkit or App UI during the Inspector refresh. App UI is
-reserved for the future live-operation window.
+Custom Inspectors deliberately use IMGUI. Do not migrate them to UI Toolkit or
+App UI. App UI is reserved for the future live-operation window.
 
 - Use `OnInspectorGUI`, `EditorGUILayout`, `SerializedObject`, and
   `SerializedProperty` as the default path.

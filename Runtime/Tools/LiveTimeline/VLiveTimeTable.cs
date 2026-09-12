@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.Serialization;
 
-namespace VLiveKit.Camera.Tools
+namespace VLiveKit.Camera
 {
     /// <summary>
     /// ライブ用の MasterTimeline と、そこに紐づく各セクション Timeline を管理するタイムテーブル。
@@ -12,48 +13,50 @@ namespace VLiveKit.Camera.Tools
     [DisallowMultipleComponent]
     public class VLiveTimeTable : MonoBehaviour
     {
-        [Serializable]
-        public class VLiveTimelineSlot
-        {
-            [Tooltip("例: Camera / Light / FX / MC / SE など")]
-            public string sectionName;
-
-            [Tooltip("そのセクションで使う PlayableDirector")]
-            public PlayableDirector director;
-
-            [Tooltip("必要ならメモ用途で使う")]
-            [TextArea]
-            public string note;
-        }
+        // Fields
 
         [Header("Master")]
+        [Tooltip("ライブ進行の基準となるMaster PlayableDirector。")]
+        [FormerlySerializedAs("masterTimeline")]
         [SerializeField]
-        private PlayableDirector masterTimeline;
+        private PlayableDirector _masterTimeline;
 
         [Header("Section Timelines")]
+        [Tooltip("名前付きセクションとPlayableDirectorの対応一覧。")]
+        [FormerlySerializedAs("sectionTimelines")]
         [SerializeField]
-        private List<VLiveTimelineSlot> sectionTimelines = new List<VLiveTimelineSlot>();
+        private List<VLiveTimelineSlot> _sectionTimelines = new();
 
         [Header("Auto Find")]
+        [Tooltip("Awake時にMaster Timeline配下のPlayableDirectorを自動収集するか。")]
+        [FormerlySerializedAs("autoFindOnAwake")]
         [SerializeField]
-        private bool autoFindOnAwake = true;
+        private bool _autoFindOnAwake = true;
 
+        [Tooltip("自動収集時に非アクティブなGameObjectも含めるか。")]
+        [FormerlySerializedAs("includeInactive")]
         [SerializeField]
-        private bool includeInactive = true;
+        private bool _includeInactive = true;
 
-        private static VLiveTimeTable cachedInstance;
+        private static VLiveTimeTable _cachedInstance;
 
-        private readonly Dictionary<string, PlayableDirector> sectionMap =
-            new Dictionary<string, PlayableDirector>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, PlayableDirector> _sectionMap =
+            new(StringComparer.OrdinalIgnoreCase);
 
-        public PlayableDirector MasterTimeline => masterTimeline;
-        public IReadOnlyList<VLiveTimelineSlot> SectionTimelines => sectionTimelines;
+
+        // Properties
+
+        public PlayableDirector MasterTimeline => _masterTimeline;
+        public IReadOnlyList<VLiveTimelineSlot> SectionTimelines => _sectionTimelines;
+
+
+        // Methods
 
         private void Awake()
         {
-            cachedInstance = this;
+            _cachedInstance = this;
 
-            if (autoFindOnAwake)
+            if (_autoFindOnAwake)
             {
                 AutoCollectChildDirectors();
             }
@@ -63,9 +66,9 @@ namespace VLiveKit.Camera.Tools
 
         private void OnEnable()
         {
-            if (cachedInstance == null)
+            if (_cachedInstance == null)
             {
-                cachedInstance = this;
+                _cachedInstance = this;
             }
 
             RebuildMap();
@@ -87,22 +90,22 @@ namespace VLiveKit.Camera.Tools
                 VLiveTimeTable parentTimeTable = caller.GetComponentInParent<VLiveTimeTable>(true);
                 if (parentTimeTable != null)
                 {
-                    cachedInstance = parentTimeTable;
-                    return cachedInstance;
+                    _cachedInstance = parentTimeTable;
+                    return _cachedInstance;
                 }
             }
 
-            if (cachedInstance != null)
+            if (_cachedInstance != null)
             {
-                return cachedInstance;
+                return _cachedInstance;
             }
 
 #if UNITY_2023_1_OR_NEWER
-            cachedInstance = FindFirstObjectByType<VLiveTimeTable>(FindObjectsInactive.Include);
+            _cachedInstance = FindFirstObjectByType<VLiveTimeTable>(FindObjectsInactive.Include);
 #else
-            cachedInstance = FindObjectOfType<VLiveTimeTable>(true);
+            _cachedInstance = FindObjectOfType<VLiveTimeTable>(true);
 #endif
-            return cachedInstance;
+            return _cachedInstance;
         }
 
         /// <summary>
@@ -110,9 +113,12 @@ namespace VLiveKit.Camera.Tools
         /// </summary>
         public PlayableDirector GetMasterTimeline()
         {
-            return masterTimeline;
+            return _masterTimeline;
         }
 
+        /// <summary>
+        /// 名前付きセクションを取得し、見つからない場合はMaster Timelineを返します。
+        /// </summary>
         public PlayableDirector GetTimelineOrMaster(string sectionName)
         {
             if (!string.IsNullOrWhiteSpace(sectionName) &&
@@ -121,7 +127,7 @@ namespace VLiveKit.Camera.Tools
                 return director;
             }
 
-            return masterTimeline;
+            return _masterTimeline;
         }
 
         /// <summary>
@@ -134,12 +140,12 @@ namespace VLiveKit.Camera.Tools
                 return null;
             }
 
-            if (sectionMap.Count == 0)
+            if (_sectionMap.Count == 0)
             {
                 RebuildMap();
             }
 
-            sectionMap.TryGetValue(sectionName, out var director);
+            _sectionMap.TryGetValue(sectionName, out var director);
             return director;
         }
 
@@ -155,12 +161,12 @@ namespace VLiveKit.Camera.Tools
                 return false;
             }
 
-            if (sectionMap.Count == 0)
+            if (_sectionMap.Count == 0)
             {
                 RebuildMap();
             }
 
-            return sectionMap.TryGetValue(sectionName, out director) && director != null;
+            return _sectionMap.TryGetValue(sectionName, out director) && director != null;
         }
 
         /// <summary>
@@ -175,12 +181,12 @@ namespace VLiveKit.Camera.Tools
                 return false;
             }
 
-            for (int i = 0; i < sectionTimelines.Count; i++)
+            for (int i = 0; i < _sectionTimelines.Count; i++)
             {
-                var slot = sectionTimelines[i];
-                if (slot != null && slot.director == targetDirector)
+                var slot = _sectionTimelines[i];
+                if (slot != null && slot.Director == targetDirector)
                 {
-                    sectionName = slot.sectionName;
+                    sectionName = slot.SectionName;
                     return true;
                 }
             }
@@ -199,25 +205,28 @@ namespace VLiveKit.Camera.Tools
                 return;
             }
 
-            for (int i = 0; i < sectionTimelines.Count; i++)
+            for (int i = 0; i < _sectionTimelines.Count; i++)
             {
-                var slot = sectionTimelines[i];
-                if (slot == null) continue;
-
-                if (string.Equals(slot.sectionName, sectionName, StringComparison.OrdinalIgnoreCase))
+                var slot = _sectionTimelines[i];
+                if (slot == null)
                 {
-                    slot.director = director;
-                    slot.note = note;
+                    continue;
+                }
+
+                if (string.Equals(slot.SectionName, sectionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    slot.Director = director;
+                    slot.Note = note;
                     RebuildMap();
                     return;
                 }
             }
 
-            sectionTimelines.Add(new VLiveTimelineSlot
+            _sectionTimelines.Add(new VLiveTimelineSlot
             {
-                sectionName = sectionName,
-                director = director,
-                note = note
+                SectionName = sectionName,
+                Director = director,
+                Note = note
             });
 
             RebuildMap();
@@ -233,14 +242,17 @@ namespace VLiveKit.Camera.Tools
                 return false;
             }
 
-            for (int i = sectionTimelines.Count - 1; i >= 0; i--)
+            for (int i = _sectionTimelines.Count - 1; i >= 0; i--)
             {
-                var slot = sectionTimelines[i];
-                if (slot == null) continue;
-
-                if (string.Equals(slot.sectionName, sectionName, StringComparison.OrdinalIgnoreCase))
+                var slot = _sectionTimelines[i];
+                if (slot == null)
                 {
-                    sectionTimelines.RemoveAt(i);
+                    continue;
+                }
+
+                if (string.Equals(slot.SectionName, sectionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    _sectionTimelines.RemoveAt(i);
                     RebuildMap();
                     return true;
                 }
@@ -257,19 +269,19 @@ namespace VLiveKit.Camera.Tools
         [ContextMenu("Auto Collect Child Directors")]
         public void AutoCollectChildDirectors()
         {
-            if (masterTimeline == null)
+            if (_masterTimeline == null)
             {
                 Debug.LogWarning("[VLiveTimeTable] MasterTimeline is not assigned.", this);
                 return;
             }
 
-            var root = masterTimeline.transform;
-            var foundDirectors = root.GetComponentsInChildren<PlayableDirector>(includeInactive);
+            var root = _masterTimeline.transform;
+            var foundDirectors = root.GetComponentsInChildren<PlayableDirector>(_includeInactive);
 
             for (int i = 0; i < foundDirectors.Length; i++)
             {
                 var director = foundDirectors[i];
-                if (director == null || director == masterTimeline)
+                if (director == null || director == _masterTimeline)
                 {
                     continue;
                 }
@@ -277,13 +289,16 @@ namespace VLiveKit.Camera.Tools
                 var sectionName = director.gameObject.name;
 
                 bool alreadyExists = false;
-                for (int j = 0; j < sectionTimelines.Count; j++)
+                for (int j = 0; j < _sectionTimelines.Count; j++)
                 {
-                    var slot = sectionTimelines[j];
-                    if (slot == null) continue;
+                    var slot = _sectionTimelines[j];
+                    if (slot == null)
+                    {
+                        continue;
+                    }
 
-                    if (slot.director == director ||
-                        string.Equals(slot.sectionName, sectionName, StringComparison.OrdinalIgnoreCase))
+                    if (slot.Director == director ||
+                        string.Equals(slot.SectionName, sectionName, StringComparison.OrdinalIgnoreCase))
                     {
                         alreadyExists = true;
                         break;
@@ -292,11 +307,11 @@ namespace VLiveKit.Camera.Tools
 
                 if (!alreadyExists)
                 {
-                    sectionTimelines.Add(new VLiveTimelineSlot
+                    _sectionTimelines.Add(new VLiveTimelineSlot
                     {
-                        sectionName = sectionName,
-                        director = director,
-                        note = "Auto Collected"
+                        SectionName = sectionName,
+                        Director = director,
+                        Note = "Auto Collected"
                     });
                 }
             }
@@ -304,19 +319,23 @@ namespace VLiveKit.Camera.Tools
             RebuildMap();
         }
 
+        /// <summary>
+        /// 現在のセクション一覧から名前検索用Mapを再構築します。
+        /// </summary>
         [ContextMenu("Rebuild Section Map")]
         public void RebuildMap()
         {
-            sectionMap.Clear();
+            _sectionMap.Clear();
 
-            for (int i = 0; i < sectionTimelines.Count; i++)
+            for (int i = 0; i < _sectionTimelines.Count; i++)
             {
-                var slot = sectionTimelines[i];
-                if (slot == null) continue;
-                if (string.IsNullOrWhiteSpace(slot.sectionName)) continue;
-                if (slot.director == null) continue;
+                var slot = _sectionTimelines[i];
+                if (slot == null || string.IsNullOrWhiteSpace(slot.SectionName) || slot.Director == null)
+                {
+                    continue;
+                }
 
-                sectionMap[slot.sectionName] = slot.director;
+                _sectionMap[slot.SectionName] = slot.Director;
             }
         }
     }

@@ -14,7 +14,7 @@
 - Aim ProxyによるTarget基準とShot固有Aimの分離
 - Cinemachine Rotation ComposerによるScreen Position、Dead Zone、Hard Limits、Damping、Lookahead
 - PresetによるLens Track
-- PresetによるHorizonと選択的なNoise
+- Presetによる明示的なRoll
 - Speed、Reverse、Hold、Resume時の連続性維持
 - Invalid値と参照欠落時に現在のProgramを失わない処理
 - Editor上のMotion Validator
@@ -30,7 +30,6 @@ Motion Evaluatorは、解決済みMotion設定とPlayback Timeから次を決定
 - Screen Position
 - Lens値
 - Roll
-- Noise Gain
 
 Runtime再生とEditor Validatorは同じEvaluatorを使用する。EvaluatorはProgram選択、入力、Scene生成、Asset保存を行わない。
 
@@ -59,8 +58,8 @@ Rig Profileは次へ使用する。
 - Preset作成時の初期値
 - Rebuild時にShotへ適用するSpeed、Hold、Resume、Reverseの応答
 - Validatorの推奨範囲
-- Horizonの既定
-- Noiseの既定
+
+Horizon特性と選択的なNoiseは、現在の映像を確認して必要性が認められた後にRig Character段階で追加する。
 
 Rig ProfileはCameraをRigidbodyとしてシミュレーションしない。メーカー公称最高速度や、出典の異なる数値を業界標準として固定しない。
 

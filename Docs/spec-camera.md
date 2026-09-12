@@ -19,7 +19,7 @@ VLiveCameraUnitのMotion Presetは単なる位置Splineではない。位置、�
 
 ## 3. Motion Preset
 
-`VLiveCameraMotionPreset`はScriptableObjectを正本とし、次の具体的なデータを持つ。
+`VLiveCameraMotionPreset`はScriptableObjectを正本とし、`VLiveCameraMotionPresetData`が次の具体的なTrackを束ねる。Identity、Body、Timing、Aim、Lens、Roll、Activationはそれぞれ独立したSerializable型とし、1ファイル1型で実装する。
 
 ### Identity and Intent
 
@@ -75,16 +75,12 @@ Fixed ShotはSplineを要求せず、初期Camera位置だけを使用する。
 
 Focus Distance、Iris、ExposureはMotion Foundationの対象外とする。必要性を確認した後、Lens Trackの任意チャンネルとして追加する。
 
-### Roll and Humanization
+### Roll Track
 
 - Horizon Mode
 - Roll Curve
-- Cinemachine Noise Profile参照
-- Noise Amplitude / Frequency Curve
-- Noise Pivot Offset
-- 再現可能なSeed
 
-Noiseは既定で無効とする。Locked、Dolly、Pedestal、Roboticへ一律に適用しない。
+HumanizationとCinemachine Noiseは現在のPresetデータへ含めない。必要性を映像で確認した後、Locked、Dolly、Pedestal、Roboticへ一律適用せず追加する。
 
 ### Activation
 
@@ -119,13 +115,14 @@ PresetのSplineとCamera位置は次の基準空間で定義する。
 
 Scene座標への変換にはTarget位置とRigの正面基準を使用し、Target TransformのScaleを使用しない。Custom Referenceは位置ではなく向きだけを使用する。
 
-### Distance ScaleとMotion Scale
+### Distance Scaleと軸別Motion Scale
 
 最初のKnotを`p0`、後続Knotを`pi`とする。
 
 - `Distance Scale`は`p0`の水平成分X/Zへ適用する。
-- `Motion Scale`は`pi - p0`へ適用する。
-- Tangentの移動成分はMotion Scaleへ追従させる。
+- `Horizontal Motion Scale`は`pi - p0`とTangentのX/Zへ適用する。
+- `Vertical Motion Scale`は`pi - p0`とTangentのYへ適用する。
+- `Vertical Motion Scale = 0`では始点の高さを保ち、軌道内の上下差分だけを無効にする。
 - UpとRotationへScaleを適用しない。
 
 Scale変更は明示的なRebuildで生成済みShotへ適用する。通常のApplyとRuntime評価では手動調整済みSplineを変更しない。
@@ -140,12 +137,14 @@ RuntimeではCinemachine Spline Dollyを`Distance`単位で操作する。オペ
 phase = clipTime / clipDuration
 progress = ProgressCurve(phase)
 distance = startDistance + travelDistance * progress
+clipTime += deltaTime * shotSpeedMultiplier * rigMasterPlaybackSpeed * direction
 ```
 
 - PhaseとProgressは原則0から1の範囲とする。
 - Clip Timeは0からClip Durationまでとし、Programへ出る区間はIn TimeからOut Timeまでとする。
 - Progress Curveは原則単調とし、停止区間は水平区間で表す。
 - Position、Aim、Composition、Lens、Rollは同じ時刻から別々に評価する。
+- Master Playback SpeedはRig全体へのライブ倍率であり、Preset Duration、Progress Curve、Splineを変更しない。
 - Curveの接線や値が範囲を超える場合はEditorで警告する。
 - 単一のSmoothStepを全Presetへ共用しない。
 
@@ -195,6 +194,8 @@ Aim Proxyは保存状態の正本ではなく、現在のTarget PoseとShotへ�
 
 Cinemachine Rotation Composerへ、PresetのScreen Position、Dead Zone、Hard Limits、Damping、Lookaheadを適用する。有人感は最初にこれらの標準機能で作り、独自の反応遅延、Overshoot、構図SolverはCinemachineだけでは不足すると確認されるまで追加しない。
 
+Aim Offset CurveとScreen Position Curveは各軸の基準値へ加算する差分として評価する。Curveを設定しただけで基準構図を置き換えない。
+
 Target Heightの入力値はRigが所有し、Rebuild時にShotへ適用する。PresetのAim Offsetはその基準からの追加差分とし、両方に同じ身長を保存しない。
 
 ## 8. LensとRoll
@@ -228,14 +229,17 @@ Lens値はBody Trackと独立して動かせる。DollyとZoomを同じ操作と
 - Robotic
 - Virtual
 
-Profileが持つもの:
+現在のProfileが持つもの:
+
+- 推奨速度、角速度、加速度、Jerkの範囲
+- 手動Speed変更、Hold、Resume、Reverseへの応答
+
+Rig Character段階で映像上の必要性を確認してから追加を判断するもの:
 
 - 推奨Damping
 - 使用する移動軸
-- 推奨速度、角速度、加速度、Jerkの範囲
 - Horizon特性
 - Noise Profile
-- 手動Speed変更、Hold、Reverseへの応答
 
 Profile値はメーカー公称最高速度をそのまま映像品質の上限にしない。最初は検証開始値として警告に使用し、ユーザーのSceneで調整する。
 
@@ -288,9 +292,24 @@ EditorのValidatorはPresetまたは生成済みShotをサンプリングし、�
 
 明示的な`Conform Duration To Limits`のように、変更内容と対象が分かりUndoできる処理だけを後から追加できる。Occlusionが意図的なForeground Revealか事故かは自動判定しない。
 
-## 13. Gold Master Palette
+## 13. 初期3D PaletteとGold Master
 
-Motion Foundation完成後、次の12種類をGold Master候補として人が映像確認する。
+現在は次の10種をUnity Editor APIから生成し、3D Motion Paletteの評価候補とする。
+
+1. Fixed Medium
+2. Push In Rise
+3. Pull Out Reveal
+4. Truck Left Float
+5. Truck Right Float
+6. Arc Around Lift
+7. Orbit Push
+8. Crane Rise
+9. Crane Drop
+10. Pedestal Rise
+
+すべてのSpline候補はY差分を持ち、Body、Timing、Lens、Rolling Entryを同じ時間軸で評価する。これはGold Master認定ではなく、ユーザーの作業用SceneでGold / Experimental / Rejectを判断するための初期候補である。
+
+その後、次の12系統をGold Master候補として揃える。
 
 1. Fixed Wide
 2. Fixed Medium
@@ -307,7 +326,7 @@ Motion Foundation完成後、次の12種類をGold Master候補として人が�
 
 Preset数を先に増やさず、各候補についてEntry、Body、Aim、Lens、終了、手動介入を確認する。確認後に左右、距離、Duration、Lens、EnergyのVariantをAIが生成する。
 
-既存のFixed Medium、Push In、Pull Out、Truck Left、Truck Right、Arc AroundはMotion Foundation確認用として新形式へ更新する。Gold Master認定はユーザーのScene確認後に行う。
+Gold Master認定はユーザーのScene確認後にだけ行う。
 
 ## 14. 異常時
 
@@ -331,3 +350,5 @@ Preset数を先に増やさず、各候補についてEntry、Body、Aim、Lens�
 9. Scene上の調整を明示操作で新しいPresetへ保存できる。
 10. Validatorの警告値と映像上の合否を混同しない。
 11. Preset AssetまたはSlot参照の変更が、生成済みShotへ暗黙適用されない。
+12. Spline PresetのY差分とVertical Motion ScaleがScene上の上下移動へ反映される。
+13. Master Playback Speedが全Shotの時間進行へ掛かり、Assetを変更しない。

@@ -1,12 +1,16 @@
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace VLiveKit.Camera.Tools.Editor
+namespace VLiveKit.Camera.Editor
 {
+    /// <summary>
+    /// 演者参照と生成済み注視ターゲットを標準IMGUIで管理します。
+    /// </summary>
     [CustomEditor(typeof(VLiveLookTargetRig))]
     public class VLiveLookTargetRigEditor : UnityEditor.Editor
     {
+        // Fields
+
         private SerializedProperty _vLivePerformerProp;
         private SerializedProperty _performerAnimatorProp;
         private SerializedProperty _fallbackHumanoidAvatarProp;
@@ -28,15 +32,18 @@ namespace VLiveKit.Camera.Tools.Editor
             HumanBodyBones.RightHand
         };
 
+
+        // Methods
+
         private void OnEnable()
         {
-            _vLivePerformerProp = serializedObject.FindProperty("vLivePerformer");
-            _performerAnimatorProp = serializedObject.FindProperty("performerAnimator");
-            _fallbackHumanoidAvatarProp = serializedObject.FindProperty("fallbackHumanoidAvatar");
-            _lookTargetRootProp = serializedObject.FindProperty("lookTargetRoot");
-            _performerNameProp = serializedObject.FindProperty("performerName");
-            _syncActiveStateEveryFrameProp = serializedObject.FindProperty("syncActiveStateEveryFrame");
-            _lookTargetChannelsProp = serializedObject.FindProperty("lookTargetChannels");
+            _vLivePerformerProp = serializedObject.FindProperty("_vLivePerformer");
+            _performerAnimatorProp = serializedObject.FindProperty("_performerAnimator");
+            _fallbackHumanoidAvatarProp = serializedObject.FindProperty("_fallbackHumanoidAvatar");
+            _lookTargetRootProp = serializedObject.FindProperty("_lookTargetRoot");
+            _performerNameProp = serializedObject.FindProperty("_performerName");
+            _syncActiveStateEveryFrameProp = serializedObject.FindProperty("_syncActiveStateEveryFrame");
+            _lookTargetChannelsProp = serializedObject.FindProperty("_lookTargetChannels");
         }
 
         public override void OnInspectorGUI()
@@ -44,9 +51,6 @@ namespace VLiveKit.Camera.Tools.Editor
             serializedObject.Update();
 
             var rig = (VLiveLookTargetRig)target;
-
-            DrawHeader();
-            EditorGUILayout.Space(6);
 
             DrawPerformerSection();
             EditorGUILayout.Space(8);
@@ -62,36 +66,9 @@ namespace VLiveKit.Camera.Tools.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawHeader()
-        {
-            var rect = GUILayoutUtility.GetRect(0, 68, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(rect, new Color(0.07f, 0.07f, 0.10f));
-
-            var titleRect = new Rect(rect.x + 12, rect.y + 8, rect.width - 24, 24);
-            var subRect = new Rect(rect.x + 12, rect.y + 34, rect.width - 24, 18);
-            var brandRect = new Rect(rect.x + 12, rect.y + 50, rect.width - 24, 16);
-
-            EditorGUI.LabelField(titleRect, "VLIVE LOOK TARGET RIG", new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 15,
-                normal = { textColor = Color.white }
-            });
-
-            EditorGUI.LabelField(subRect, "演者ボーンからカメラ用ターゲットを生成", new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = new Color(0.70f, 0.90f, 1f) }
-            });
-
-            EditorGUI.LabelField(brandRect, "VLive Performer / Camera Utility", new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = new Color(0.45f, 0.80f, 1f) }
-            });
-        }
-
         private void DrawPerformerSection()
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("VLive Performer Link", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Performer", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(_vLivePerformerProp, new GUIContent("VLive Performer"));
 
             EditorGUILayout.Space(4);
@@ -102,20 +79,18 @@ namespace VLiveKit.Camera.Tools.Editor
             EditorGUILayout.PropertyField(_lookTargetRootProp, new GUIContent("Look Target Root"));
             EditorGUILayout.PropertyField(_performerNameProp, new GUIContent("Performer Name"));
             EditorGUILayout.PropertyField(_syncActiveStateEveryFrameProp, new GUIContent("Sync Active State Every Frame"));
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawOperationSection(VLiveLookTargetRig rig)
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("VLive Operation", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Actions", EditorStyles.boldLabel);
 
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Resolve Performer", GUILayout.Height(28)))
                 {
                     Undo.RecordObject(rig, "Resolve Performer");
-                    InvokeMethod(rig, "AutoResolvePerformer");
+                    rig.ResolvePerformer();
                     EditorUtility.SetDirty(rig);
                 }
 
@@ -147,20 +122,17 @@ namespace VLiveKit.Camera.Tools.Editor
 
             EditorGUILayout.Space(4);
 
-            DrawStatusLamp("Performer Live", rig.IsPerformerLive);
-            DrawStatusLamp("Targets Ready", rig.LookTargetChannels != null && rig.LookTargetChannels.Count > 0);
-
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.LabelField("Performer Live", rig.IsPerformerLive ? "Yes" : "No");
+            EditorGUILayout.LabelField("Targets Ready", rig.LookTargetChannels != null && rig.LookTargetChannels.Count > 0 ? "Yes" : "No");
         }
 
         private void DrawQuickAccessSection(VLiveLookTargetRig rig)
         {
-            EditorGUILayout.BeginVertical("box");
             EditorGUILayout.LabelField("Quick Bone Access", EditorStyles.boldLabel);
 
             foreach (var bone in QuickAccessBones)
             {
-                var target = rig.GetBoneTG(bone);
+                var target = rig.GetBoneTarget(bone);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -179,12 +151,10 @@ namespace VLiveKit.Camera.Tools.Editor
                 }
             }
 
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawDebugSection()
         {
-            EditorGUILayout.BeginVertical("box");
             _showChannelList = EditorGUILayout.Foldout(_showChannelList, "Target Channels", true);
 
             if (_showChannelList)
@@ -194,45 +164,19 @@ namespace VLiveKit.Camera.Tools.Editor
                 for (int i = 0; i < _lookTargetChannelsProp.arraySize; i++)
                 {
                     var element = _lookTargetChannelsProp.GetArrayElementAtIndex(i);
-                    var targetBoneProp = element.FindPropertyRelative("targetBone");
-                    var performerBoneProp = element.FindPropertyRelative("performerBone");
-                    var lookTargetObjectProp = element.FindPropertyRelative("lookTargetObject");
+                    var targetBoneProp = element.FindPropertyRelative("TargetBone");
+                    var performerBoneProp = element.FindPropertyRelative("PerformerBone");
+                    var lookTargetObjectProp = element.FindPropertyRelative("LookTargetObject");
 
-                    EditorGUILayout.BeginVertical("helpbox");
                     EditorGUILayout.PropertyField(targetBoneProp, new GUIContent("Target Bone"));
                     EditorGUILayout.PropertyField(performerBoneProp, new GUIContent("Performer Bone"));
                     EditorGUILayout.PropertyField(lookTargetObjectProp, new GUIContent("Look Target"));
-                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(2f);
                 }
 
                 EditorGUI.indentLevel--;
             }
 
-            EditorGUILayout.EndVertical();
-        }
-
-        private void DrawStatusLamp(string label, bool active)
-        {
-            var rect = GUILayoutUtility.GetRect(18, 18, GUILayout.ExpandWidth(true));
-            var lampRect = new Rect(rect.x + 4, rect.y + 2, 12, 12);
-            var labelRect = new Rect(rect.x + 22, rect.y, rect.width - 22, 18);
-
-            EditorGUI.DrawRect(lampRect, active ? new Color(0.20f, 1f, 0.45f) : new Color(0.35f, 0.35f, 0.35f));
-            EditorGUI.LabelField(labelRect, label);
-        }
-
-        private void InvokeMethod(object targetObject, string methodName)
-        {
-            var method = targetObject.GetType().GetMethod(
-                methodName,
-                BindingFlags.Instance |
-                BindingFlags.NonPublic |
-                BindingFlags.Public);
-
-            if (method != null)
-            {
-                method.Invoke(targetObject, null);
-            }
         }
     }
 }

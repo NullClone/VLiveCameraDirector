@@ -3,13 +3,12 @@
 VLiveCameraUnit is a Unity 6.3+ / Cinemachine 3 package for performing prepared
 live-camera shots with operator control and reliable composition assistance.
 
-The current goal is an Inspector Refresh on top of the proven Motion Foundation:
-replace the custom dashboard-like Editors with concise IMGUI Inspectors that
-resemble standard Unity and Cinemachine components. Fixed Inspector text is
-English and Tooltips may remain Japanese. Multiple independent shot cameras
-remain keyboard-selectable. The larger runtime refactor, gold-master expansion,
-App UI, MIDI, recommendation, and automation come after this refresh is proven
-in the user's Scene.
+The current goal is the 3D Motion Palette foundation: each prepared shot combines
+three-dimensional body motion, timing, aim, composition, lens, roll, and entry
+state, while the Rig supplies independent horizontal/vertical scaling and a live
+master speed. Multiple independent shot cameras remain keyboard-selectable.
+App UI, MIDI, recommendation, and automation come after this manual foundation
+is proven in the user's Scene.
 
 ## Read first
 
@@ -39,6 +38,7 @@ made. Do not duplicate the same explanation.
 
 - Use `VLiveKit.Camera`, `VLiveKit.Camera.Editor`, and
   `VLiveKit.Camera.Tests` namespaces.
+- Keep exactly one source type per C# file and match the filename to that type.
 - Keep one CinemachineCamera per shot. Never reconfigure a live camera as another
   shot.
 - Keep Motion Preset assets free of runtime state. Motion playback state has one
@@ -53,7 +53,7 @@ made. Do not duplicate the same explanation.
 - Use IMGUI for the current Custom Inspectors. Do not migrate them to UI Toolkit
   or App UI. Remove decorative banners, emoji, custom themes, and coloured
   status badges in favour of standard Unity controls.
-- Setup creates the Rig scaffold but never creates, discovers, assigns, or
+- The GameObject menu creates the Rig scaffold but never creates, discovers, assigns, or
   modifies a Unity Camera. The user explicitly assigns the Program Camera.
 - Keep rig authoring, Program switching, shot playback, and input in separate
   concrete responsibilities. Do not use this rule to add unused interfaces,

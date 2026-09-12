@@ -13,7 +13,7 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Target Shot & Components (対象Shotおよびコンポーネント)")]
+        [Header("Target Shot & Components")]
         [Tooltip("このプレイヤーが属するVLiveCameraShot。")]
         [SerializeField]
         private VLiveCameraShot _shot;
@@ -106,20 +106,17 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            if (_isPlaying && motion.ShotType == VLiveCameraShot.ShotType.Spline)
+            if (_isPlaying && motion.ShotType == VLiveCameraShotType.Spline)
             {
-                // 1. 速度変化・Hold・Reverse・Resumeの平滑化更新
                 UpdateSpeedTransitions(motion, Time.deltaTime);
 
-                // 2. Playback Timeの進行
-                float effectiveSpeed = _currentSpeedMultiplier * _currentDirection;
+                float rigSpeed = _shot != null ? _shot.MasterPlaybackSpeed : 1f;
+                float effectiveSpeed = _currentSpeedMultiplier * _currentDirection * rigSpeed;
                 _currentTime += effectiveSpeed * Time.deltaTime;
 
-                // 3. 終端・始端判定
                 HandleBoundaries(motion);
             }
 
-            // 4. Motion Sample評価とCinemachineへの適用（Target移動に伴うAim Proxy更新を含む）
             EvaluateAndApply(motion);
         }
 
@@ -169,14 +166,23 @@ namespace VLiveKit.Camera
             VLiveCameraAppliedMotion motion = GetAppliedMotion();
             if (motion != null)
             {
-                if (motion.ShotType == VLiveCameraShot.ShotType.Spline)
+                if (motion.ShotType == VLiveCameraShotType.Spline)
                 {
                     _isPlaying = true;
                     _isHolding = false;
                     _isReversing = false;
-                    _isResuming = false;
                     _targetSpeedMultiplier = 1.0f;
-                    _currentSpeedMultiplier = 1.0f;
+
+                    if (motion.EntryMode == EntryMode.Static)
+                    {
+                        _currentSpeedMultiplier = 0f;
+                        _isResuming = true;
+                    }
+                    else
+                    {
+                        _currentSpeedMultiplier = 1.0f;
+                        _isResuming = false;
+                    }
                 }
                 else
                 {
@@ -186,7 +192,6 @@ namespace VLiveKit.Camera
                     _isResuming = false;
                 }
 
-                // 即座にAimProxyおよびCinemachineへ最新のTarget位置を反映
                 EvaluateAndApply(motion);
             }
         }
@@ -212,7 +217,7 @@ namespace VLiveKit.Camera
             }
 
             VLiveCameraAppliedMotion motion = GetAppliedMotion();
-            if (motion == null || motion.ShotType != VLiveCameraShot.ShotType.Spline)
+            if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
             }
@@ -235,7 +240,7 @@ namespace VLiveKit.Camera
             }
 
             VLiveCameraAppliedMotion motion = GetAppliedMotion();
-            if (motion == null || motion.ShotType != VLiveCameraShot.ShotType.Spline)
+            if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
             }
@@ -258,7 +263,7 @@ namespace VLiveKit.Camera
             }
 
             VLiveCameraAppliedMotion motion = GetAppliedMotion();
-            if (motion == null || motion.ShotType != VLiveCameraShot.ShotType.Spline)
+            if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
             }
@@ -294,7 +299,7 @@ namespace VLiveKit.Camera
             }
 
             VLiveCameraAppliedMotion motion = GetAppliedMotion();
-            if (motion == null || motion.ShotType != VLiveCameraShot.ShotType.Spline)
+            if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
             }
@@ -315,7 +320,7 @@ namespace VLiveKit.Camera
             }
 
             VLiveCameraAppliedMotion motion = GetAppliedMotion();
-            if (motion == null || motion.ShotType != VLiveCameraShot.ShotType.Spline)
+            if (motion == null || motion.ShotType != VLiveCameraShotType.Spline)
             {
                 return;
             }
@@ -435,7 +440,6 @@ namespace VLiveKit.Camera
             {
                 if (_currentDirection != _targetDirection)
                 {
-                    // 減速反転フェーズ (ReverseDecelerationTime)
                     float decelRate = maxSpeed / Mathf.Max(0.01f, motion.ReverseDecelerationTime);
                     _currentSpeedMultiplier = Mathf.MoveTowards(_currentSpeedMultiplier, 0f, decelRate * deltaTime);
 
@@ -447,7 +451,6 @@ namespace VLiveKit.Camera
                 }
                 else
                 {
-                    // 反転後加速フェーズ (ReverseAccelerationTime)
                     float accelRate = maxSpeed / Mathf.Max(0.01f, motion.ReverseAccelerationTime);
                     _currentSpeedMultiplier = Mathf.MoveTowards(_currentSpeedMultiplier, _targetSpeedMultiplier, accelRate * deltaTime);
 
@@ -463,7 +466,6 @@ namespace VLiveKit.Camera
 
             if (_isResuming)
             {
-                // Resume時の加速復帰フェーズ (ResumeAccelerationTime)
                 float accelRate = maxSpeed / Mathf.Max(0.01f, motion.ResumeAccelerationTime);
                 _currentSpeedMultiplier = Mathf.MoveTowards(_currentSpeedMultiplier, _targetSpeedMultiplier, accelRate * deltaTime);
 
@@ -476,7 +478,6 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            // 通常再生中の目標速度追従 (SpeedResponseTime)
             float speedRate = maxSpeed / Mathf.Max(0.01f, motion.SpeedResponseTime);
             _currentSpeedMultiplier = Mathf.MoveTowards(_currentSpeedMultiplier, _targetSpeedMultiplier, speedRate * deltaTime);
         }
@@ -526,8 +527,7 @@ namespace VLiveKit.Camera
                 return;
             }
 
-            // 1. Spline Dolly
-            if (_splineDolly != null && motion.ShotType == VLiveCameraShot.ShotType.Spline)
+            if (_splineDolly != null && motion.ShotType == VLiveCameraShotType.Spline)
             {
                 if (_splineDolly.PositionUnits != PathIndexUnit.Distance)
                 {
@@ -537,7 +537,6 @@ namespace VLiveKit.Camera
                 _splineDolly.CameraPosition = sample.SplineDistance;
             }
 
-            // 2. Aim Proxy
             if (_aimProxy != null && _shot != null && _shot.PerformerTarget != null)
             {
                 Vector3 targetPos = _shot.PerformerTarget.position;
@@ -545,21 +544,16 @@ namespace VLiveKit.Camera
                 _aimProxy.position = aimPos;
             }
 
-            // 3. Rotation Composer
             if (_rotationComposer != null)
             {
                 _rotationComposer.Composition.ScreenPosition = sample.ScreenPosition;
             }
 
-            // 4. Lens & Roll
             if (_cinemachineCamera != null)
             {
                 _cinemachineCamera.Lens.FieldOfView = sample.FieldOfView;
 
-                if (motion.RollMode == RollMode.RollCurve)
-                {
-                    _cinemachineCamera.Lens.Dutch = sample.Roll;
-                }
+                _cinemachineCamera.Lens.Dutch = motion.RollMode == RollMode.RollCurve ? sample.Roll : 0f;
             }
         }
     }

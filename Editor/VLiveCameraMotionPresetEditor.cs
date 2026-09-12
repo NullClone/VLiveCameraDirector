@@ -4,333 +4,118 @@ using UnityEngine;
 namespace VLiveKit.Camera.Editor
 {
     /// <summary>
-    /// VLiveCameraMotionPreset用のカスタムインスペクター。
-    /// 各Trackの階層的表示とMotion Validatorによる診断情報を提供します。
+    /// Camera Performanceのトラック編集と数値診断を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraMotionPreset))]
     public class VLiveCameraMotionPresetEditor : UnityEditor.Editor
     {
         // Fields
 
-        private SerializedProperty _displayNameProp;
-        private SerializedProperty _shotTypeProp;
-        private SerializedProperty _motionFamilyProp;
-        private SerializedProperty _shotSizeProp;
-        private SerializedProperty _energyProp;
-        private SerializedProperty _descriptionProp;
+        private SerializedProperty _identityProp;
+        private SerializedProperty _bodyProp;
+        private SerializedProperty _timingProp;
+        private SerializedProperty _aimProp;
+        private SerializedProperty _lensProp;
+        private SerializedProperty _rollProp;
+        private SerializedProperty _activationProp;
         private SerializedProperty _rigProfileProp;
 
-        private SerializedProperty _knotsProp;
-        private SerializedProperty _isClosedProp;
-        private SerializedProperty _referenceSplineLengthProp;
-        private SerializedProperty _startDistanceProp;
-        private SerializedProperty _endDistanceProp;
-
-        private SerializedProperty _clipDurationProp;
-        private SerializedProperty _progressCurveProp;
-        private SerializedProperty _scaleTimingModeProp;
-        private SerializedProperty _minSpeedMultiplierProp;
-        private SerializedProperty _maxSpeedMultiplierProp;
-        private SerializedProperty _speedStepProp;
-
-        private SerializedProperty _aimOffsetProp;
-        private SerializedProperty _aimOffsetXCurveProp;
-        private SerializedProperty _aimOffsetYCurveProp;
-        private SerializedProperty _aimOffsetZCurveProp;
-        private SerializedProperty _screenPositionProp;
-        private SerializedProperty _screenPositionXCurveProp;
-        private SerializedProperty _screenPositionYCurveProp;
-        private SerializedProperty _deadZoneEnabledProp;
-        private SerializedProperty _deadZoneSizeProp;
-        private SerializedProperty _hardLimitsEnabledProp;
-        private SerializedProperty _hardLimitsSizeProp;
-        private SerializedProperty _hardLimitsOffsetProp;
-        private SerializedProperty _dampingProp;
-        private SerializedProperty _lookaheadEnabledProp;
-        private SerializedProperty _lookaheadTimeProp;
-        private SerializedProperty _lookaheadSmoothingProp;
-        private SerializedProperty _centerOnActivateProp;
-
-        private SerializedProperty _lensModeProp;
-        private SerializedProperty _fieldOfViewProp;
-        private SerializedProperty _fieldOfViewCurveProp;
-        private SerializedProperty _focalLengthProp;
-        private SerializedProperty _focalLengthCurveProp;
-        private SerializedProperty _sensorSizeProp;
-
-        private SerializedProperty _rollModeProp;
-        private SerializedProperty _rollCurveProp;
-
-        private SerializedProperty _entryModeProp;
-        private SerializedProperty _inTimeProp;
-        private SerializedProperty _outTimeProp;
-        private SerializedProperty _exitBehaviorProp;
-
-        private VLiveCameraMotionValidator.ValidationReport _cachedReport;
+        private VLiveCameraMotionValidationReport _cachedReport;
+        private bool _diagnosticsExpanded;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _displayNameProp = serializedObject.FindProperty("_displayName");
-            _shotTypeProp = serializedObject.FindProperty("_shotType");
-            _motionFamilyProp = serializedObject.FindProperty("_motionFamily");
-            _shotSizeProp = serializedObject.FindProperty("_shotSize");
-            _energyProp = serializedObject.FindProperty("_energy");
-            _descriptionProp = serializedObject.FindProperty("_description");
-            _rigProfileProp = serializedObject.FindProperty("_rigProfile");
-
-            _knotsProp = serializedObject.FindProperty("_knots");
-            _isClosedProp = serializedObject.FindProperty("_isClosed");
-            _referenceSplineLengthProp = serializedObject.FindProperty("_referenceSplineLength");
-            _startDistanceProp = serializedObject.FindProperty("_startDistance");
-            _endDistanceProp = serializedObject.FindProperty("_endDistance");
-
-            _clipDurationProp = serializedObject.FindProperty("_clipDuration");
-            _progressCurveProp = serializedObject.FindProperty("_progressCurve");
-            _scaleTimingModeProp = serializedObject.FindProperty("_scaleTimingMode");
-            _minSpeedMultiplierProp = serializedObject.FindProperty("_minSpeedMultiplier");
-            _maxSpeedMultiplierProp = serializedObject.FindProperty("_maxSpeedMultiplier");
-            _speedStepProp = serializedObject.FindProperty("_speedStep");
-
-            _aimOffsetProp = serializedObject.FindProperty("_aimOffset");
-            _aimOffsetXCurveProp = serializedObject.FindProperty("_aimOffsetXCurve");
-            _aimOffsetYCurveProp = serializedObject.FindProperty("_aimOffsetYCurve");
-            _aimOffsetZCurveProp = serializedObject.FindProperty("_aimOffsetZCurve");
-            _screenPositionProp = serializedObject.FindProperty("_screenPosition");
-            _screenPositionXCurveProp = serializedObject.FindProperty("_screenPositionXCurve");
-            _screenPositionYCurveProp = serializedObject.FindProperty("_screenPositionYCurve");
-            _deadZoneEnabledProp = serializedObject.FindProperty("_deadZoneEnabled");
-            _deadZoneSizeProp = serializedObject.FindProperty("_deadZoneSize");
-            _hardLimitsEnabledProp = serializedObject.FindProperty("_hardLimitsEnabled");
-            _hardLimitsSizeProp = serializedObject.FindProperty("_hardLimitsSize");
-            _hardLimitsOffsetProp = serializedObject.FindProperty("_hardLimitsOffset");
-            _dampingProp = serializedObject.FindProperty("_damping");
-            _lookaheadEnabledProp = serializedObject.FindProperty("_lookaheadEnabled");
-            _lookaheadTimeProp = serializedObject.FindProperty("_lookaheadTime");
-            _lookaheadSmoothingProp = serializedObject.FindProperty("_lookaheadSmoothing");
-            _centerOnActivateProp = serializedObject.FindProperty("_centerOnActivate");
-
-            _lensModeProp = serializedObject.FindProperty("_lensMode");
-            _fieldOfViewProp = serializedObject.FindProperty("_fieldOfView");
-            _fieldOfViewCurveProp = serializedObject.FindProperty("_fieldOfViewCurve");
-            _focalLengthProp = serializedObject.FindProperty("_focalLength");
-            _focalLengthCurveProp = serializedObject.FindProperty("_focalLengthCurve");
-            _sensorSizeProp = serializedObject.FindProperty("_sensorSize");
-
-            _rollModeProp = serializedObject.FindProperty("_rollMode");
-            _rollCurveProp = serializedObject.FindProperty("_rollCurve");
-
-            _entryModeProp = serializedObject.FindProperty("_entryMode");
-            _inTimeProp = serializedObject.FindProperty("_inTime");
-            _outTimeProp = serializedObject.FindProperty("_outTime");
-            _exitBehaviorProp = serializedObject.FindProperty("_exitBehavior");
+            SerializedProperty data = serializedObject.FindProperty("_data");
+            _identityProp = data.FindPropertyRelative("_identity");
+            _bodyProp = data.FindPropertyRelative("_body");
+            _timingProp = data.FindPropertyRelative("_timing");
+            _aimProp = data.FindPropertyRelative("_aim");
+            _lensProp = data.FindPropertyRelative("_lens");
+            _rollProp = data.FindPropertyRelative("_roll");
+            _activationProp = data.FindPropertyRelative("_activation");
+            _rigProfileProp = data.FindPropertyRelative("_rigProfile");
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+            EditorGUI.BeginChangeCheck();
 
-            var preset = (VLiveCameraMotionPreset)target;
+            DrawIdentity();
+            EditorGUILayout.Space(4f);
+            DrawTrack(_bodyProp, "Body");
+            DrawTrack(_timingProp, "Timing");
+            DrawTrack(_aimProp, "Aim & Composition");
+            DrawTrack(_lensProp, "Lens");
+            DrawTrack(_rollProp, "Roll");
+            DrawTrack(_activationProp, "Activation");
 
-            DrawIdentitySection();
-            EditorGUILayout.Space(8);
-
-            DrawBodySection();
-            EditorGUILayout.Space(8);
-
-            DrawTimingSection();
-            EditorGUILayout.Space(8);
-
-            DrawAimSection();
-            EditorGUILayout.Space(8);
-
-            DrawLensSection();
-            EditorGUILayout.Space(8);
-
-            DrawRollSection();
-            EditorGUILayout.Space(8);
-
-            DrawActivationSection();
-            EditorGUILayout.Space(8);
-
-            DrawDiagnosticsSection(preset);
-
-            serializedObject.ApplyModifiedProperties();
-        }
-
-        private void DrawIdentitySection()
-        {
-            EditorGUILayout.LabelField("Identity & Intent", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_displayNameProp);
-            EditorGUILayout.PropertyField(_shotTypeProp);
-            EditorGUILayout.PropertyField(_motionFamilyProp);
-            EditorGUILayout.PropertyField(_shotSizeProp);
-            EditorGUILayout.PropertyField(_energyProp);
-            EditorGUILayout.PropertyField(_descriptionProp);
-            EditorGUILayout.PropertyField(_rigProfileProp);
-        }
-
-        private void DrawBodySection()
-        {
-            EditorGUILayout.LabelField("Body Track", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_isClosedProp);
-            EditorGUILayout.PropertyField(_referenceSplineLengthProp);
-
-            using (new EditorGUILayout.HorizontalScope())
+            if (EditorGUI.EndChangeCheck())
             {
-                EditorGUILayout.PropertyField(_startDistanceProp, new GUIContent("Start Distance (m)"));
-                EditorGUILayout.PropertyField(_endDistanceProp, new GUIContent("End Distance (m)"));
-            }
-
-            EditorGUILayout.PropertyField(_knotsProp, true);
-        }
-
-        private void DrawTimingSection()
-        {
-            EditorGUILayout.LabelField("Timing Track", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_clipDurationProp);
-            EditorGUILayout.PropertyField(_progressCurveProp);
-            EditorGUILayout.PropertyField(_scaleTimingModeProp);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PropertyField(_minSpeedMultiplierProp, new GUIContent("Min Speed Mult"));
-                EditorGUILayout.PropertyField(_maxSpeedMultiplierProp, new GUIContent("Max Speed Mult"));
-            }
-
-            EditorGUILayout.PropertyField(_speedStepProp);
-        }
-
-        private void DrawAimSection()
-        {
-            EditorGUILayout.LabelField("Aim & Composition", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_aimOffsetProp);
-            if (_aimOffsetXCurveProp != null && _aimOffsetYCurveProp != null && _aimOffsetZCurveProp != null)
-            {
-                EditorGUILayout.PropertyField(_aimOffsetXCurveProp);
-                EditorGUILayout.PropertyField(_aimOffsetYCurveProp);
-                EditorGUILayout.PropertyField(_aimOffsetZCurveProp);
-            }
-
-            EditorGUILayout.PropertyField(_screenPositionProp);
-            if (_screenPositionXCurveProp != null && _screenPositionYCurveProp != null)
-            {
-                EditorGUILayout.PropertyField(_screenPositionXCurveProp);
-                EditorGUILayout.PropertyField(_screenPositionYCurveProp);
-            }
-
-            EditorGUILayout.PropertyField(_deadZoneEnabledProp);
-            if (_deadZoneEnabledProp.boolValue)
-            {
-                EditorGUILayout.PropertyField(_deadZoneSizeProp);
-            }
-
-            EditorGUILayout.PropertyField(_hardLimitsEnabledProp);
-            if (_hardLimitsEnabledProp.boolValue)
-            {
-                EditorGUILayout.PropertyField(_hardLimitsSizeProp);
-                EditorGUILayout.PropertyField(_hardLimitsOffsetProp);
-            }
-
-            EditorGUILayout.PropertyField(_dampingProp);
-            EditorGUILayout.PropertyField(_lookaheadEnabledProp);
-            if (_lookaheadEnabledProp.boolValue)
-            {
-                EditorGUILayout.PropertyField(_lookaheadTimeProp);
-                EditorGUILayout.PropertyField(_lookaheadSmoothingProp);
-            }
-
-            EditorGUILayout.PropertyField(_centerOnActivateProp);
-        }
-
-        private void DrawLensSection()
-        {
-            EditorGUILayout.LabelField("Lens Track", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_lensModeProp);
-            if (_lensModeProp.enumValueIndex == (int)LensMode.FieldOfView)
-            {
-                EditorGUILayout.PropertyField(_fieldOfViewProp);
-                EditorGUILayout.PropertyField(_fieldOfViewCurveProp);
+                serializedObject.ApplyModifiedProperties();
+                _cachedReport = null;
             }
             else
             {
-                EditorGUILayout.PropertyField(_focalLengthProp);
-                EditorGUILayout.PropertyField(_focalLengthCurveProp);
-                EditorGUILayout.PropertyField(_sensorSizeProp);
+                serializedObject.ApplyModifiedProperties();
             }
+
+            EditorGUILayout.Space(4f);
+            DrawDiagnostics((VLiveCameraMotionPreset)target);
         }
 
-        private void DrawRollSection()
+        private void DrawIdentity()
         {
-            EditorGUILayout.LabelField("Roll Track", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_rollModeProp);
-            if (_rollModeProp.enumValueIndex == (int)RollMode.RollCurve)
-            {
-                EditorGUILayout.PropertyField(_rollCurveProp);
-            }
+            EditorGUILayout.LabelField("Camera Performance", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(_identityProp, new GUIContent("Identity & Intent"), true);
+            EditorGUILayout.PropertyField(_rigProfileProp, new GUIContent("Rig Profile"));
         }
 
-        private void DrawActivationSection()
+        private static void DrawTrack(SerializedProperty property, string label)
         {
-            EditorGUILayout.LabelField("Activation", EditorStyles.boldLabel);
-
-            EditorGUILayout.PropertyField(_entryModeProp);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PropertyField(_inTimeProp, new GUIContent("In Time"));
-                EditorGUILayout.PropertyField(_outTimeProp, new GUIContent("Out Time"));
-            }
-
-            EditorGUILayout.PropertyField(_exitBehaviorProp);
+            EditorGUILayout.PropertyField(property, new GUIContent(label), true);
         }
 
-        private void DrawDiagnosticsSection(VLiveCameraMotionPreset preset)
+        private void DrawDiagnostics(VLiveCameraMotionPreset preset)
         {
-            EditorGUILayout.LabelField("Motion Diagnostics", EditorStyles.boldLabel);
-
-            if (GUILayout.Button("Run Diagnostics", GUILayout.Height(24)))
+            _diagnosticsExpanded = EditorGUILayout.Foldout(_diagnosticsExpanded, "Diagnostics", true);
+            if (!_diagnosticsExpanded)
             {
-                _cachedReport = VLiveCameraMotionValidator.ValidatePreset(preset);
+                return;
             }
 
-            if (_cachedReport != null)
+            using (new EditorGUI.IndentLevelScope())
             {
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField(
-                    $"Duration: {_cachedReport.Duration:F2}s  |  Spline Length: {_cachedReport.SplineLength:F2}m\n" +
-                    $"Peak Speed: {_cachedReport.MaxSpeed:F2} m/s  |  Peak Acc: {_cachedReport.MaxAcceleration:F2} m/s²  |  Peak Jerk: {_cachedReport.MaxJerk:F2} m/s³\n" +
-                    $"FOV Range: {_cachedReport.MinFieldOfView:F1}° - {_cachedReport.MaxFieldOfView:F1}°",
-                    EditorStyles.miniLabel
-                );
-
-                EditorGUILayout.Space(2);
-
-                if (_cachedReport.Messages.Count == 0)
+                if (GUILayout.Button("Run Diagnostics"))
                 {
-                    EditorGUILayout.HelpBox("No issues found.", MessageType.Info);
+                    _cachedReport = VLiveCameraMotionValidator.ValidatePreset(preset);
                 }
-                else
-                {
-                    foreach (var msg in _cachedReport.Messages)
-                    {
-                        MessageType msgType = msg.Severity switch
-                        {
-                            VLiveCameraMotionValidator.DiagnosticSeverity.Error => MessageType.Error,
-                            VLiveCameraMotionValidator.DiagnosticSeverity.Warning => MessageType.Warning,
-                            _ => MessageType.Info
-                        };
 
-                        EditorGUILayout.HelpBox($"[{msg.Category}] {msg.Message}", msgType);
-                    }
+                if (_cachedReport == null)
+                {
+                    return;
+                }
+
+                EditorGUILayout.LabelField("Duration", $"{_cachedReport.Duration:F2} s");
+                EditorGUILayout.LabelField("Spline Length", $"{_cachedReport.SplineLength:F2} m");
+                EditorGUILayout.LabelField("Peak Speed", $"{_cachedReport.MaxSpeed:F2} m/s");
+                EditorGUILayout.LabelField("Peak Acceleration", $"{_cachedReport.MaxAcceleration:F2} m/s²");
+                EditorGUILayout.LabelField("Peak Jerk", $"{_cachedReport.MaxJerk:F2} m/s³");
+                EditorGUILayout.LabelField("Field of View", $"{_cachedReport.MinFieldOfView:F1}° - {_cachedReport.MaxFieldOfView:F1}°");
+
+                foreach (VLiveCameraDiagnosticMessage message in _cachedReport.Messages)
+                {
+                    MessageType type = message.Severity switch
+                    {
+                        VLiveCameraDiagnosticSeverity.Error => MessageType.Error,
+                        VLiveCameraDiagnosticSeverity.Warning => MessageType.Warning,
+                        _ => MessageType.Info
+                    };
+
+                    EditorGUILayout.HelpBox($"[{message.Category}] {message.Message}", type);
                 }
             }
         }

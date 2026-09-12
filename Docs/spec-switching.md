@@ -75,7 +75,7 @@ Continuous EntryはPresetの規則に従ってOff-Air再生を継続できる。
 - Unity CameraへTransformやLensを毎フレームコピーしない。
 - Live中のCinemachineCameraへ別Shotの位置、Spline、Lens、Targetを上書きしない。
 - Motion FoundationはCutだけとし、Blendと映像Crossfadeを含めない。
-- Aim、Lens、Noiseは各ShotのCinemachine構成へMotion Playerが適用する。
+- Aim、Lens、Rollは各ShotのCinemachine構成へMotion Playerが適用する。
 
 ## 8. 同一Shotの選択
 

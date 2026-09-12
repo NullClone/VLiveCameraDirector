@@ -1,329 +1,164 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
-namespace VLiveKit.Camera.Tools
+namespace VLiveKit.Camera
 {
+    /// <summary>
+    /// Game Viewへ構図ガイドと任意のレターボックスを低負荷で描画します。
+    /// </summary>
     [ExecuteAlways]
     public class SplitLines : MonoBehaviour
     {
-        [SerializeField]
-        private SplitMode m_splitMode = SplitMode.Thirds;
+        // Fields
 
+        [Tooltip("表示する構図ガイドの種類。")]
+        [FormerlySerializedAs("m_splitMode")]
         [SerializeField]
-        private bool m_isDraw = true;
+        private SplitGuideMode _guideMode = SplitGuideMode.Thirds;
 
+        [Tooltip("構図ガイドを表示するか。")]
+        [FormerlySerializedAs("m_isDraw")]
         [SerializeField]
-        private Color m_lineColor = new Color(1.0f, 0.0f, 0.0f, 0.5f);
+        private bool _drawGuides = true;
 
-        // 線の透明度
-        // [SerializeField] private float m_lineAlpha = 1.0f;
+        [Tooltip("構図ガイドの色と透明度。")]
+        [FormerlySerializedAs("m_lineColor")]
         [SerializeField]
-        [Range(0.0f, 10.0f)]
-        private float m_lineWidth = 2.0f;
+        private Color _lineColor = new Color(1f, 1f, 1f, 0.45f);
 
-        // レターボックスの設定を追加
+        [Tooltip("構図ガイドの線幅。単位はピクセルです。")]
+        [FormerlySerializedAs("m_lineWidth")]
+        [Range(0.5f, 10f)]
         [SerializeField]
-        private bool m_enableLetterbox = false;
+        private float _lineWidth = 1.5f;
 
+        [Tooltip("上下のレターボックスを表示するか。")]
+        [FormerlySerializedAs("m_enableLetterbox")]
         [SerializeField]
-        private Color m_letterboxColor = Color.black;
+        private bool _letterboxEnabled;
 
+        [Tooltip("レターボックスの色と透明度。")]
+        [FormerlySerializedAs("m_letterboxColor")]
         [SerializeField]
+        private Color _letterboxColor = Color.black;
+
+        [Tooltip("画面高に対する片側レターボックスの比率。")]
+        [FormerlySerializedAs("m_letterboxRatio")]
         [Range(0f, 0.5f)]
-        private float m_letterboxRatio = 0.1f;
+        [SerializeField]
+        private float _letterboxRatio = 0.1f;
 
-        // [SerializeField] private float m_lineHeight = 1.0f;
 
-        // 分割線のスタイルを選べるようにする
-        private enum SplitMode
-        {
-            Symmetrical, // 対称
-            Bisection, // 二分割
-            Thirds, // 三分割
-            Diagonal, // 対角線
-
-            // 分割線と対角線を組み合わせる
-            ThirstAndDiagonal,
-            CinemaScope, // シネマスコープ
-        }
+        // Methods
 
         private void OnGUI()
         {
-            if (!m_isDraw) return;
-
-            // レターボックスの描画（全モードで共通）
-            if (m_enableLetterbox)
+            if (_letterboxEnabled)
             {
-                float boxHeight = Screen.height * m_letterboxRatio;
-
-                GUIStyle boxStyle = new GUIStyle();
-                Texture2D boxTexture = new Texture2D(1, 1);
-                boxTexture.SetPixel(0, 0, m_letterboxColor);
-                boxTexture.Apply();
-                boxStyle.normal.background = boxTexture;
-
-                // 上部のレターボックス
-                GUI.Box(new Rect(0, 0, Screen.width, boxHeight), GUIContent.none, boxStyle);
-                // 下部のレターボックス
-                GUI.Box(new Rect(0, Screen.height - boxHeight, Screen.width, boxHeight), GUIContent.none, boxStyle);
-
-                if (Application.isPlaying)
-                {
-                    Destroy(boxTexture);
-                }
+                DrawLetterbox();
             }
 
-            if (m_splitMode == SplitMode.Symmetrical)
+            if (!_drawGuides)
             {
-                // 対称
-                float halfWidth = Screen.width / 2.0f;
-                float halfHeight = Screen.height / 2.0f;
-                float lineWidth = m_lineWidth;
-
-                GUIStyle lineStyle = new GUIStyle();
-                Texture2D lineTexture = new Texture2D(1, 1);
-                lineTexture.SetPixel(0, 0, m_lineColor);
-                lineTexture.Apply();
-
-                lineStyle.normal.background = lineTexture;
-
-                Rect lineRect1 = new Rect(halfWidth - (lineWidth / 2), 0, lineWidth, Screen.height);
-                GUI.Box(lineRect1, GUIContent.none, lineStyle);
-
-                // Rect lineRect2 = new Rect(0, halfHeight - (lineWidth / 2), Screen.width, lineWidth);
-                // GUI.Box(lineRect2, GUIContent.none, lineStyle);
-
-                // メモリリークするものがあれば明示的に破棄
-                // プレイモードのときに動作させる
-                if (Application.isPlaying)
-                {
-                    Destroy(lineTexture);
-                    // Debug.Log("play mode");
-                }
-                else
-                {
-                    // Debug.Log("edit mode");
-                }
+                return;
             }
 
-            if (m_splitMode == SplitMode.Bisection)
+            switch (_guideMode)
             {
-                // 二分割
-                float halfWidth = Screen.width / 2.0f;
-                float halfHeight = Screen.height / 2.0f;
-                float lineWidth = m_lineWidth;
+                case SplitGuideMode.Symmetrical:
+                    DrawVertical(Screen.width * 0.5f, 0f, Screen.height);
+                    break;
 
-                GUIStyle lineStyle = new GUIStyle();
-                Texture2D lineTexture = new Texture2D(1, 1);
-                lineTexture.SetPixel(0, 0, m_lineColor);
-                lineTexture.Apply();
+                case SplitGuideMode.Bisection:
+                    DrawVertical(Screen.width * 0.5f, 0f, Screen.height);
+                    DrawHorizontal(Screen.height * 0.5f, 0f, Screen.width);
+                    break;
 
-                lineStyle.normal.background = lineTexture;
+                case SplitGuideMode.Thirds:
+                    DrawThirds(0f, Screen.height);
+                    break;
 
-                Rect lineRect1 = new Rect(halfWidth - (lineWidth / 2), 0, lineWidth, Screen.height);
-                GUI.Box(lineRect1, GUIContent.none, lineStyle);
+                case SplitGuideMode.Diagonal:
+                    DrawDiagonals();
+                    break;
 
-                Rect lineRect2 = new Rect(0, halfHeight - (lineWidth / 2), Screen.width, lineWidth);
-                GUI.Box(lineRect2, GUIContent.none, lineStyle);
+                case SplitGuideMode.ThirdsAndDiagonal:
+                    DrawThirds(0f, Screen.height);
+                    DrawDiagonals();
+                    break;
 
-                // メモリリークするものがあれば明示的に破棄
-                // プレイモードのときに動作させる
-                if (Application.isPlaying)
-                {
-                    Destroy(lineTexture);
-                    // Debug.Log("play mode");
-                }
-                else
-                {
-                    // Debug.Log("edit mode");
-                }
-            }
-
-            if (m_splitMode == SplitMode.Thirds)
-            {
-                // 三分割
-                float thirdWidth = Screen.width / 3.0f;
-                float thirdHeight = Screen.height / 3.0f;
-                float lineWidth = m_lineWidth;
-
-                GUIStyle lineStyle = new GUIStyle();
-                Texture2D lineTexture = new Texture2D(1, 1);
-                lineTexture.SetPixel(0, 0, m_lineColor);
-                lineTexture.Apply();
-
-                lineStyle.normal.background = lineTexture;
-
-                Rect lineRect1 = new Rect(thirdWidth - (lineWidth / 2), 0, lineWidth, Screen.height);
-                GUI.Box(lineRect1, GUIContent.none, lineStyle);
-
-                Rect lineRect2 = new Rect(2 * thirdWidth - (lineWidth / 2), 0, lineWidth, Screen.height);
-                GUI.Box(lineRect2, GUIContent.none, lineStyle);
-
-                Rect lineRect3 = new Rect(0, thirdHeight - (lineWidth / 2), Screen.width, lineWidth);
-                GUI.Box(lineRect3, GUIContent.none, lineStyle);
-
-                Rect lineRect4 = new Rect(0, 2 * thirdHeight - (lineWidth / 2), Screen.width, lineWidth);
-                GUI.Box(lineRect4, GUIContent.none, lineStyle);
-
-                // メモリリークするものがあれば明示的に破棄
-                // プレイモードのときに動作させる
-                if (Application.isPlaying)
-                {
-                    Destroy(lineTexture);
-                    // Debug.Log("play mode");
-                }
-                else
-                {
-                    // Debug.Log("edit mode");
-                }
-            }
-
-            if (m_splitMode == SplitMode.Diagonal)
-            {
-                // 対角線
-                float lineWidth = m_lineWidth;
-                GUIStyle lineStyle = new GUIStyle();
-                Texture2D lineTexture = new Texture2D(1, 1);
-                lineTexture.SetPixel(0, 0, m_lineColor);
-                lineTexture.Apply();
-
-                lineStyle.normal.background = lineTexture;
-
-                // 左上から右下へ
-                Vector2 start1 = new Vector2(0, 0);
-                Vector2 end1 = new Vector2(Screen.width, Screen.height);
-                DrawLine(start1, end1, lineTexture, lineWidth);
-
-                // 右上から左下へ
-                Vector2 start2 = new Vector2(Screen.width, 0);
-                Vector2 end2 = new Vector2(0, Screen.height);
-                DrawLine(start2, end2, lineTexture, lineWidth);
-
-                // メモリリークするものがあれば明示的に破棄
-                // プレイモードのときに動作させる
-                if (Application.isPlaying)
-                {
-                    Destroy(lineTexture);
-                    // Debug.Log("play mode");
-                }
-                else
-                {
-                    // Debug.Log("edit mode");
-                }
-            }
-
-            if (m_splitMode == SplitMode.ThirstAndDiagonal)
-            {
-                // 分割線と対角線を組み合わせる
-                // 対角線
-                float lineWidth = m_lineWidth;
-                GUIStyle lineStyle = new GUIStyle();
-                Texture2D lineTexture = new Texture2D(1, 1);
-                lineTexture.SetPixel(0, 0, m_lineColor);
-                lineTexture.Apply();
-
-                lineStyle.normal.background = lineTexture;
-
-                // 左上から右下へ
-                Vector2 start1 = new Vector2(0, 0);
-                Vector2 end1 = new Vector2(Screen.width, Screen.height);
-                DrawLine(start1, end1, lineTexture, lineWidth);
-
-                // 右上から左下へ
-                Vector2 start2 = new Vector2(Screen.width, 0);
-                Vector2 end2 = new Vector2(0, Screen.height);
-                DrawLine(start2, end2, lineTexture, lineWidth);
-
-                float thirdWidth = Screen.width / 3.0f;
-                float thirdHeight = Screen.height / 3.0f;
-                // float lineWidth = m_lineWidth;
-
-                // GUIStyle lineStyle = new GUIStyle();
-                // Texture2D lineTexture = new Texture2D(1, 1);
-                // lineTexture.SetPixel(0, 0, m_lineColor);
-                // lineTexture.Apply();
-
-                // lineStyle.normal.background = lineTexture;
-
-                Rect lineRect1 = new Rect(thirdWidth - (lineWidth / 2), 0, lineWidth, Screen.height);
-                GUI.Box(lineRect1, GUIContent.none, lineStyle);
-
-                Rect lineRect2 = new Rect(2 * thirdWidth - (lineWidth / 2), 0, lineWidth, Screen.height);
-                GUI.Box(lineRect2, GUIContent.none, lineStyle);
-
-                Rect lineRect3 = new Rect(0, thirdHeight - (lineWidth / 2), Screen.width, lineWidth);
-                GUI.Box(lineRect3, GUIContent.none, lineStyle);
-
-                Rect lineRect4 = new Rect(0, 2 * thirdHeight - (lineWidth / 2), Screen.width, lineWidth);
-                GUI.Box(lineRect4, GUIContent.none, lineStyle);
-
-
-                // メモリリークするものがあれば明示的に破棄
-                // プレイモードのときに動作させる
-                if (Application.isPlaying)
-                {
-                    Destroy(lineTexture);
-                    // Debug.Log("play mode");
-                }
-                else
-                {
-                    // Debug.Log("edit mode");
-                }
-                // if (lineStyle != null)
-                // {
-                //     Destroy(lineStyle);
-                // }
-
-                // Destroy(lineStyle);
-            }
-
-            if (m_splitMode == SplitMode.CinemaScope)
-            {
-                // シネマスコープ
-                float screenWidth = Screen.width;
-                float screenHeight = Screen.height;
-                float cinemaScopeHeight = screenWidth / 2.35f; // 2.35:1のアスペクト比
-                float letterboxHeight = (screenHeight - cinemaScopeHeight) / 2; // 上下のレターボックスの高さ
-                float lineWidth = m_lineWidth;
-
-                GUIStyle lineStyle = new GUIStyle();
-                Texture2D lineTexture = new Texture2D(1, 1);
-                lineTexture.SetPixel(0, 0, m_lineColor);
-                lineTexture.Apply();
-
-                lineStyle.normal.background = lineTexture;
-
-                // シネマスコープ内の分割線を描画
-                float thirdWidth = screenWidth / 3.0f;
-                float thirdHeight = cinemaScopeHeight / 3.0f;
-
-                Rect lineRect1 = new Rect(thirdWidth - (lineWidth / 2), letterboxHeight, lineWidth, cinemaScopeHeight);
-                GUI.Box(lineRect1, GUIContent.none, lineStyle);
-
-                Rect lineRect2 = new Rect(2 * thirdWidth - (lineWidth / 2), letterboxHeight, lineWidth, cinemaScopeHeight);
-                GUI.Box(lineRect2, GUIContent.none, lineStyle);
-
-                Rect lineRect3 = new Rect(0, letterboxHeight + thirdHeight - (lineWidth / 2), screenWidth, lineWidth);
-                GUI.Box(lineRect3, GUIContent.none, lineStyle);
-
-                Rect lineRect4 = new Rect(0, letterboxHeight + 2 * thirdHeight - (lineWidth / 2), screenWidth, lineWidth);
-                GUI.Box(lineRect4, GUIContent.none, lineStyle);
-
-                // メモリリークするものがあれば明示的に破棄
-                if (Application.isPlaying)
-                {
-                    Destroy(lineTexture);
-                }
-            }
-
-            void DrawLine(Vector2 start, Vector2 end, Texture2D texture, float width)
-            {
-                Matrix4x4 matrix = GUI.matrix;
-                float angle = Mathf.Atan2(end.y - start.y, end.x - start.x) * 180f / Mathf.PI;
-                float length = Vector2.Distance(start, end);
-                GUIUtility.RotateAroundPivot(angle, start);
-                GUI.DrawTexture(new Rect(start.x, start.y - (width / 2), length, width), texture);
-                GUI.matrix = matrix;
+                case SplitGuideMode.CinemaScope:
+                    DrawCinemaScopeThirds();
+                    break;
             }
         }
+
+        private void DrawLetterbox()
+        {
+            float height = Screen.height * _letterboxRatio;
+            DrawRect(new Rect(0f, 0f, Screen.width, height), _letterboxColor);
+            DrawRect(new Rect(0f, Screen.height - height, Screen.width, height), _letterboxColor);
+        }
+
+        private void DrawThirds(float top, float height)
+        {
+            DrawVertical(Screen.width / 3f, top, height);
+            DrawVertical(Screen.width * 2f / 3f, top, height);
+            DrawHorizontal(top + height / 3f, 0f, Screen.width);
+            DrawHorizontal(top + height * 2f / 3f, 0f, Screen.width);
+        }
+
+        private void DrawCinemaScopeThirds()
+        {
+            float imageHeight = Mathf.Min(Screen.height, Screen.width / 2.35f);
+            float top = (Screen.height - imageHeight) * 0.5f;
+            DrawThirds(top, imageHeight);
+        }
+
+        private void DrawDiagonals()
+        {
+            DrawLine(Vector2.zero, new Vector2(Screen.width, Screen.height));
+            DrawLine(new Vector2(Screen.width, 0f), new Vector2(0f, Screen.height));
+        }
+
+        private void DrawVertical(float x, float top, float height)
+        {
+            DrawRect(new Rect(x - _lineWidth * 0.5f, top, _lineWidth, height), _lineColor);
+        }
+
+        private void DrawHorizontal(float y, float left, float width)
+        {
+            DrawRect(new Rect(left, y - _lineWidth * 0.5f, width, _lineWidth), _lineColor);
+        }
+
+        private void DrawLine(Vector2 start, Vector2 end)
+        {
+            Matrix4x4 previousMatrix = GUI.matrix;
+            Color previousColor = GUI.color;
+            float angle = Mathf.Atan2(end.y - start.y, end.x - start.x) * Mathf.Rad2Deg;
+            float length = Vector2.Distance(start, end);
+
+            GUI.color = _lineColor;
+            GUIUtility.RotateAroundPivot(angle, start);
+            GUI.DrawTexture(new Rect(start.x, start.y - _lineWidth * 0.5f, length, _lineWidth), Texture2D.whiteTexture);
+            GUI.matrix = previousMatrix;
+            GUI.color = previousColor;
+        }
+
+        private static void DrawRect(Rect rect, Color color)
+        {
+            Color previousColor = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = previousColor;
+        }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            _lineWidth = Mathf.Clamp(_lineWidth, 0.5f, 10f);
+            _letterboxRatio = Mathf.Clamp(_letterboxRatio, 0f, 0.5f);
+        }
+#endif
     }
 }

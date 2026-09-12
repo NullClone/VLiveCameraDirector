@@ -11,7 +11,7 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Target Switcher (制御対象)")]
+        [Header("Target Switcher")]
         [Tooltip("切り替え命令を送信するVLiveCameraSwitcher。")]
         [SerializeField]
         private VLiveCameraSwitcher _switcher;
@@ -92,7 +92,7 @@ namespace VLiveKit.Camera
             return false;
         }
 
-        [Header("Keyboard Bindings - Shot Cut (ショット切り替えキー)")]
+        [Header("Keyboard Bindings - Shot Cut")]
         [Tooltip("ショット1〜9へ直接Cutするためのキー割り当て一覧。")]
         [SerializeField]
         private Key[] _cutKeys = new Key[]
@@ -108,7 +108,7 @@ namespace VLiveKit.Camera
             Key.Digit9
         };
 
-        [Header("Keyboard Bindings - Motion Control (移動制御キー)")]
+        [Header("Keyboard Bindings - Motion Control")]
         [Tooltip("Spline進行速度を上げるキー。")]
         [SerializeField]
         private Key _speedUpKey = Key.UpArrow;
@@ -160,7 +160,7 @@ namespace VLiveKit.Camera
 #if ENABLE_INPUT_SYSTEM
         private static bool IsPressed(Keyboard keyboard, Key key)
         {
-            if (key <= Key.None || (int)key >= (int)Key.IMESelected)
+            if (key == Key.None)
             {
                 return false;
             }

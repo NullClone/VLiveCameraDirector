@@ -1,92 +1,9 @@
-using System;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
 namespace VLiveKit.Camera
 {
-    /// <summary>
-    /// VLiveCameraRigで管理される1つのショットスロット。
-    /// Preset参照とそれに対応して生成されたShot参照を保持します。
-    /// </summary>
-    [Serializable]
-    public class VLiveCameraShotSlot
-    {
-        // Fields
-
-        [Tooltip("このスロットで使用するMotion Preset。")]
-        [SerializeField]
-        private VLiveCameraMotionPreset _preset;
-
-        [Tooltip("このスロットに対応して生成されたShot。")]
-        [SerializeField]
-        private VLiveCameraShot _shot;
-
-
-        // Properties
-
-        /// <summary>
-        /// 使用するMotion Presetを取得または設定します。
-        /// </summary>
-        public VLiveCameraMotionPreset Preset
-        {
-            get => _preset;
-            set => _preset = value;
-        }
-
-        /// <summary>
-        /// 生成されたShotコンポーネントを取得します。
-        /// </summary>
-        public VLiveCameraShot Shot => _shot;
-
-
-        // Methods
-
-        /// <summary>
-        /// 空のショットスロットを作成します。
-        /// </summary>
-        public VLiveCameraShotSlot() { }
-
-        /// <summary>
-        /// 指定されたPresetを持つショットスロットを作成します。
-        /// </summary>
-        public VLiveCameraShotSlot(VLiveCameraMotionPreset preset)
-        {
-            _preset = preset;
-            _shot = null;
-        }
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// Editor専用: 指定されたPresetとShotを持つショットスロットを作成します。
-        /// </summary>
-        public VLiveCameraShotSlot(VLiveCameraMotionPreset preset, VLiveCameraShot shot)
-        {
-            _preset = preset;
-            _shot = shot;
-        }
-
-        /// <summary>
-        /// Editor専用: 生成・再構築されたShot参照を設定します。
-        /// </summary>
-        public void SetShot(VLiveCameraShot shot)
-        {
-            _shot = shot;
-        }
-#endif
-    }
-
-    /// <summary>
-    /// カメラ配置の正面方向を決定する基準モード。
-    /// </summary>
-    public enum ForwardReferenceMode
-    {
-        TargetForward,
-        WorldPlusZ,
-        WorldMinusZ,
-        CustomReference
-    }
-
     /// <summary>
     /// カメラリグ全体の構成、注視対象、正面基準、スケール、順序付きShotスロットを保持する正本コンポーネント。
     /// </summary>
@@ -121,10 +38,20 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _distanceScale = 1.0f;
 
-        [Tooltip("スプライン制御点の移動幅スケール。1.0が基準移動幅。0より大きい値。")]
+        [Tooltip("スプライン制御点の水平移動幅スケール。1.0が基準移動幅です。")]
         [Min(0.01f)]
         [SerializeField]
         private float _motionScale = 1.0f;
+
+        [Tooltip("スプライン制御点の垂直移動幅スケール。1.0が基準移動幅です。")]
+        [Min(0f)]
+        [SerializeField]
+        private float _verticalMotionScale = 1.0f;
+
+        [Tooltip("Rig内の全Shotへ掛ける再生速度倍率。Presetの形状と個別速度は変更しません。")]
+        [Range(0.1f, 4f)]
+        [SerializeField]
+        private float _masterPlaybackSpeed = 1.25f;
 
         [Tooltip("番号順に管理されるShotスロット一覧。これがShot順の唯一の正本です。")]
         [SerializeField]
@@ -210,6 +137,24 @@ namespace VLiveKit.Camera
         {
             get => _motionScale;
             set => _motionScale = Mathf.Max(0.01f, value);
+        }
+
+        /// <summary>
+        /// 垂直移動幅スケールを取得または設定します。
+        /// </summary>
+        public float VerticalMotionScale
+        {
+            get => _verticalMotionScale;
+            set => _verticalMotionScale = Mathf.Max(0f, value);
+        }
+
+        /// <summary>
+        /// Rig内の全Shotへ適用する再生速度倍率を取得または設定します。
+        /// </summary>
+        public float MasterPlaybackSpeed
+        {
+            get => _masterPlaybackSpeed;
+            set => _masterPlaybackSpeed = Mathf.Clamp(value, 0.1f, 4f);
         }
 
         /// <summary>
@@ -353,6 +298,13 @@ namespace VLiveKit.Camera
             {
                 _motionScale = 0.01f;
             }
+
+            if (_verticalMotionScale < 0f)
+            {
+                _verticalMotionScale = 0f;
+            }
+
+            _masterPlaybackSpeed = Mathf.Clamp(_masterPlaybackSpeed, 0.1f, 4f);
 
             if (_slots == null)
             {

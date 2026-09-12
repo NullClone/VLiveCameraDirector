@@ -11,24 +11,19 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        /// <summary>
-        /// ショットの動作種別。
-        /// </summary>
-        public enum ShotType
-        {
-            Fixed,
-            Spline
-        }
-
         [Tooltip("ショットの識別名。")]
         [SerializeField]
         private string _shotName = "Shot";
 
         [Tooltip("ショットの動作種別（Fixed: 固定構図, Spline: スプライン移動）。")]
         [SerializeField]
-        private ShotType _shotType = ShotType.Fixed;
+        private VLiveCameraShotType _shotType = VLiveCameraShotType.Fixed;
 
-        [Header("Owned Components & References (所有コンポーネントと参照)")]
+        [Tooltip("このShotを所有するVLiveCameraRig。")]
+        [SerializeField]
+        private VLiveCameraRig _rig;
+
+        [Header("Owned Components & References")]
         [Tooltip("このショット専用のCinemachineCamera。")]
         [SerializeField]
         private CinemachineCamera _cinemachineCamera;
@@ -53,7 +48,7 @@ namespace VLiveKit.Camera
         [SerializeField]
         private Transform _performerTarget;
 
-        [Header("Applied Motion Settings (適用済み設定)")]
+        [Header("Applied Motion Settings")]
         [Tooltip("このショットに適用されている再利用元Preset参照。")]
         [SerializeField]
         private VLiveCameraMotionPreset _appliedPreset;
@@ -78,11 +73,16 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _appliedMotionScale = 1.0f;
 
+        [Tooltip("Rebuild時に適用された垂直移動幅スケール。")]
+        [SerializeField]
+        private float _appliedVerticalMotionScale = 1.0f;
+
 
         // Properties
 
         public string ShotName => _shotName;
-        public ShotType Type => _shotType;
+        public VLiveCameraShotType Type => _shotType;
+        public VLiveCameraRig Rig => _rig;
 
         public CinemachineCamera CinemachineCamera
         {
@@ -150,6 +150,19 @@ namespace VLiveKit.Camera
         public Quaternion AppliedRigOrientation => _appliedRigOrientation;
         public float AppliedDistanceScale => _appliedDistanceScale > 0.001f ? _appliedDistanceScale : 1.0f;
         public float AppliedMotionScale => _appliedMotionScale > 0.001f ? _appliedMotionScale : 1.0f;
+        public float AppliedVerticalMotionScale => Mathf.Max(0f, _appliedVerticalMotionScale);
+        public float MasterPlaybackSpeed
+        {
+            get
+            {
+                if (_rig == null)
+                {
+                    _rig = GetComponentInParent<VLiveCameraRig>();
+                }
+
+                return _rig != null ? _rig.MasterPlaybackSpeed : 1f;
+            }
+        }
 
         /// <summary>
         /// このショットが正常にProgramとして動作可能であるかを取得します。
@@ -184,7 +197,7 @@ namespace VLiveKit.Camera
                     return false;
                 }
 
-                if (_shotType == ShotType.Spline)
+                if (_shotType == VLiveCameraShotType.Spline)
                 {
                     if (SplineDolly == null || SplineDolly.Spline == null)
                     {
@@ -331,8 +344,9 @@ namespace VLiveKit.Camera
         /// </summary>
         public void Configure(
             string shotName,
+            VLiveCameraRig rig,
             CinemachineCamera cmCam,
-            ShotType shotType,
+            VLiveCameraShotType shotType,
             CinemachineSplineDolly splineDolly,
             CinemachineRotationComposer composer,
             Transform aimProxy,
@@ -342,9 +356,11 @@ namespace VLiveKit.Camera
             float targetHeight,
             Quaternion rigOrientation,
             float distanceScale = 1.0f,
-            float motionScale = 1.0f)
+            float motionScale = 1.0f,
+            float verticalMotionScale = 1.0f)
         {
             _shotName = shotName;
+            _rig = rig;
             _cinemachineCamera = cmCam;
             _shotType = shotType;
             _splineDolly = splineDolly;
@@ -357,6 +373,7 @@ namespace VLiveKit.Camera
             _appliedRigOrientation = rigOrientation;
             _appliedDistanceScale = Mathf.Max(0.01f, distanceScale);
             _appliedMotionScale = Mathf.Max(0.01f, motionScale);
+            _appliedVerticalMotionScale = Mathf.Max(0f, verticalMotionScale);
 
             if (_appliedMotion == null)
             {
@@ -389,13 +406,15 @@ namespace VLiveKit.Camera
             float targetHeight,
             Quaternion rigOrientation,
             float distanceScale = 1.0f,
-            float motionScale = 1.0f)
+            float motionScale = 1.0f,
+            float verticalMotionScale = 1.0f)
         {
             _appliedPreset = preset;
             _appliedTargetHeight = targetHeight;
             _appliedRigOrientation = rigOrientation;
             _appliedDistanceScale = Mathf.Max(0.01f, distanceScale);
             _appliedMotionScale = Mathf.Max(0.01f, motionScale);
+            _appliedVerticalMotionScale = Mathf.Max(0f, verticalMotionScale);
 
             if (_appliedMotion == null)
             {
@@ -420,11 +439,21 @@ namespace VLiveKit.Camera
             {
                 _appliedMotionScale = 1.0f;
             }
+
+            if (_appliedVerticalMotionScale < 0f)
+            {
+                _appliedVerticalMotionScale = 0f;
+            }
         }
 #endif
 
         private void EnsureComponentReferences()
         {
+            if (_rig == null)
+            {
+                _rig = GetComponentInParent<VLiveCameraRig>();
+            }
+
             if (_cinemachineCamera == null)
             {
                 _cinemachineCamera = GetComponent<CinemachineCamera>();

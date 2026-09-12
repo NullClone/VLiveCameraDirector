@@ -4,14 +4,9 @@
 
 Hierarchyと制御Componentを手作業で組み立てなくても、1回の操作でVLiveCameraUnitのRig骨格を現在のSceneへ導入できるようにする。初期作成後の日常的な編集は各ComponentのInspectorで行う。
 
-## 2. 開き方
+## 2. 作成入口
 
-次の入口を提供する。
-
-- `GameObject/VLiveKit/Camera Rig`: 現在のSceneへ新しいRigを作成する。
-- `Tools/VLive Camera/VLive Camera Setup`: 初期Rig作成だけを行う小さなWindowを開く。
-
-どちらも同じ`VLiveCameraRigBuilder`の作成処理を呼び、生成結果に差を作らない。WindowにTarget、Preset、スケールの編集状態を保持しない。
+`GameObject/VLiveKit/Virtual Camera`だけを作成入口とする。独立したSetup Window、Step UI、Wizardは提供しない。作成後の設定はRig Inspectorへ集約する。
 
 ## 3. 初期作成
 
@@ -20,10 +15,10 @@ Hierarchyと制御Componentを手作業で組み立てなくても、1回の操�
 - `VLive Camera Rig` Rootと`VLiveCameraRig`
 - `VLiveCameraSwitcher`
 - `VLiveCameraKeyboardInput`
-- 6つの標準Presetを参照するShot Slot
+- 10種の標準3D Motion Presetを参照するShot Slot
 - Shot、Spline、Aim Proxyを配置する子Container
 
-SetupはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを生成せず、既存Cameraも探索、割り当て、変更しない。作成後はRigを選択し、ユーザーがInspectorでTargetとProgram Cameraを明示的に割り当てる。`Apply / Sync`は割り当てられたProgram Cameraに必要なCinemachine BrainをUndo対応で追加し、不足するShot用CinemachineCameraを生成できる。
+GameObject Menuによる初期作成はUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを生成せず、既存Cameraも探索、割り当て、変更しない。作成後はRigを選択し、ユーザーがInspectorでTargetとProgram Cameraを明示的に割り当てる。`Apply / Sync`は割り当てられたProgram Cameraに必要なCinemachine BrainをUndo対応で追加し、不足するShot用CinemachineCameraを生成できる。
 
 ## 4. Rig Inspector
 
@@ -38,6 +33,8 @@ Rig Inspectorは次の区分を持つ。
 - Target Height
 - Distance Scale
 - Motion Scale
+- Vertical Motion Scale
+- Master Playback Speed
 
 ### Shot Slots
 
@@ -118,7 +115,7 @@ AIによるPreset生成も同じAsset作成処理を利用する。AI専用形�
 ## 9. 安全性
 
 - すべてのScene変更をUndoできる。
-- SetupはCameraを生成、探索、割り当て、変更しない。
+- GameObject MenuはCameraを生成、探索、割り当て、変更しない。
 - Program CameraはユーザーがInspectorで明示的に割り当てる。
 - Builderが所有していないGameObjectやComponentを変更、削除しない。
 - Sceneを自動保存しない。
@@ -129,7 +126,7 @@ AIによるPreset生成も同じAsset作成処理を利用する。AI専用形�
 
 ## 10. 所有権
 
-Windowとメニューは初期導入、Rig Inspectorは設定、BuilderはScene変更を担当する。設定の正本は`VLiveCameraRig`だけとし、Window、CustomEditor、Builderが設定値のコピーを保持しない。
+GameObject Menuは初期導入、Rig Inspectorは設定、BuilderはScene変更を担当する。設定の正本は`VLiveCameraRig`だけとし、CustomEditorとBuilderが設定値のコピーを保持しない。
 
 生成物の識別にはSlot内のShot参照とRigの親子関係を使用する。Preset参照、GameObject名、Scene内で最初に見つかったSwitcherだけを識別根拠にしない。
 
@@ -137,7 +134,7 @@ Windowとメニューは初期導入、Rig Inspectorは設定、BuilderはScene�
 
 実装エージェントは次だけを既定確認とする。
 
-- Windowと作成MenuがCompileされる。
+- GameObject Menuと作成処理がCompileされる。
 - SerializedProperty、Undo、参照設定に明白な問題がない。
 - 全Inspectorの固定表示が英語で、Tooltipが必要なSerializedFieldに存在する。
 - IMGUI内にRepaintごとのGUIStyle生成や不要な装飾がない。

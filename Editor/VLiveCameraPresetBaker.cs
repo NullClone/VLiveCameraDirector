@@ -55,18 +55,19 @@ namespace VLiveKit.Camera.Editor
                 ? shot.AppliedMotionScale
                 : ((rig != null && rig.MotionScale > 0.001f) ? rig.MotionScale : 1.0f);
 
+            float verticalMotionScale = shot.AppliedVerticalMotionScale;
+
             float targetHeight = (shot.AppliedTargetHeight > 0.001f)
                 ? shot.AppliedTargetHeight
                 : ((rig != null) ? rig.TargetHeight : 1.4f);
 
             VLiveCameraAppliedMotion applied = shot.AppliedMotion ?? new VLiveCameraAppliedMotion();
 
-            // 1. Body Track (Spline Knots)
             MotionKnot[] knots;
             float refSplineLength = 0f;
             bool isClosed = false;
 
-            if (shot.Type == VLiveCameraShot.ShotType.Spline && shot.SplineDolly != null && shot.SplineDolly.Spline != null)
+            if (shot.Type == VLiveCameraShotType.Spline && shot.SplineDolly != null && shot.SplineDolly.Spline != null)
             {
                 SplineContainer container = shot.SplineDolly.Spline;
                 Spline spline = container.Spline;
@@ -95,26 +96,63 @@ namespace VLiveKit.Camera.Editor
                             Vector3 relWorldPi = worldPi - targetPos;
                             Vector3 scaledPi = Quaternion.Inverse(orientation) * relWorldPi;
                             Vector3 deltaScaled = scaledPi - scaledP0;
-                            pi = p0 + deltaScaled / motionScale;
+                            pi = p0 + VLiveCameraMotionSpace.UnscaleMotion(
+                                deltaScaled,
+                                motionScale,
+                                verticalMotionScale);
                         }
 
-                        // Tangents: BezierKnotのTangentIn/Outはknot.Rotationのローカル空間で定義されているため、
-                        // orientationによる回転を重ねて逆変換せず、MotionScaleのみを逆適用する
-                        Vector3 presetTanIn = ((Vector3)spline[i].TangentIn) / motionScale;
-                        Vector3 presetTanOut = ((Vector3)spline[i].TangentOut) / motionScale;
-
                         TangentMode mode = spline.GetTangentMode(i);
+                        float autoSmoothTension = spline.GetAutoSmoothTension(i);
                         Quaternion worldRot = container.transform.rotation * (Quaternion)spline[i].Rotation;
                         Quaternion presetRot = Quaternion.Inverse(orientation) * worldRot;
+                        Vector3 presetTanIn = TransformTangentToPreset(
+                            container.transform,
+                            (Quaternion)spline[i].Rotation,
+                            (Vector3)spline[i].TangentIn,
+                            orientation,
+                            presetRot,
+                            motionScale,
+                            verticalMotionScale);
+                        Vector3 presetTanOut = TransformTangentToPreset(
+                            container.transform,
+                            (Quaternion)spline[i].Rotation,
+                            (Vector3)spline[i].TangentOut,
+                            orientation,
+                            presetRot,
+                            motionScale,
+                            verticalMotionScale);
 
-                        knots[i] = new MotionKnot(pi, presetTanIn, presetTanOut, mode, presetRot);
+                        knots[i] = new MotionKnot(
+                            pi,
+                            presetTanIn,
+                            presetTanOut,
+                            mode,
+                            presetRot,
+                            autoSmoothTension);
                     }
 
                     // 基準スプライン長はベイク後の未スケールknot列から正確に再計算
                     var unscaledSpline = new Spline();
                     for (int i = 0; i < knotCount; i++)
                     {
-                        unscaledSpline.Add(new BezierKnot(knots[i].Position, knots[i].TangentIn, knots[i].TangentOut, knots[i].Rotation), knots[i].TangentMode);
+                        MotionKnot source = knots[i];
+                        var knot = new BezierKnot(
+                            source.Position,
+                            source.TangentIn,
+                            source.TangentOut,
+                            source.Rotation);
+                        unscaledSpline.Add(knot);
+                        unscaledSpline.SetTangentMode(i, source.TangentMode);
+
+                        if (source.TangentMode == TangentMode.AutoSmooth)
+                        {
+                            unscaledSpline.SetAutoSmoothTension(i, source.AutoSmoothTension);
+                        }
+                        else
+                        {
+                            unscaledSpline[i] = knot;
+                        }
                     }
 
                     unscaledSpline.Closed = isClosed;
@@ -123,7 +161,6 @@ namespace VLiveKit.Camera.Editor
             }
             else
             {
-                // Fixed Shot
                 Vector3 camWorld = shot.CinemachineCamera != null ? shot.CinemachineCamera.transform.position : shot.transform.position;
                 Vector3 relWorld = camWorld - targetPos;
                 Vector3 scaledP0 = Quaternion.Inverse(orientation) * relWorld;
@@ -139,7 +176,6 @@ namespace VLiveKit.Camera.Editor
                 refSplineLength = 0f;
             }
 
-            // 2. Aim Offset
             Vector3 presetAimOffset = applied.AimOffset;
             if (shot.AimProxy != null)
             {
@@ -149,7 +185,6 @@ namespace VLiveKit.Camera.Editor
                 presetAimOffset = Quaternion.Inverse(orientation) * aboveHeight;
             }
 
-            // 3. Screen Position & RotationComposer Settings
             Vector2 screenPos = applied.ScreenPosition;
             bool deadZoneEnabled = applied.DeadZoneEnabled;
             Vector2 deadZoneSize = applied.DeadZoneSize;
@@ -177,7 +212,6 @@ namespace VLiveKit.Camera.Editor
                 centerOnActivate = shot.RotationComposer.CenterOnActivate;
             }
 
-            // 4. Lens Settings
             LensMode lensMode = applied.LensMode;
             float fov = applied.FieldOfView;
             float focalLength = applied.FocalLength;
@@ -209,7 +243,6 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // 5. Identity & Intent
             ShotSize shotSize = (shot.AppliedPreset != null) ? shot.AppliedPreset.Size : ShotSize.Medium;
             ShotEnergy energy = (shot.AppliedPreset != null) ? shot.AppliedPreset.Energy : ShotEnergy.Normal;
             MotionFamily family = (shot.AppliedPreset != null) ? shot.AppliedPreset.Family : applied.Family;
@@ -220,7 +253,6 @@ namespace VLiveKit.Camera.Editor
                 ? $"Baked from shot '{shot.ShotName}' based on '{shot.AppliedPreset.DisplayName}'"
                 : $"Baked from scene Shot '{shot.ShotName}'";
 
-            // 6. Asset Path
             if (string.IsNullOrEmpty(targetAssetPath))
             {
                 if (!Directory.Exists(DefaultPresetFolder))
@@ -234,7 +266,6 @@ namespace VLiveKit.Camera.Editor
 
             targetAssetPath = AssetDatabase.GenerateUniqueAssetPath(targetAssetPath);
 
-            // 7. Confirmation dialog
             if (showConfirmationDialog)
             {
                 bool proceed = EditorUtility.DisplayDialog(
@@ -250,57 +281,43 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // 8. Presetインスタンス作成と完全保存
+            VLiveCameraMotionPresetData data = applied.Data.Clone();
+            data.Identity.DisplayName = displayName;
+            data.Identity.ShotType = shot.Type;
+            data.Identity.Family = family;
+            data.Identity.Size = shotSize;
+            data.Identity.Energy = energy;
+            data.Identity.Description = description;
+            data.RigProfile = rigProfile;
+
+            data.Body.Knots = knots;
+            data.Body.IsClosed = isClosed;
+            data.Body.ReferenceSplineLength = refSplineLength;
+            data.Timing.ClipDuration = applied.EffectiveDuration;
+
+            data.Aim.AimOffset = presetAimOffset;
+            data.Aim.ScreenPosition = screenPos;
+            data.Aim.DeadZoneEnabled = deadZoneEnabled;
+            data.Aim.DeadZoneSize = deadZoneSize;
+            data.Aim.HardLimitsEnabled = hardLimitsEnabled;
+            data.Aim.HardLimitsSize = hardLimitsSize;
+            data.Aim.HardLimitsOffset = hardLimitsOffset;
+            data.Aim.Damping = damping;
+            data.Aim.LookaheadEnabled = lookaheadEnabled;
+            data.Aim.LookaheadTime = lookaheadTime;
+            data.Aim.LookaheadSmoothing = lookaheadSmoothing;
+            data.Aim.CenterOnActivate = centerOnActivate;
+
+            data.Lens.Mode = lensMode;
+            data.Lens.FieldOfView = fov;
+            data.Lens.FocalLength = focalLength;
+            data.Lens.SensorSize = sensorSize;
+
+            data.Activation.InTime = applied.InTime;
+            data.Activation.OutTime = applied.OutTime;
+
             var preset = ScriptableObject.CreateInstance<VLiveCameraMotionPreset>();
-            preset.Initialize(
-                displayName,
-                shot.Type,
-                family,
-                shotSize,
-                energy,
-                description,
-                rigProfile,
-                knots,
-                isClosed,
-                refSplineLength,
-                applied.ClipDuration,
-                applied.ProgressCurve,
-                applied.ScaleMode,
-                applied.MinSpeedMultiplier,
-                applied.MaxSpeedMultiplier,
-                applied.SpeedStep,
-                presetAimOffset,
-                applied.AimOffsetXCurve,
-                applied.AimOffsetYCurve,
-                applied.AimOffsetZCurve,
-                screenPos,
-                applied.ScreenPositionXCurve,
-                applied.ScreenPositionYCurve,
-                deadZoneEnabled,
-                deadZoneSize,
-                hardLimitsEnabled,
-                hardLimitsSize,
-                hardLimitsOffset,
-                damping,
-                lookaheadEnabled,
-                lookaheadTime,
-                lookaheadSmoothing,
-                centerOnActivate,
-                lensMode,
-                fov,
-                applied.FieldOfViewCurve,
-                focalLength,
-                applied.FocalLengthCurve,
-                sensorSize,
-                applied.RollMode,
-                applied.RollCurve,
-                applied.EntryMode,
-                applied.InTime,
-                applied.OutTime,
-                applied.ExitBehavior,
-                applied.StartDistance,
-                applied.EndDistance
-            );
+            preset.Initialize(data);
 
             AssetDatabase.CreateAsset(preset, targetAssetPath);
             EditorUtility.SetDirty(preset);
@@ -308,6 +325,25 @@ namespace VLiveKit.Camera.Editor
 
             Debug.Log($"[VLiveCameraPresetBaker] Saved new Motion Preset from shot '{shot.ShotName}': {targetAssetPath}");
             return preset;
+        }
+
+        private static Vector3 TransformTangentToPreset(
+            Transform splineTransform,
+            Quaternion splineKnotRotation,
+            Vector3 tangent,
+            Quaternion rigOrientation,
+            Quaternion presetKnotRotation,
+            float horizontalScale,
+            float verticalScale)
+        {
+            Vector3 splineTangent = splineKnotRotation * tangent;
+            Vector3 worldTangent = splineTransform.localToWorldMatrix.MultiplyVector(splineTangent);
+            Vector3 scaledPresetTangent = Quaternion.Inverse(rigOrientation) * worldTangent;
+            Vector3 presetTangent = VLiveCameraMotionSpace.UnscaleMotion(
+                scaledPresetTangent,
+                horizontalScale,
+                verticalScale);
+            return Quaternion.Inverse(presetKnotRotation) * presetTangent;
         }
     }
 }

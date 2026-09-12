@@ -43,19 +43,18 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 
 ## 4. 現在の縦切り実装
 
-`Docs/phases.md`のStep 4.5 Inspector Refreshを次に実装する。
+`Docs/phases.md`のStep 4.6 3D Motion Palette Refactorを現在の基準とする。
 
-1. `git status --short`と全Custom Inspector、Setup Windowを確認する。
-2. `ui-imgui` Skillを読み、既存のRuntime挙動とEditor操作を一覧化する。
-3. 固定表示を英語へ統一し、日本語Tooltipを維持する。
-4. 独自Banner、暗色背景、絵文字、色付きBadge、装飾目的のBoxを除去する。
-5. 標準IMGUIとSerializedPropertyを中心に各Inspectorを簡略化する。
-6. Shot固有のRebuild、保存、診断、削除をShot Inspectorへ置き、Rig InspectorをRig全体の操作へ絞る。
-7. Custom GUIStyleを使う場合はキャッシュし、Repaint内の生成をなくす。
-8. Setup WindowをCamera非生成の実際の挙動と一致させる。
-9. Import、Compile、Console、diffを簡易確認する。
+1. `git status --short`と関係するRuntime、Editor、Presetを確認する。
+2. `unity-cli`と`ui-imgui` Skillを読む。
+3. Camera PerformanceをIdentity / Body / Timing / Aim / Lens / Roll / Activationへ分離する。
+4. 全Spline KnotのY値とTangentを保持し、水平・垂直スケールを独立適用する。
+5. RigのMaster Playback SpeedとShotごとの手動Speed Multiplierを別レイヤーとして扱う。
+6. 同梱PresetはUnity Editor APIで再生成し、YAMLを直接編集しない。
+7. 1ファイル1型、統一namespace、英語IMGUI、日本語Tooltipを確認する。
+8. Import、Compile、Console、diffを簡易確認する。
 
-Runtime、Preset Asset、Camera Work、UI Toolkit、App UI、MIDI、専用テストScene、汎用Inspector frameworkを同時に変更しない。
+App UI、MIDI、Preview / Take、専用テストScene、汎用frameworkは同時に追加しない。
 
 ## 5. 実装規則
 

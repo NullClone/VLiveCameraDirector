@@ -8,7 +8,7 @@ VLiveCameraUnitは、事前に用意した多数のカメラをライブ中に�
 
 ## 2. 目指す操作体験
 
-1. メニューまたは簡略化されたSetup WindowからCameraを含まないRig骨格を1回の操作で作成する。
+1. `GameObject/VLiveKit/Virtual Camera`からCameraを含まないRig骨格を1回の操作で作成する。
 2. Hierarchyで`VLive Camera Rig`を選択する。
 3. InspectorでPerformer Target、正面基準、構図スケール、使用するMotion Presetと順序を設定する。
 4. `Apply / Sync`で不足するShotを生成し、参照と順序を同期する。
@@ -44,15 +44,14 @@ Motion Presetは位置Splineだけではない。
 - Lens
 - Roll
 - Activation
-- 選択的なHumanization
 
-これらを同じ時刻から独立して評価する。Dolly、Crane、Gimbalなどの機材差をRig Profileで共有し、すべてのPresetへ同じEase、Aim、Noiseを適用しない。
+これらを同じ時刻から独立して評価する。Dolly、Crane、Gimbalなどの機材差をRig Profileで共有する。HumanizationとNoiseは現在の契約へ含めず、映像確認で必要性が認められた機材だけへ後から追加する。
 
-### 3.4 初期作成は一操作、編集はInspector
+### 3.4 初期作成はGameObject Menu、編集はInspector
 
-Setup WindowとメニューはRigの初期作成だけを担当する。Target、正面基準、Scale、Shot構成の編集と同期は`VLiveCameraRig`のInspectorを正本とし、WindowとInspectorに同じ設定を重複して持たせない。
+独立したSetup Windowは持たない。GameObject MenuはRigの初期作成だけを担当する。Target、正面基準、Scale、Shot構成の編集と同期は`VLiveCameraRig`のInspectorを正本とする。
 
-SetupはUnity CameraやCinemachine Brainを生成、探索、割り当て、変更しない。Program CameraはRig Inspectorでユーザーが明示的に指定する。
+GameObject Menuによる初期作成はUnity CameraやCinemachine Brainを生成、探索、割り当て、変更しない。Program CameraはRig Inspectorでユーザーが明示的に指定する。
 
 Inspectorの値を変更しただけではSceneオブジェクトやAssetを生成、削除、再配置、保存しない。変更は内容が明確なボタン操作とUndoの単位で行う。
 
@@ -89,13 +88,15 @@ Motion Preset Assetは再利用可能な原本、生成済みShotはScene固有�
 - Inspector主導のRig Authoring
 - 標準IMGUIによる英語Custom Inspector
 - ScriptableObject形式のMotion Preset
-- 完全なSpline Knot、Tangent、Up
+- Identity / Body / Timing / Aim / Lens / Roll / Activationへ分割されたCamera Performanceデータ
+- 完全な3D Spline Knot、Tangent、Up
+- 水平Motion Scale、垂直Motion Scale、Master Playback Speed
 - Distance単位のSpline再生
 - DurationとProgress Curve
 - Aim ProxyとCinemachine Rotation Composer
 - 自動Lens Track
 - Static / Rolling Entry
-- Fixed Shotと移動Shot
+- Fixed Shotと、切り替え直後から動作中に入れるRolling移動Shot
 - キーボードによる直接Cut
 - 連続的なSpeed、Reverse、Hold、Resume
 - Editor上の簡易Motion Validator
@@ -120,14 +121,15 @@ Motion Preset Assetは再利用可能な原本、生成済みShotはScene固有�
 
 Motion FoundationとGold MasterがユーザーのSceneで成立した後、次へ進む。
 
-1. App UIによるCamera PaletteとProgram表示
-2. Preview / Take / Tally
-3. Camera Bank
-4. Pan、Tilt、Zoomのライブトリム
-5. MIDIとSoft Takeover
-6. Timeline / BPM Cue
-7. AIによるPreset候補生成
-8. 次Shot推薦と明示的な半自動Take
+1. 現在の10種3D PaletteをユーザーのSceneで調整し、Gold Master候補を増やす
+2. App UIによるCamera PaletteとProgram表示
+3. Preview / Take / Tally
+4. Camera Bank
+5. Pan、Tilt、Zoomのライブトリム
+6. MIDIとSoft Takeover
+7. Timeline / BPM Cue
+8. AIによるPreset候補生成
+9. 次Shot推薦と明示的な半自動Take
 
 キーボード運用を残し、MIDIを必須にしない。AIは人と同じPreset Assetを生成し、Runtimeで別のCamera制御経路を持たない。
 
