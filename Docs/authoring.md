@@ -68,6 +68,7 @@ GameObject MenuはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを
 | Keyboard Input | Switcher、Key Bindings | 割り当てと競合確認 |
 | Motion Player | 主要参照、Playback状態 | Play Mode中の読み取り |
 | Rig Profile | Response、Recommended Constraints | Profile編集 |
+| Composition Overlay | Aspect、Mask、Guides、Runtime Panel | 初期値編集とUI Document構成 |
 
 大量Preset用の検索、カテゴリ、サムネイル、App UI Paletteは、実数と運用要件が確定するまで追加しない。
 

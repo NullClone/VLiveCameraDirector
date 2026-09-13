@@ -46,6 +46,7 @@ Resolved Shot Motion + Playback Time
 | 現在時刻、速度、方向、Hold、完了状態 | `VLiveCameraMotionPlayer` |
 | 現在のProgram Shot | `VLiveCameraSwitcher` |
 | キー割り当て | `VLiveCameraKeyboardInput` |
+| 構図Overlayの初期値とPlay Mode中の表示状態 | `SplitLines` |
 
 Switcherへ別のShot一覧を持たせず、Motion Player以外へ再生状態を複製しない。PresetはRuntime状態とScene参照を持たない。
 
@@ -61,6 +62,8 @@ Switcherへ別のShot一覧を持たせず、Motion Player以外へ再生状態�
 | `VLiveCameraMotionEvaluator` | 解決済みMotionと時刻からMotion Sampleを決定的に計算する |
 | `VLiveCameraSwitcher` | RigのSlot順を使用してProgram Cutだけを管理する |
 | `VLiveCameraKeyboardInput` | Keyboard入力をSwitcherの公開操作へ渡す |
+| `SplitLines` | Game Viewのアスペクトマスク、構図ガイド、App UIテーマと設定パネルを管理する |
+| `SplitLinesElement` | `SplitLines`から受け取ったマスク、外周フレーム、Split LineをPainter2Dで描画する |
 | Editor Builder | 明示操作としてRig、Shot、Splineの生成、修復、再構築を行う |
 | Preset Baker | Scene上のShotから新しいPreset Assetを保存する |
 | Motion Validator | AssetやSceneを変更せずMotionを診断する |
@@ -125,6 +128,7 @@ Runtime/
   Switching/
   Input/
   Composition/
+  UI/
   Performer/
   Timeline/
   VLiveKit.Camera.Runtime.asmdef
@@ -147,13 +151,13 @@ Presets/
 - RuntimeとEditorのasmdefを機能フォルダごとに細分化しない。
 - `Core`、`Common`、`Utilities`、`Managers`、`Enums`、`Tools`のような投棄先フォルダを作らない。
 - enumは所有する機能の近くへ置く。
-- App UI、MIDI、AIなど未実装機能の空フォルダを先に作らない。
+- MIDI、AIなど未実装機能の空フォルダを先に作らない。
 
 製品表示名は`VLive Camera Director`、移行後のPackage IDは`com.toshi.vlivekit.camera-director`とする。コード型の`VLiveCamera`接頭辞は維持する。旧`VLiveCameraUnit`のフォルダ、Package ID、asmdef名は[roadmap.md](roadmap.md)の破壊的移行で置き換え、互換wrapperを並存させない。
 
 ## 9. 拡張境界
 
-将来のMIDI、App UI、Camera Bank、Preview、AIは、Switcher、Motion Player、Preset作成APIを利用する。現在の基盤へ次を先行追加しない。
+将来のMIDI、Camera Palette全体を扱うApp UI、Camera Bank、Preview、AIは、Switcher、Motion Player、Preset作成APIを利用する。現在の基盤へ次を先行追加しない。
 
 - 入力機器別の空Adapter
 - Command Bus、Service Locator、DI Container

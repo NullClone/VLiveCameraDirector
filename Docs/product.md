@@ -77,13 +77,14 @@ VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し�
 - Speed、Reverse、Hold、Resume
 - Motion Validator
 - Scene上のShotから新しいPresetを保存するEditor操作
+- UI ToolkitとApp UIによるGame View構図ガイド、外周フレーム、アスペクトマスク、テーマ切替付きランタイム設定パネル
 
 ## 5. 現在の対象外
 
 - Inspector変更直後の自動生成、削除、再配置
 - Preview / Take / Tally、Camera Bank、Multiview
 - Pan、Tilt、Screen Position、Zoomのライブトリム
-- MIDIとApp UI操作Window
+- MIDIとCamera Palette全体を扱うApp UI操作Window
 - Runtime AI、Shot推薦、自動Take
 - Focus、Iris、Exposureの自動演出
 - 独自Aim Solver、Runtime Occlusion Solver

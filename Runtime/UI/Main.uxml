@@ -1,0 +1,96 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:appui="Unity.AppUI.UI" xmlns:vlive="VLiveKit.Camera">
+    <ui:Style src="Overlay.uss" />
+    <appui:Panel name="composition-panel" theme="dark" scale="medium" class="composition-panel" picking-mode="Ignore">
+        <vlive:SplitLinesElement name="composition-overlay" class="composition-overlay" />
+
+        <ui:VisualElement name="runtime-controls" class="runtime-controls" picking-mode="Ignore">
+            <appui:IconButton name="settings-open-button" icon="frame-corners" primary="true" size="L" tooltip="Composition Frame" class="settings-open-button" />
+
+            <ui:VisualElement name="settings-drawer" class="settings-drawer">
+                <ui:VisualElement class="drawer-header">
+                    <appui:Icon icon-name="camera-settings" size="L" primary="true" class="drawer-title-icon" />
+                    <ui:VisualElement class="drawer-heading">
+                        <ui:Label text="Composition Frame" class="drawer-title" />
+                        <ui:Label text="Live Game View overlay" class="drawer-subtitle" />
+                    </ui:VisualElement>
+                    <appui:IconButton name="settings-close-button" icon="x" quiet="true" size="M" tooltip="Close" class="drawer-close-button" />
+                </ui:VisualElement>
+
+                <ui:ScrollView class="drawer-scroll" horizontal-scroller-visibility="Hidden">
+                    <ui:VisualElement class="control-section">
+                        <ui:VisualElement class="section-header">
+                            <appui:Icon icon-name="frame-corners" size="S" primary="true" class="section-icon" />
+                            <ui:Label text="FRAME" class="section-title" />
+                        </ui:VisualElement>
+                        <appui:Toggle name="letterbox-toggle" label="Frame Mask" value="true" />
+
+                        <ui:Label text="Aspect Ratio" class="field-label" />
+                        <appui:SliderFloat name="aspect-slider" low-value="0.5" high-value="4" value="2.35" step="0.001" shift-step="0.01" show-input-field="true" format-string="#.000" track="On" />
+
+                        <ui:VisualElement class="preset-grid">
+                            <appui:Button name="preset-4-3" title="4:3" size="S" class="preset-button" />
+                            <appui:Button name="preset-16-9" title="16:9" size="S" class="preset-button" />
+                            <appui:Button name="preset-1-85" title="1.85" size="S" class="preset-button" />
+                            <appui:Button name="preset-2-00" title="2.00" size="S" class="preset-button" />
+                            <appui:Button name="preset-2-35" title="2.35" size="S" class="preset-button" />
+                            <appui:Button name="preset-2-39" title="2.39" size="S" class="preset-button" />
+                        </ui:VisualElement>
+
+                        <ui:Label text="Mask Color" class="field-label" />
+                        <appui:ColorField name="letterbox-color-field" show-alpha="false" />
+
+                        <ui:Label text="Opacity" class="field-label" />
+                        <appui:SliderFloat name="opacity-slider" low-value="0" high-value="1" value="0.9" step="0.01" shift-step="0.1" show-input-field="true" format-string="#.00" track="On" />
+
+                        <ui:Label text="Motion Response" class="field-label" />
+                        <appui:SliderFloat name="frame-response-slider" low-value="0.01" high-value="1" value="0.22" step="0.01" shift-step="0.1" show-input-field="true" format-string="#.00 s" track="On" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="section-divider" />
+
+                    <ui:VisualElement class="control-section">
+                        <ui:VisualElement class="section-header">
+                            <appui:Icon icon-name="grid-four" size="S" primary="true" class="section-icon" />
+                            <ui:Label text="LINES" class="section-title" />
+                        </ui:VisualElement>
+                        <appui:Toggle name="guides-toggle" label="Frame + Split Lines" value="true" />
+
+                        <ui:Label text="Line Color" class="field-label" />
+                        <appui:ColorField name="line-color-field" show-alpha="true" />
+
+                        <ui:Label text="Line Width" class="field-label" />
+                        <appui:SliderFloat name="line-width-slider" low-value="0.5" high-value="10" value="1.5" step="0.1" shift-step="1" show-input-field="true" format-string="#.0 px" track="On" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="section-divider" />
+
+                    <ui:VisualElement class="control-section">
+                        <ui:VisualElement class="section-header">
+                            <appui:Icon icon-name="palette" size="S" primary="true" class="section-icon" />
+                            <ui:Label text="THEME" class="section-title" />
+                        </ui:VisualElement>
+
+                        <ui:Label text="Color Theme" class="field-label field-label-first" />
+                        <ui:VisualElement class="theme-grid">
+                            <appui:Button name="theme-dark" title="Dark" leading-icon="moon" size="S" class="theme-button" />
+                            <appui:Button name="theme-light" title="Light" leading-icon="sun" size="S" class="theme-button" />
+                            <appui:Button name="theme-editor-dark" title="Editor Dark" leading-icon="sliders" size="S" class="theme-button" />
+                            <appui:Button name="theme-editor-light" title="Editor Light" leading-icon="sliders" size="S" class="theme-button" />
+                        </ui:VisualElement>
+
+                        <ui:Label text="UI Scale" class="field-label" />
+                        <ui:VisualElement class="scale-row">
+                            <appui:Button name="scale-small" title="Small" leading-icon="resize" size="S" class="scale-button" />
+                            <appui:Button name="scale-medium" title="Medium" leading-icon="resize" size="S" class="scale-button" />
+                            <appui:Button name="scale-large" title="Large" leading-icon="resize" size="S" class="scale-button scale-button-last" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:ScrollView>
+
+                <ui:VisualElement class="drawer-footer">
+                    <appui:Button name="reset-button" title="Reset to Defaults" leading-icon="arrow-counter-clockwise" size="M" class="reset-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </appui:Panel>
+</ui:UXML>

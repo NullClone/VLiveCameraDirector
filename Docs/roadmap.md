@@ -6,7 +6,7 @@
 
 ## 2. Current — Motion Foundation
 
-2026-09-12時点の基盤:
+2026-09-13時点の基盤:
 
 - Unity 6.3、Cinemachine 3.1.7、Input System 1.19.0
 - Rigと順序付きShot SlotによるScene Authoring
@@ -24,6 +24,7 @@
 - 標準IMGUIを使った英語Custom Inspector
 - Editor Motion Validator
 - Runtime、Editor、Presetの責務別フォルダ構成
+- Game View用のApp UI構図パネル、テーマ切替、アニメーション付きアスペクトマスク、外周フレーム、Split Line
 
 ユーザーの作業用SceneでRig作成と基本的な切り替えは確認済みである。初期Presetは評価候補であり、Gold Masterではない。
 
@@ -73,7 +74,7 @@ AIはUnity Editor APIから人と同じMotion Preset Assetを作る。YAML直接
 
 ## 6. Later — Live Operation
 
-- App UIによるCamera PaletteとProgram表示
+- App UIによるCamera Palette全体とProgram表示
 - Preview / Take / Tally
 - Camera Bank
 - Pan、Tilt、Screen Position、Zoomの非破壊ライブトリム

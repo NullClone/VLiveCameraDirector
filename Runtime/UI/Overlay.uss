@@ -1,0 +1,186 @@
+.composition-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.composition-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.runtime-controls {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.settings-open-button {
+    position: absolute;
+    right: var(--appui-spacing-200);
+    top: var(--appui-spacing-200);
+}
+
+.settings-drawer {
+    display: none;
+    position: absolute;
+    right: var(--appui-spacing-200);
+    top: var(--appui-spacing-200);
+    bottom: var(--appui-spacing-200);
+    width: 360px;
+    min-width: 300px;
+    max-width: 42%;
+    background-color: var(--appui-backgrounds-100);
+    border-left-width: var(--appui-border-width-xs);
+    border-right-width: var(--appui-border-width-xs);
+    border-top-width: var(--appui-border-width-xs);
+    border-bottom-width: var(--appui-border-width-xs);
+    border-left-color: var(--appui-backgrounds-300);
+    border-right-color: var(--appui-backgrounds-300);
+    border-top-color: var(--appui-backgrounds-300);
+    border-bottom-color: var(--appui-backgrounds-300);
+    border-top-left-radius: var(--appui-border-radius-lg);
+    border-top-right-radius: var(--appui-border-radius-lg);
+    border-bottom-left-radius: var(--appui-border-radius-lg);
+    border-bottom-right-radius: var(--appui-border-radius-lg);
+}
+
+.drawer-header {
+    min-height: 68px;
+    padding-left: var(--appui-spacing-300);
+    padding-right: var(--appui-spacing-200);
+    padding-top: var(--appui-spacing-200);
+    padding-bottom: var(--appui-spacing-200);
+    flex-direction: row;
+    align-items: center;
+    border-bottom-width: var(--appui-border-width-xs);
+    border-bottom-color: var(--appui-backgrounds-300);
+}
+
+.drawer-heading {
+    flex-grow: 1;
+}
+
+.drawer-title-icon {
+    margin-right: var(--appui-spacing-150);
+}
+
+.drawer-title {
+    color: var(--appui-alias-text-primary);
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.drawer-subtitle {
+    color: var(--appui-alias-text-secondary);
+    font-size: 11px;
+    margin-top: var(--appui-spacing-50);
+}
+
+.drawer-close-button {
+    margin-left: var(--appui-spacing-100);
+}
+
+.drawer-scroll {
+    flex-grow: 1;
+}
+
+.control-section {
+    padding-left: var(--appui-spacing-300);
+    padding-right: var(--appui-spacing-300);
+    padding-top: var(--appui-spacing-250);
+    padding-bottom: var(--appui-spacing-250);
+}
+
+.section-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--appui-spacing-150);
+}
+
+.section-icon {
+    margin-right: var(--appui-spacing-100);
+}
+
+.section-title {
+    color: var(--appui-accent-100);
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+
+.field-label {
+    color: var(--appui-alias-text-primary);
+    font-size: 11px;
+    margin-top: var(--appui-spacing-200);
+    margin-bottom: var(--appui-spacing-75);
+}
+
+.field-label-first {
+    margin-top: 0;
+}
+
+.preset-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: var(--appui-spacing-100);
+}
+
+.preset-button {
+    width: 31%;
+    margin-right: 2%;
+    margin-bottom: var(--appui-spacing-100);
+}
+
+.theme-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.theme-button {
+    width: 48%;
+    margin-right: 2%;
+    margin-bottom: var(--appui-spacing-100);
+}
+
+.scale-row {
+    flex-direction: row;
+}
+
+.scale-button {
+    flex-grow: 1;
+    margin-right: var(--appui-spacing-100);
+}
+
+.scale-button-last {
+    margin-right: 0;
+}
+
+.section-divider {
+    height: var(--appui-border-width-xs);
+    margin-left: var(--appui-spacing-300);
+    margin-right: var(--appui-spacing-300);
+    background-color: var(--appui-backgrounds-300);
+}
+
+.drawer-footer {
+    padding-left: var(--appui-spacing-300);
+    padding-right: var(--appui-spacing-300);
+    padding-top: var(--appui-spacing-200);
+    padding-bottom: var(--appui-spacing-200);
+    border-top-width: var(--appui-border-width-xs);
+    border-top-color: var(--appui-backgrounds-300);
+}
+
+.reset-button {
+    width: 100%;
+}

@@ -103,7 +103,7 @@ fields inside nested serializable types.
 ## Inspector presentation
 
 Custom Inspectors deliberately use IMGUI. Do not migrate them to UI Toolkit or
-App UI. App UI is reserved for the future live-operation window.
+App UI. Runtimeの明示的なライブ操作画面にはUI ToolkitとApp UIを使用してよい。
 
 - Use `OnInspectorGUI`, `EditorGUILayout`, `SerializedObject`, and
   `SerializedProperty` as the default path.
