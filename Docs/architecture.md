@@ -11,7 +11,8 @@ Motion Preset Assets ---> Rig ---> ordered Shot Slots
                            |             |
                            |             +--> Shot 1 ... Shot N
                            |                    each owns one CinemachineCamera
-                           |                    Spline, Aim Proxy, Motion Player
+                           |                    Spline, Target Group, Group Framing
+                           |                    Motion Player
                            v
 Operator Input --------> Switcher --------> Cinemachine Brain
                            |                       |
@@ -39,8 +40,9 @@ Resolved Shot Motion + Playback Time
 
 | 状態 | 唯一の所有者 |
 | --- | --- |
-| Target、Program Camera、正面基準、Scale、Shot順 | `VLiveCameraRig` |
-| SlotのPreset参照と生成済みShot参照 | `VLiveCameraShotSlot` |
+| 基準Transform、Program Camera、共通Physical Camera設定、正面基準、Scale、Shot順 | `VLiveCameraRig` |
+| SlotのPreset参照、Actor一覧、生成済みShot参照 | `VLiveCameraShotSlot` |
+| Humanoid AnimatorとActorごとの構図半径 | `VLivePerformer` |
 | 再利用可能なCamera Performance | `VLiveCameraMotionPreset` |
 | Sceneへ適用済みのMotion設定 | `VLiveCameraShot` |
 | 現在時刻、速度、方向、Hold、完了状態 | `VLiveCameraMotionPlayer` |
@@ -54,18 +56,18 @@ Switcherへ別のShot一覧を持たせず、Motion Player以外へ再生状態�
 
 | 型 | 責務 |
 | --- | --- |
-| `VLiveCameraRig` | Scene全体の設定と順序付きShot Slotを保持する |
+| `VLiveCameraRig` | Scene全体の基準、共通Physical Camera設定、順序付きShot Slotを保持する |
+| `VLivePerformer` | ActorのHumanoid AnimatorとHead、Bust、Bodyの構図半径を保持する |
 | `VLiveCameraMotionPreset` | Track集合からなる再利用可能なCamera Performanceを保持する |
 | `VLiveCameraRigProfile` | 機材固有の操作応答とValidator推奨値を共有する |
-| `VLiveCameraShot` | 専用Camera、Spline、Aim Proxy、適用済みMotionとlifecycleを所有する |
+| `VLiveCameraShot` | 専用Camera、Spline、Target Group、Group Framing、適用済みMotionとlifecycleを所有する |
 | `VLiveCameraMotionPlayer` | 1 Shotの再生状態を進め、評価結果を自身のCinemachine構成へ適用する |
 | `VLiveCameraMotionEvaluator` | 解決済みMotionと時刻からMotion Sampleを決定的に計算する |
 | `VLiveCameraSwitcher` | RigのSlot順を使用してProgram Cutだけを管理する |
 | `VLiveCameraKeyboardInput` | Keyboard入力をSwitcherの公開操作へ渡す |
 | `SplitLines` | Game Viewのアスペクトマスク、構図ガイド、App UIテーマと設定パネルを管理する |
 | `SplitLinesElement` | `SplitLines`から受け取ったマスク、外周フレーム、Split LineをPainter2Dで描画する |
-| Editor Builder | 明示操作としてRig、Shot、Splineの生成、修復、再構築を行う |
-| Preset Baker | Scene上のShotから新しいPreset Assetを保存する |
+| Editor Builder | 明示操作としてRig、Shot、Spline、Target Groupの生成、修復、再構築を行う |
 | Motion Validator | AssetやSceneを変更せずMotionを診断する |
 
 ## 5. Preset、Shot、Playerの境界
@@ -77,10 +79,13 @@ Presetは原本、ShotはSceneへ適用したインスタンス、PlayerはRunti
 | Body geometry | Motion Preset | `SplineContainer` |
 | Timing、Progress、Entry、Activation | Motion Preset | Shotの適用済みMotion |
 | Aim、Composition、Lens、Roll | Motion Preset | Shotの適用済みMotion |
+| Actor一覧 | Shot Slot | ShotとCinemachine Target Group |
+| ActorのHumanoidボーンと構図半径 | `VLivePerformer` | Cinemachine Target GroupのMember |
+| Sensor Size、Gate Fit、Lens Shift、Near / Far Clip Plane | Rig | Program Cameraと各ShotのPhysical Lens |
 | Rig応答 | Rig Profile | Rebuild時に解決した適用済みMotion |
 | 現在時刻、速度、方向、Hold | なし | Motion Playerだけ |
 
-通常のApplyはScene Overrideを保持する。Preset、Rig Profile、Scale、正面基準、Slot参照の変更はRebuildでのみ既存Shotへ反映する。Scene変更をPresetへ自動逆同期しない。
+通常のApplyはScene Overrideを保持しつつ、Shot SlotのActor一覧とTarget Group Memberを同期する。Preset、Rig Profile、Scale、正面基準の変更はRebuildでのみ既存Shotへ反映する。Scene変更をPresetへ自動逆同期しない。
 
 ## 6. Cinemachine統合契約
 
@@ -97,15 +102,21 @@ Presetは原本、ShotはSceneへ適用したインスタンス、PlayerはRunti
 - 1 Shotごとの`CinemachineCamera`
 - Program Camera上の`CinemachineBrain`
 - `CinemachineSplineDolly`によるSpline評価
+- `CinemachineTargetGroup`による単独・複数Actorの被写体範囲
 - `CinemachineRotationComposer`による追従と構図補間
-- Lensと最終Camera Pipeline
+- `CinemachineGroupFraming`による被写体Groupの画面内維持
+- Physical Lensと最終Camera Pipeline
 
 ### 統合規則
 
 - 1 Shotにつき1つのCinemachineCameraを使用し、Live中のCameraを別Shotへ再構成しない。
 - Program出力は1台のUnity CameraとCinemachine Brainを使用する。
+- Cinemachine BrainはPhysical Lens overrideを有効にする。
 - Unity CameraへTransformやLensを毎フレームコピーしない。
-- Aim、Damping、Lookahead、LensなどはCinemachine標準機能を優先する。
+- ActorはShot Slotから指定し、`VLivePerformer`がHumanoid Animatorから直接取得したボーンをTarget Groupへ登録する。補助Proxyは作らない。
+- Aim OffsetはRotation ComposerのTarget Offset、Screen PositionはGroup FramingのCenter Offsetへ適用する。
+- Group Framingは画角を変更せずDollyで収まりを調整し、PresetのField of ViewまたはFocal Lengthを保持する。
+- Aim、Damping、Lookahead、Group Framing、LensなどはCinemachine標準機能を優先する。
 - Cinemachineと競合する独自Brain、独自Aim Solver、独自Camera Pipelineを作らない。
 - 標準Pipelineで不足するとScene比較から確認できた処理だけを、Cinemachineの正式な拡張点へ追加する。
 - RuntimeのHard SafetyはNaN、Infinity、無効参照を拒否するが、Presetの演出意図を別の動きへ置き換えない。
@@ -114,7 +125,7 @@ Presetは原本、ShotはSceneへ適用したインスタンス、PlayerはRunti
 
 Runtimeは再生、状態、決定的なMotion評価だけを扱う。Update中にScene、Spline、Assetを生成、削除、保存しない。
 
-EditorはRig作成、Apply、Rebuild、Preset保存、Validation、Custom Inspectorを扱う。Scene変更は明示操作、確認、Undoを伴い、Inspector描画や`OnValidate`だけでは実行しない。
+EditorはRig作成、Apply、Rebuild、Camera Settings一括適用、Validation、Custom Inspectorを扱う。Scene変更は明示操作、確認、Undoを伴い、Inspector描画や`OnValidate`だけでは実行しない。
 
 RuntimeとEditor Validatorは同じMotion Evaluatorを使用する。EditorはRuntime状態を第二の正本として保持しない。
 
@@ -141,7 +152,7 @@ Editor/
 
 Presets/
   Motion/
-  RigProfiles/
+  DefaultRigProfile.asset
 ```
 
 - Runtime namespaceは`VLiveKit.Camera`とする。
@@ -153,11 +164,11 @@ Presets/
 - enumは所有する機能の近くへ置く。
 - MIDI、AIなど未実装機能の空フォルダを先に作らない。
 
-製品表示名は`VLive Camera Director`、移行後のPackage IDは`com.toshi.vlivekit.camera-director`とする。コード型の`VLiveCamera`接頭辞は維持する。旧`VLiveCameraUnit`のフォルダ、Package ID、asmdef名は[roadmap.md](roadmap.md)の破壊的移行で置き換え、互換wrapperを並存させない。
+製品表示名は`VLive Camera Director`、Package IDは`com.toshi.vlivekit.camera-director`とする。Runtime asmdefは`VLiveKit.Camera.Runtime`、Editor asmdefは`VLiveKit.Camera.Editor`とし、コード型の`VLiveCamera`接頭辞は維持する。旧名の互換wrapperを並存させない。
 
 ## 9. 拡張境界
 
-将来のMIDI、Camera Palette全体を扱うApp UI、Camera Bank、Preview、AIは、Switcher、Motion Player、Preset作成APIを利用する。現在の基盤へ次を先行追加しない。
+将来のMIDI、Camera Palette全体を扱うApp UI、Camera Bank、Preview、AIは、Switcher、Motion Player、Motion Presetの現行データ契約を利用する。現在の基盤へ次を先行追加しない。
 
 - 入力機器別の空Adapter
 - Command Bus、Service Locator、DI Container
@@ -180,3 +191,5 @@ Presets/
 8. Preset変更が生成済みShotまたはLive中のMotionへ暗黙伝播しない。
 9. C#ソースはenum、struct、Serializable helperを含め1ファイル1型である。
 10. 現在不要な汎用frameworkや将来用interfaceが存在しない。
+11. ActorのHumanoidボーンを独自Proxyへ複製せず、Cinemachine Target Groupが直接参照する。
+12. 共通Physical Camera設定はRigだけが所有し、Motion Presetへ重複保存しない。

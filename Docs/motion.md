@@ -10,10 +10,10 @@ Motionはオペレーターが選んだ演出を安定して再生し、必要�
 
 - 1 Shotにつき1つの`VLiveCameraShot`と専用CinemachineCameraを使用する。
 - Presetは再利用可能な設定だけを持ち、Runtime再生状態とScene参照を持たない。
-- ShotはScene上のCamera、Spline、Aim Proxy、適用済みMotionを持つ。
+- ShotはScene上のCamera、Spline、Cinemachine Target Group、Group Framing、適用済みMotionを持つ。
 - Motion Playerだけが現在時刻、速度、方向、Hold、完了状態を持つ。
 - Body、Aim、Composition、Lens、Rollは同じPlayback Timeを使用する。
-- AIと人は同じMotion Preset形式とEditor作成APIを利用する。
+- Motion Presetは作成者によらず同じAsset形式を使用する。
 - Fixed Shotを安全な基準として残し、すべてのShotへ微動を加えない。
 - Cinemachine 3とUnity Splinesの標準機能を優先する。
 
@@ -34,13 +34,15 @@ Motionはオペレーターが選んだ演出を安定して再生し、必要�
 
 Family、Shot Size、EnergyはPaletteの検索とAI生成入力に使用する。分類をAssetフォルダ階層の正本にしない。
 
+Shot Sizeは`Wide`、`Full`、`BustUp`、`CloseUp`、`FaceUp`とし、既定値は`BustUp`とする。これは焦点距離の別名ではなく、Target Groupへ含めるHumanoidボーンとGroup Framingの画面占有率を決める。
+
 ### Rig Profile
 
 Presetは`VLiveCameraRigProfile`を参照できる。Profileは複数Presetで共有する機材応答とValidator推奨値だけを持ち、Aim、Lens、Timingなどの具体値をPresetと重複所有しない。
 
 ### Body Track
 
-- Target相対の完全なSpline定義
+- Reference Transform相対の完全なSpline定義
 - 開始距離と終了距離
 - 初期方向
 - OpenまたはClosed
@@ -57,7 +59,7 @@ Fixed ShotはSplineを要求せず、初期Camera位置だけを使用する。
 
 ### Aim and Composition Track
 
-- Target基準のAim OffsetとCurve
+- Target Group基準のAim OffsetとCurve
 - Screen PositionとCurve
 - Dead ZoneとHard Limits
 - Horizontal / Vertical Damping
@@ -68,9 +70,8 @@ Fixed ShotはSplineを要求せず、初期Camera位置だけを使用する。
 
 - Field of ViewまたはFocal Length
 - 開始値と終了値、またはLens Curve
-- Physical Mode時のSensor SizeとGate Fit
 
-Focus Distance、Iris、Exposureは現在含めない。
+Sensor Size、Gate Fit、Lens Shift、Near / Far Clip PlaneはMotion Presetへ保存せず、Rigの共通Physical Camera設定だけが所有する。Focus Distance、Iris、Exposureは現在含めない。
 
 ### Roll Track
 
@@ -90,7 +91,7 @@ Spline UpとRoll CurveのどちらがRollを所有するかを明確にし、二
 
 Presetは原本であり、Rebuild時にRig Scale、正面基準、Rig Profileを解決してCamera、Spline、Cinemachine設定とShotの適用済みMotionへ具体化する。
 
-Preset、Rig Profile、Rig Scale、Slot参照の変更を生成済みShotへ暗黙伝播しない。Runtime PlayerはPreset Assetを毎フレーム直接評価せず、Shotに適用済みの設定を評価する。Apply、Rebuild、Preset保存の詳細は[authoring.md](authoring.md)を正本とする。
+Preset、Rig Profile、Rig Scaleの変更を生成済みShotへ暗黙伝播しない。Actor一覧はApply、Preset由来の値はRebuildで反映する。Runtime PlayerはPreset Assetを毎フレーム直接評価せず、Shotに適用済みの設定を評価する。Apply、Rebuild、Camera Settings一括適用の詳細は[authoring.md](authoring.md)を正本とする。
 
 ## 5. Spline定義
 
@@ -107,12 +108,12 @@ Tangent Modeは`Linear`、`Mirrored`、`Continuous`、`Broken`、`AutoSmooth`を
 
 ### 基準空間
 
-- 原点: Performer Targetの位置
+- 原点: RigのReference Transform位置。未指定時はCamera Director Root位置
 - +Z: 被写体の正面側
 - +X: 正面から見た右側
 - +Y: World Up
 
-Scene座標への変換にはTarget位置とRigの正面基準を使用する。Target TransformのScaleは使用せず、Custom Referenceは位置ではなく向きだけを使用する。
+Scene座標への変換にはReference Transform位置とRigの正面基準を使用する。Reference TransformのScaleは使用せず、Custom Referenceは位置ではなく向きだけを使用する。Camera軌道の基準と被写体Actorは独立させる。
 
 ### Scale
 
@@ -172,21 +173,57 @@ RollingはCut後の最初の表示区間から運動を継続する。Out Time�
 ## 8. Aimと構図
 
 ```text
-Performer Target
-      -> Applied Target Height + Aim Offset
-      -> Aim Proxy
-      -> Cinemachine Rotation Composer
+Shot Slot Performers
+      -> VLivePerformer
+      -> Humanoid Bones
+      -> Cinemachine Target Group
+             |--> Rotation Composer Target Offset
+             +--> Group Framing Center Offset and Dolly
 ```
 
-Aim Proxyは独立した設定の正本ではなく、Target Pose、Shotへ適用済みのTarget Height、基準向き、Aim評価から導出する。
+`VLivePerformer`はHumanoid Animatorを参照し、次の簡潔な規則でTarget Group Memberを構築する。Eyes、顔ランドマーク、補助Proxy、Constraintは使用しない。
 
-Cinemachine Rotation ComposerへScreen Position、Dead Zone、Hard Limits、Damping、Lookaheadを適用する。Targetを常に中央へ固定せず、三分割法やHeadroomも一律に強制しない。Aim Offset CurveとScreen Position Curveは基準値への差分として評価する。
+| Shot Size | Target Group Member、Weight、Radius | Group Framing Size |
+| --- | --- | --- |
+| `Wide` | Head: 1.2 / Head Radius x 1.1、Bust: 1.0 / Bust Radius、Hips: 0.9 / Body Radius | 0.55 |
+| `Full` | Head: 1.2 / Head Radius x 1.1、Bust: 1.0 / Bust Radius、Hips: 0.9 / Body Radius | 0.72 |
+| `BustUp` | Head: 1.2 / Head Radius x 1.1、Bust: 1.0 / Bust Radius | 0.80 |
+| `CloseUp` | Head: 1.2 / Head Radius x 1.1、Bust: 1.0 / Bust Radius x 0.6 | 0.90 |
+| `FaceUp` | Head: 1.2 / Head Radius | 1.00 |
+
+表中のBustはUpperChest、存在しない場合はChestを表す。Member表記は`Weight / Radius`とする。
+
+- ActorごとにHead Radius、Bust Radius、Body Radiusを持ち、既定値は0.18m、0.35m、0.65mとする。
+- UpperChestがないHumanoid AvatarではChestを使用する。
+- 複数Actorの場合は全Actorの有効なMemberを同じTarget Groupへ登録する。
+- 有効なHumanoidボーンMemberを1つも取得できないShotは無効とし、別Actorへ暗黙フォールバックしない。
+- Target GroupはGroup Center、Manual Rotation、Late Updateを使用し、Manual RotationをRigの正面基準へ合わせる。
+
+Aim OffsetはTarget Groupのローカル空間で`CinemachineRotationComposer.TargetOffset`へ適用する。Dead Zone、Hard Limits、Damping、Lookahead、Center On ActivateもRotation Composerへ適用する。
+
+Screen Positionは`CinemachineGroupFraming.CenterOffset`へ適用し、Rotation ComposerのScreen Positionは中央に保つ。AimとGroup Framingで同じ画面オフセットを二重適用しない。
+
+Group FramingはHorizontal and Vertical、Damping 1、Dolly Only、Change Rotation、Dolly Range -5mから+5mを既定とする。Actorの人数や間隔が変わってもTarget Group全体を収めるが、Field of ViewまたはFocal Lengthは変更しない。
+
+Aim Offset CurveとScreen Position Curveは基準値への差分として評価する。Targetを常に中央へ固定せず、構図値はPresetの意図を使用する。
 
 独自の反応遅延、Overshoot、構図Solverは、Cinemachine標準機能だけでは不足すると確認されるまで追加しない。
 
 ## 9. LensとRoll
 
-一般的なPresetはField of View、映画レンズを意識するPresetはFocal LengthとSensor Sizeを使用できる。Physical Cameraを全Presetへ強制しない。
+全ShotとProgram CameraはPhysical Cameraを使用する。一般的なPresetはField of View、映画レンズを意識するPresetはFocal Lengthを保持できる。Focal Lengthは評価時点のRig共通Sensor Heightを用いて垂直Field of Viewへ変換し、Cinemachine Lensへ渡す。
+
+RigはSensor Size、Gate Fit、Lens Shift、Near / Far Clip Planeを一括管理する。既定値は次とする。
+
+| Setting | Default |
+| --- | --- |
+| Sensor Size | 36 x 24mm |
+| Gate Fit | Horizontal |
+| Lens Shift | (0, 0) |
+| Near Clip Plane | 0.1m |
+| Far Clip Plane | 1000m |
+
+これらの共通値は明示的なCamera Settings適用操作でProgram Cameraと全Shotへ同期し、Shot固有のField of View、Focal Length相当の画角、Dutchを上書きしない。
 
 LensはBodyと独立して評価できる。DollyとZoomを同じ操作として扱わず、意図的なDolly Zoomだけが同期させる。
 
@@ -225,7 +262,7 @@ Validatorは映像品質の採点器ではなく、破綻候補を見つけるEd
 - Lens変化速度
 - AimのScreen Space位置
 - Horizon Roll
-- Targetとの最短距離
+- Target GroupのBounding Sphereとの最短距離
 - Near Clip侵入
 - Duration、Spline長、Rig Scaleの不整合
 
@@ -245,7 +282,7 @@ Validatorの閾値は検証開始値であり、警告を合否へ変換しな�
 - 無効なMotion ShotをProgramへ選択しない。
 - 選択失敗時は現在のProgramを維持する。
 - NaNまたはInfinityをCinemachineへ適用しない。
-- Target欠落時は現在状態を維持し、警告を毎フレーム出さない。
+- Target Groupが空、または有効なHumanoidボーンがないShotは無効として扱う。
 - Spline欠落時はMotion Shotを無効として扱う。
 - 異常時に別Target、別Shot、別軌道へ自動切り替えしない。
 - RuntimeでScene、Spline、Assetを生成、削除、保存しない。
@@ -278,3 +315,5 @@ Validatorの閾値は検証開始値であり、警告を合否へ変換しな�
 7. Preset原本、適用済みMotion、Runtime再生状態を混同しない。
 8. Vertical Motion ScaleとMaster Playback SpeedがAssetを変更しない。
 9. Validatorの警告値と映像上の合否を混同しない。
+10. Sensor SizeをMotion Presetへ保存せず、Rig共通値からFocal Lengthを評価する。
+11. Actor構図にAim Proxyを使用せず、HumanoidボーンをCinemachine Target Groupへ直接登録する。

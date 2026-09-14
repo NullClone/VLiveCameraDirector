@@ -11,12 +11,12 @@ VLive Camera Directorは、プロの現場水準を満たす直感的な手動�
 ## 2. 目指す操作体験
 
 1. GameObject MenuからCameraを含まないRig骨格を作成する。
-2. Rig InspectorでPerformer Target、Program Camera、正面基準、Scale、使用するMotion Presetと順序を設定する。
-3. `Apply / Sync`で不足するShotを生成し、参照と順序を同期する。
+2. Actorへ`VLivePerformer`を設定し、Rig InspectorでProgram Camera、基準Transform、共通Physical Camera設定、ShotごとのActor、Motion Presetと順序を設定する。
+3. `Apply`で不足するShotを生成し、Target Group、参照、順序を同期する。
 4. キーでShotへ直接Cutする。
 5. ShotはPresetから適用されたIn Pointから成立し、Rolling Shotは最初の表示区間から動いている。
 6. 必要なときだけSpeed、Reverse、Hold、Resumeを操作する。
-7. Scene上でCamera、Spline、Aim、Lensを調整し、必要なら新しいPresetとして明示保存する。
+7. Scene上でCamera、Spline、Lensを調整し、Actor構図はShot Slot、Performer Radius、Shot Sizeから管理する。
 
 初期導入後の日常的な編集は、UnityとCinemachineの標準Componentに近いInspectorで完結させる。専用の確認Sceneは配布せず、構図と操作感はユーザーが自身の作業用Sceneで判断する。
 
@@ -38,7 +38,7 @@ Keyboardは常に利用できる基礎入力とする。将来MIDIを追加し�
 
 Motion Presetは位置Splineだけではない。Body、Timing、Aim、Screen Composition、Lens、Roll、Activationを同じPlayback Timeから評価する。
 
-人とAIは同じMotion Preset Assetを作成する。AI専用Runtime経路や別データ形式を持たない。
+Motion Presetは作成者によらず同じAsset形式を使用する。AI専用Runtime経路や別データ形式を持たない。
 
 ### 3.4 PresetとScene調整を分ける
 
@@ -46,12 +46,12 @@ Motion Preset Assetは再利用可能な原本、生成済みShotはScene固有�
 
 - 通常のApplyはScene調整を保持する。
 - RebuildだけがPreset値を既存Shotへ再適用する。
-- Scene調整を再利用する場合は新しいPresetへ明示保存する。
+- Scene調整をPresetへ暗黙逆同期しない。現在はSceneからPresetを保存する操作を提供しない。
 - PresetまたはRig Profileの編集をLive中のShotへ暗黙伝播しない。
 
 ### 3.5 CinemachineをCamera Pipelineの正本とする
 
-各Shotは専用のCinemachineCameraを持つ。Cinemachine Brain、Spline Dolly、Rotation Composer、Lensなどの標準機能を優先し、同じ機能をVLive側で再実装しない。
+各Shotは専用のCinemachineCameraを持つ。Cinemachine Brain、Spline Dolly、Target Group、Rotation Composer、Group Framing、Physical Lensなどの標準機能を優先し、同じ機能をVLive側で再実装しない。
 
 VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し、CinemachineはCamera Pipelineと最終出力を所有する。詳細は[architecture.md](architecture.md)を正本とする。
 
@@ -62,9 +62,13 @@ VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し�
 ## 4. 現在の製品範囲
 
 - Unity 6.3以上、Cinemachine 3
-- Targetは1人
+- Shotごとに1人以上のActor
+- Humanoid AnimatorからのHead、UpperChestまたはChest、Hips認識
+- Wide、Full、BustUp、CloseUp、FaceUpのShot Size
+- Cinemachine Target GroupとGroup Framingによる単独・複数Actorの構図維持
 - 1台のProgram CameraとCinemachine Brain
 - 1 Shotにつき1台の専用CinemachineCamera
+- Physical CameraとRig単位のSensor Size、Gate Fit、Lens Shift、Near / Far Clip Plane一括設定
 - Inspector主導のRig Authoring
 - IMGUIによる英語Custom Inspectorと日本語Tooltip
 - ScriptableObject形式のMotion Preset
@@ -76,7 +80,6 @@ VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し�
 - キーボードによるDirect Cut
 - Speed、Reverse、Hold、Resume
 - Motion Validator
-- Scene上のShotから新しいPresetを保存するEditor操作
 - UI ToolkitとApp UIによるGame View構図ガイド、外周フレーム、アスペクトマスク、テーマ切替付きランタイム設定パネル
 
 ## 5. 現在の対象外
@@ -87,19 +90,20 @@ VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し�
 - MIDIとCamera Palette全体を扱うApp UI操作Window
 - Runtime AI、Shot推薦、自動Take
 - Focus、Iris、Exposureの自動演出
+- Scene上のShotからMotion Presetを生成または上書きする操作
 - 独自Aim Solver、Runtime Occlusion Solver
 - RigidbodyによるCamera機材シミュレーション
 - 実需のない互換wrapperと将来用抽象化
 
 ## 6. 成功条件
 
-1. Rig Inspectorで1人のTargetと複数Shotを構成できる。
+1. Rig InspectorでShotごとに1人以上のActorと複数Shotを構成できる。
 2. キーだけで明確にCutでき、追加操作なしでも各Shotの意図が伝わる。
 3. StaticとRolling、機材差、Aim、Lensの意図が映像上読み取れる。
 4. Speed、Reverse、Hold、Resumeで位置と速度が不連続に飛ばない。
 5. 同じCinemachineCameraを別Shotとして使い回さない。
-6. 通常の同期で既存のCamera、Lens、Spline、Aim調整を失わない。
+6. 通常のApplyで既存のCamera、Lens、Spline調整を失わず、ActorとTarget Group参照だけを同期できる。
 7. Preset原本、Shotへ適用した設定、Runtime再生状態が混同されない。
-8. 人とAIが同じPreset作成経路を利用できる。
+8. Motion Presetのデータ形式を作成者やRuntime経路ごとに分岐させない。
 9. 自動診断と、人による映像品質の判断を混同しない。
 10. Keyboardだけの運用を将来も維持できる。

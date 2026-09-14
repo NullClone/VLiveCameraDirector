@@ -4,17 +4,25 @@
 
 現在成立している基盤、次に完成させる縦切り、その後の順序だけを管理する。完了済み作業の詳細はGit履歴へ残し、この文書へStep履歴を蓄積しない。
 
-## 2. Current — Motion Foundation
+## 2. Current — Camera Director Foundation
 
-2026-09-13時点の基盤:
+2026-09-14時点の基盤:
 
 - Unity 6.3、Cinemachine 3.1.7、Input System 1.19.0
+- 製品名`VLive Camera Director`、Package ID`com.toshi.vlivekit.camera-director`
+- `VLiveKit.Camera.Runtime`と`VLiveKit.Camera.Editor` assembly
 - Rigと順序付きShot SlotによるScene Authoring
 - 1 Shotにつき1つの専用CinemachineCamera
+- Shotごとの単独・複数`VLivePerformer`
+- HumanoidのHead、UpperChestまたはChest、Hips自動認識
+- Cinemachine Target Group、Rotation Composer、Group FramingによるActor構図
+- Wide、Full、BustUp、CloseUp、FaceUpのShot Size
+- 全ShotとProgram CameraのPhysical Camera化
+- RigによるSensor Size、Gate Fit、Lens Shift、Near / Far Clip Plane一括設定
 - KeyboardによるDirect Cut
 - Cameraを生成しないGameObject Menu
 - Setup WindowとStep UIを使用しないInspector主導のAuthoring
-- Apply、Rebuild、削除、Preset保存の明示的な分離
+- Apply、Rebuild、Camera Settings一括適用、削除の明示的な分離
 - Identity、Body、Timing、Aim、Lens、Roll、Activation形式のMotion Preset
 - 完全な3D Spline Knot、水平・垂直Scale、Master Playback Speed
 - Motion EvaluatorとMotion Player
@@ -26,29 +34,25 @@
 - Runtime、Editor、Presetの責務別フォルダ構成
 - Game View用のApp UI構図パネル、テーマ切替、アニメーション付きアスペクトマスク、外周フレーム、Split Line
 
-ユーザーの作業用SceneでRig作成と基本的な切り替えは確認済みである。初期Presetは評価候補であり、Gold Masterではない。
+ユーザーの作業用SceneでRig作成と基本的な切り替えは確認済みである。新しいActor構図とPhysical Camera基盤はUnity CompileとConsoleまで確認済みであり、実際のFaceUp、BustUp、複数Actorの画面構図は未評価である。初期Presetは評価候補であり、Gold Masterではない。
 
-## 3. Next — Camera Director Consolidation
+## 3. Next — Framing and Physical Camera Acceptance
 
-次の1縦切りでは、機能追加より先に製品名、フォルダ、assembly、Cinemachine境界を揃える。
+次の1縦切りでは機能を増やさず、ユーザーの作業用SceneでActor構図とPhysical Cameraの基準値を確定する。
 
-- 製品表示名を`VLive Camera Director`へ変更する。
-- Package IDを`com.toshi.vlivekit.camera-director`へ変更する。
-- ルートフォルダを`VLiveCameraDirector`へ変更する。
-- asmdefを`VLiveKit.Camera.Runtime`と`VLiveKit.Camera.Editor`へ変更する。
-- namespaceと`VLiveCamera`型接頭辞は維持する。
-- `.cs`、Asset、フォルダと各`.meta`を対で移動しGUIDを維持する。
-- Preset CreatorとBakerの固定パスを新構成へ更新する。
-- Menu、CreateAssetMenu、文書、表示名から旧製品名を除去する。
-- Cinemachineの標準ComponentとPipelineを優先し、重複する独自処理がないか確認する。
-- 旧Package ID、asmdef、フォルダ名の互換wrapperを残さない。
-- Unity Import、Compile、Consoleとscoped diffを確認する。
+- 1人のActorでBustUp、CloseUp、FaceUpのHeadroomと切れ位置を確認する。
+- 身長と体格が異なる複数ActorでGroup Framingの余白と中心を確認する。
+- Actorの移動、屈み、腕振り中にHead、Bust、Body Radiusが過不足なく機能するか確認する。
+- FixedとSpline ShotでDolly Onlyの補正量とMotion意図が競合しないか確認する。
+- 既定Sensor Size 36 x 24mm、Near 0.1m、Far 1000m、Dolly Range -5mから+5mをScene条件に合わせて評価する。
+- Shot SizeごとのGroup Framing SizeとActor Radiusを、代表Sceneの基準値として確定する。
+- ValidatorのBounding Sphere距離とNear Clip警告が実映像の問題と一致するか確認する。
 
-この段階ではCamera挙動、Preset値、ユーザーScene、Package直下READMEを変更しない。
+数値は映像比較から調整し、Eyes推定、顔ランドマーク、独自Aim Solver、Occlusion Solverを先に追加しない。
 
 ## 4. Then — Motion Quality and Gold Masters
 
-Consolidation後、ユーザーのSceneで現在のPaletteを評価する。
+FramingとPhysical Cameraの基準値確定後、ユーザーのSceneで現在のPaletteを評価する。
 
 - Y移動、旋回、距離、Lens、Rolling Entryの映像確認
 - Dolly、Fluid Head、Crane、Gimbal、Handheld、RoboticのRig Character

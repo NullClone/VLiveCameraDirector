@@ -54,7 +54,7 @@ Unity Editor、Scene、Prefab、Asset、Build、Testでは`unity-cli`を使用�
 - ユーザーSceneを変更、保存、削除しない。
 - [architecture.md](architecture.md)の状態所有権とCinemachine境界を崩さない。
 - [motion.md](motion.md)のMotionデータと計算契約を崩さない。
-- Apply、Rebuild、削除、Preset保存を暗黙に統合しない。
+- Apply、Rebuild、Camera Settings一括適用、削除を暗黙に統合しない。
 - Inspector変更や`OnValidate`だけでScene、Spline、Assetを変更しない。
 - Validatorは既定で診断だけを行う。
 - 現在必要のないinterface、Manager、Registry、Command Bus、DIを追加しない。
@@ -92,7 +92,7 @@ Compile、Validatorの数値、Scene上の映像確認を同じ証拠として�
 - Scene変更が明示操作とUndoを伴う。
 - Applyが既存のScene調整を上書きしない。
 - Rebuildと削除の対象が明確である。
-- Preset保存が既存Assetを暗黙上書きしない。
+- Scene調整がMotion Preset Assetへ暗黙逆同期されない。
 - ValidatorがAssetやSceneを変更しない。
 - 表示するSerializedFieldにTooltipがある。
 - ユーザー向けMonoBehaviourに有用なCustomEditorがある。

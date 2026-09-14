@@ -6,27 +6,52 @@ HierarchyとComponentを手作業で組み立てなくても、1回の操作でV
 
 ## 2. 作成入口
 
-移行後の作成入口は`GameObject/VLiveKit/Camera Director Rig`とする。独立したSetup Window、Step UI、Wizardは提供しない。
+作成入口は`GameObject/VLiveKit/Camera Director`とする。独立したSetup Window、Step UI、Wizardは提供しない。
 
 初期作成では次をUndo可能な1操作で作る。
 
-- `VLive Camera Rig` Rootと`VLiveCameraRig`
+- `Camera Director` Rootと`VLiveCameraRig`
 - `VLiveCameraSwitcher`
-- `VLiveCameraKeyboardInput`
-- 標準Motion Presetを参照するShot Slot
-- Shot、Spline、Aim Proxyを配置する子Container
+- Shot、Spline、Target Groupを配置する子Container
 
 GameObject MenuはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを生成せず、既存Cameraも探索、割り当て、変更しない。Program CameraはユーザーがRig Inspectorで明示的に指定する。
 
-## 3. Rig Inspector
+`VLiveCameraKeyboardInput`、Cinemachine Brain、Shotは最初の`Apply`で必要に応じて生成する。Rig骨格作成時点では入力やCameraを暗黙追加しない。
 
-### Setup and Framing
+## 3. Actor設定
 
-- Performer Target
+ActorのRootまたはAnimatorを含む親GameObjectへ`VLivePerformer`を追加する。Component追加時は子階層のAnimatorを自動取得し、Inspectorの`Resolve Animator From Children`で明示的に再取得できる。
+
+- Performer Animatorは有効なHumanoid Avatarを使用する。
+- Performer NameはEditor上の識別名とする。
+- Head Radius、Bust Radius、Body RadiusはActor固有の構図範囲をメートル単位で設定する。
+- Eyes、顔ランドマーク、Constraint、補助Proxyは要求しない。
+
+Humanoidボーンの選択とShot SizeごとのMember構成は[motion.md](motion.md)を正本とする。
+
+## 4. Rig Inspector
+
+### Setup
+
 - Program Camera
+- Reference Transform
 - Forward Reference Mode
 - Custom Reference
-- Target Height
+
+Reference TransformはCamera軌道の原点と`ReferenceForward`の向きを決める。未指定時はCamera Director Rootを使用し、Actor参照とは分離する。
+
+### Common Physical Camera Settings
+
+- Sensor Size
+- Gate Fit
+- Lens Shift
+- Near Clip Plane
+- Far Clip Plane
+
+これらはRigが唯一の正本として保持する。値の編集だけでは既存Cameraへ伝播せず、明示的な`Apply Camera Settings to All Shots`で同期する。新規ShotとRebuild対象には現在のRig値を適用する。
+
+### Motion Settings
+
 - Distance Scale
 - Horizontal Motion Scale
 - Vertical Motion Scale
@@ -36,6 +61,7 @@ GameObject MenuはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを
 
 - Slot番号
 - Motion Preset参照
+- 1人以上の`VLivePerformer`一覧
 - 対応する生成済みShot参照
 - 追加、並び替え、Slotからの除外
 
@@ -43,12 +69,13 @@ GameObject MenuはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを
 
 ### Actions
 
-- `Apply / Sync`
-- `Rebuild All From Presets`
+- `Apply`
+- `Rebuild`
+- `Apply Camera Settings to All Shots`
 
-選択ShotのRebuild、Preset保存、診断、削除はShot Inspectorへ置く。Rig InspectorはRig全体の設定と問題だけを表示する。
+選択ShotのRebuild、診断、削除はShot Inspectorへ置く。Rig InspectorはRig全体の設定と問題だけを表示する。
 
-## 4. Inspector表示
+## 5. Inspector表示
 
 - IMGUIを使用し、Custom InspectorへUI ToolkitやApp UIを使用しない。
 - UnityとCinemachineの標準Componentに近い外観にする。
@@ -61,8 +88,9 @@ GameObject MenuはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを
 
 | Inspector | 主な表示 | 所有する操作 |
 | --- | --- | --- |
-| Rig | Target、Program Camera、Framing、Shot Slots | Apply / Sync、Rebuild All |
-| Shot | Source Preset、Cinemachine参照、適用状態 | Rebuild、Save As New Preset、Validate、Delete |
+| Rig | Reference、Program Camera、Physical Camera、Motion、Shot Slots | Apply、Rebuild、Camera Settings一括適用 |
+| Performer | Humanoid Animator、表示名、Head / Bust / Body Radius | 子階層からのAnimator再取得 |
+| Shot | Source Preset、Actor、Target Group、Cinemachine参照、適用状態 | Rebuild、Validate、Delete |
 | Motion Preset | Identityと各Track | Preset編集と診断 |
 | Switcher | Rig、Current Program | Program状態の確認 |
 | Keyboard Input | Switcher、Key Bindings | 割り当てと競合確認 |
@@ -72,24 +100,26 @@ GameObject MenuはUnity Camera、Cinemachine Brain、Shot用CinemachineCameraを
 
 大量Preset用の検索、カテゴリ、サムネイル、App UI Paletteは、実数と運用要件が確定するまで追加しない。
 
-## 5. Apply / Sync
+## 6. Apply
 
-`Apply / Sync`は次だけを行う。
+`Apply`は次だけを行う。
 
 - Slotに不足するShotと専用CinemachineCameraを生成する。
 - Motion Shotに不足する専用Splineを生成する。
-- Shotに不足するAim ProxyとMotion Playerを生成する。
-- Target、Program出力、SlotとShotの参照を修復する。
+- ShotごとのActorからCinemachine Target Groupを生成し、HumanoidボーンMemberを同期する。
+- Shotに不足するRotation Composer、Group Framing、Motion Playerを生成する。
+- Target Group、Program出力、SlotとShotの参照を修復する。
 - 明示指定されたProgram Cameraに必要なCinemachine BrainがなければUndo対応で追加する。
+- Cinemachine BrainをCut BlendとPhysical Lens overrideへ設定する。
 - 新規生成物だけへPreset初期値、正面基準、Scaleを適用する。
 
-既存ShotのTransform、Lens、Spline、Aim、適用済みMotionを上書きしない。Preset、Rig Profile、Target Height、Scale、正面基準、Slot参照の変更はRebuildで反映する。
+既存ShotのTransform、Lens、Spline、Group Framing設定、適用済みMotionを上書きしない。Actor一覧とTarget Group Memberは通常のApplyで同期する。Preset、Rig Profile、Scale、正面基準、Shot Sizeの変更はRebuildで反映する。
 
 Slotから外れたShotを自動削除しない。Inspector変更、`OnValidate`、Selection変更、Domain ReloadだけではScene構成を変更しない。
 
-## 6. Rebuild
+## 7. Rebuild
 
-`Rebuild From Preset`はCamera位置、Lens、Aim、Spline、Timing、Curve、Activationを現在のRig設定とPresetから再生成する破壊的な明示操作である。
+`Rebuild From Preset`はCamera位置、Physical Lens、Aim、Target Group、Group Framing、Spline、Timing、Curve、Activationを現在のRig設定、Actor一覧、Presetから再生成する破壊的な明示操作である。
 
 - 対象と失われるScene調整を実行前に表示する。
 - SelectedとAllを分ける。
@@ -97,27 +127,25 @@ Slotから外れたShotを自動削除しない。Inspector変更、`OnValidate`
 - Play Mode中とLive中は実行しない。
 - 通常のApplyと同じボタンや暗黙処理にしない。
 
-## 7. SceneからPresetへの保存
+## 8. Camera Settings一括適用
 
-`Save Selected Shot As New Preset`は、Sceneで調整したShotを新しいMotion Presetへ保存する。
+`Apply Camera Settings to All Shots`は、Rigの共通Physical Camera設定をProgram CameraとRig所有の全CinemachineCameraへ同期する。
 
-- Source Shotと保存先を実行前に表示する。
-- Camera、Spline、Aim、Lens、適用済みTimingとActivationを保存する。
-- Knot、Tangent、Tangent Mode、Up、Curveを欠落させない。
-- 既存Presetを暗黙に上書きしない。
-- SlotのPreset参照を自動差し替えしない。
-- Asset YAMLを直接編集せずUnity Editor APIを使用する。
-- SceneやProjectを自動保存しない。
+- Program Cameraは`usePhysicalProperties`を有効にする。
+- Cinemachine Brainが存在する場合はPhysical Lens overrideを有効にする。
+- 全CameraへSensor Size、Gate Fit、Lens Shift、Near / Far Clip Planeを適用する。
+- Shot固有のField of View、Focal Length相当の画角、Dutch、Physical Exposure値は保持する。
+- Scene変更はUndo可能にし、Sceneを自動保存しない。
 
-AIによるPreset生成も同じAsset作成APIを使用する。
+Scene上のShotからMotion Presetを生成または既存Presetへ保存する操作は、現在提供しない。Scene調整をPreset Assetへ暗黙逆同期しない。
 
-## 8. Slot除外と削除
+## 9. Slot除外と削除
 
-Slotから外す操作とSceneオブジェクトの削除を分ける。生成済みShot、Camera、Splineを削除する場合は対象を明示し、確認とUndoを必須とする。
+Slotから外す操作とSceneオブジェクトの削除を分ける。生成済みShot、Camera、Spline、Target Groupを削除する場合は対象を明示し、確認とUndoを必須とする。
 
 生成物の識別にはSlot内のShot参照とRigの親子関係を使用する。Preset参照、GameObject名、Scene内で最初に見つかったComponentだけを根拠にしない。
 
-## 9. 安全境界
+## 10. 安全境界
 
 - すべてのScene変更をUndo可能にする。
 - Builderが所有していないGameObjectやComponentを変更、削除しない。
@@ -128,12 +156,12 @@ Slotから外す操作とSceneオブジェクトの削除を分ける。生成�
 - AssetまたはSceneを自動保存しない。
 - Validatorは既定で診断だけを行う。
 
-## 10. 不変条件
+## 11. 不変条件
 
 1. 1回の操作でCameraを生成せず初期Rig骨格を作成できる。
-2. Target、Program Camera、正面、Scale、Shot SlotsをRig Inspectorで編集できる。
+2. Reference、Program Camera、共通Physical Camera、正面、Scale、ShotごとのActorをRig Inspectorで編集できる。
 3. Applyは不足物だけを生成し、既存のScene調整を失わない。
-4. Rebuild、削除、Preset保存は対象が明確な別操作である。
+4. Rebuild、Camera Settings一括適用、削除は対象が明確な別操作である。
 5. 同じPresetを複数Slotで使用してもShot参照が混線しない。
 6. Inspector描画と値変更だけではSceneやAssetを変更しない。
 7. Scene上のShotを既存Presetへ暗黙上書きしない。

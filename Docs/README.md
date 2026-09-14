@@ -16,7 +16,7 @@
 | --- | --- |
 | Motion Preset、Spline、Timing、Aim、Lens、Roll、支援 | [motion.md](motion.md) |
 | Direct Cut、Shot lifecycle、Keyboard、手動介入 | [operation.md](operation.md) |
-| Rig作成、Inspector、Apply、Rebuild、Preset保存 | [authoring.md](authoring.md) |
+| Rig作成、Inspector、Apply、Rebuild、Camera Settings一括適用 | [authoring.md](authoring.md) |
 
 ## 開発規則
 

@@ -94,7 +94,7 @@ Reverseは速度符号を瞬時に反転しない。
 
 ### Fixed Shot
 
-Fixed Shotは位置、Aim、Composition、Lensを維持する。Motion操作は安全に無視し、Target追従とRotation ComposerによるAimは継続できる。
+Fixed Shotは位置、Aim、Composition、Lensを維持する。Motion操作は安全に無視し、Target Group追従、Rotation Composer、Group Framingによる構図維持は継続できる。
 
 ## 7. Keyboard Input
 
@@ -116,7 +116,7 @@ Fixed Shotは位置、Aim、Composition、Lensを維持する。Motion操作は�
 - Program出力は1台のUnity CameraとCinemachine Brainを使用する。
 - 各Shotは別々のCinemachineCameraを持つ。
 - Unity CameraへTransformやLensを毎フレームコピーしない。
-- Live中のCameraへ別Shotの位置、Spline、Lens、Targetを上書きしない。
+- Live中のCameraへ別Shotの位置、Spline、Lens、Target Groupを上書きしない。
 - 現在はCutだけを扱い、Blendと映像Crossfadeを含めない。
 
 詳細な所有境界は[architecture.md](architecture.md)を正本とする。
