@@ -55,6 +55,9 @@
                         </ui:VisualElement>
                         <appui:Toggle name="guides-toggle" label="Frame + Split Lines" value="true" />
 
+                        <ui:Label text="Guide Mode" class="field-label" />
+                        <appui:Dropdown name="guide-mode-dropdown" size="M" emphasized="true" />
+
                         <ui:Label text="Line Color" class="field-label" />
                         <appui:ColorField name="line-color-field" show-alpha="true" />
 

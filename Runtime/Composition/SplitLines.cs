@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
 using Unity.AppUI.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
 using AppButton = Unity.AppUI.UI.Button;
+using AppDropdown = Unity.AppUI.UI.Dropdown;
 using AppIconButton = Unity.AppUI.UI.IconButton;
 using AppPanel = Unity.AppUI.UI.Panel;
 using AppToggle = Unity.AppUI.UI.Toggle;
@@ -22,7 +25,15 @@ namespace VLiveKit.Camera
         private const float MaxAspectRatio = 4f;
         private const float ClosedDrawerPadding = 24f;
 
-        [Header("Frame Mask")]
+
+        [SerializeField]
+        [HideInInspector]
+        private VisualTreeAsset _visualTree;
+
+        [SerializeField]
+        [HideInInspector]
+        private PanelSettings _panelSettings;
+
         [Tooltip("指定したアスペクト比の外側へフレームマスクを表示するか。")]
         [SerializeField]
         private bool _letterboxEnabled = true;
@@ -86,6 +97,7 @@ namespace VLiveKit.Camera
         [SerializeField]
         private CompositionPanelScale _panelScale = CompositionPanelScale.Medium;
 
+
         private UIDocument _uiDocument;
         private AppPanel _appUiPanel;
         private SplitLinesElement _overlay;
@@ -109,6 +121,7 @@ namespace VLiveKit.Camera
         private AppButton _scaleLargeButton;
         private AppToggle _letterboxToggle;
         private AppToggle _guidesToggle;
+        private AppDropdown _guideModeDropdown;
         private SliderFloat _aspectSlider;
         private SliderFloat _opacitySlider;
         private SliderFloat _frameResponseSlider;
@@ -127,12 +140,24 @@ namespace VLiveKit.Camera
         private Color _runtimeLineColor;
         private bool _runtimeLetterboxEnabled;
         private bool _runtimeGuidesEnabled;
+        private SplitGuideMode _runtimeGuideMode;
         private CompositionPanelTheme _runtimePanelTheme;
         private CompositionPanelScale _runtimePanelScale;
         private Vector4 _currentInsets;
         private Vector4 _insetVelocity;
         private float _drawerOffset;
         private float _drawerVelocity;
+
+
+        private static readonly string[] GuideModeLabels =
+        {
+            "Symmetrical",
+            "Bisection",
+            "Thirds",
+            "Diagonal",
+            "Thirds + Diagonal",
+            "CinemaScope"
+        };
 
 
         // Methods
@@ -157,11 +182,21 @@ namespace VLiveKit.Camera
                 _settingsDrawer.style.display = DisplayStyle.Flex;
         }
 
-        private void OnEnable()
+
+        private void Reset()
         {
             _uiDocument = GetComponent<UIDocument>();
+            _uiDocument.panelSettings = _panelSettings;
+            _uiDocument.visualTreeAsset = _visualTree;
+            _uiDocument.sortingOrder = 1000;
+        }
+
+        private void OnEnable()
+        {
+            _uiDocument ??= GetComponent<UIDocument>();
             _uiBound = false;
             _runtimeInitialized = false;
+
             TryBindUi();
         }
 
@@ -221,6 +256,7 @@ namespace VLiveKit.Camera
             _scaleLargeButton = root.Q<AppButton>("scale-large");
             _letterboxToggle = root.Q<AppToggle>("letterbox-toggle");
             _guidesToggle = root.Q<AppToggle>("guides-toggle");
+            _guideModeDropdown = root.Q<AppDropdown>("guide-mode-dropdown");
             _aspectSlider = root.Q<SliderFloat>("aspect-slider");
             _opacitySlider = root.Q<SliderFloat>("opacity-slider");
             _frameResponseSlider = root.Q<SliderFloat>("frame-response-slider");
@@ -236,10 +272,14 @@ namespace VLiveKit.Camera
                 _themeDarkButton == null || _themeLightButton == null ||
                 _themeEditorDarkButton == null || _themeEditorLightButton == null ||
                 _scaleSmallButton == null || _scaleMediumButton == null || _scaleLargeButton == null ||
-                _letterboxToggle == null || _guidesToggle == null || _aspectSlider == null ||
+                _letterboxToggle == null || _guidesToggle == null || _guideModeDropdown == null ||
+                _aspectSlider == null ||
                 _opacitySlider == null || _frameResponseSlider == null ||
                 _lineWidthSlider == null || _letterboxColorField == null || _lineColorField == null)
                 return false;
+
+            _guideModeDropdown.bindItem = BindGuideModeItem;
+            _guideModeDropdown.sourceItems = GuideModeLabels;
 
             _openButton.clickable.clicked += OpenSettings;
             _closeButton.clickable.clicked += CloseSettings;
@@ -259,6 +299,7 @@ namespace VLiveKit.Camera
             _scaleLargeButton.clickable.clicked += SetLargeScale;
             _letterboxToggle.RegisterValueChangedCallback(OnLetterboxChanged);
             _guidesToggle.RegisterValueChangedCallback(OnGuidesChanged);
+            _guideModeDropdown.RegisterValueChangedCallback(OnGuideModeChanged);
             RegisterSliderCallbacks();
             _letterboxColorField.RegisterValueChangingCallback(OnLetterboxColorChanging);
             _letterboxColorField.RegisterValueChangedCallback(OnLetterboxColorChanged);
@@ -306,6 +347,9 @@ namespace VLiveKit.Camera
             _scaleLargeButton.clickable.clicked -= SetLargeScale;
             _letterboxToggle.UnregisterValueChangedCallback(OnLetterboxChanged);
             _guidesToggle.UnregisterValueChangedCallback(OnGuidesChanged);
+            _guideModeDropdown.UnregisterValueChangedCallback(OnGuideModeChanged);
+            _guideModeDropdown.bindItem = null;
+            _guideModeDropdown.sourceItems = null;
             UnregisterSliderCallbacks();
             _letterboxColorField.UnregisterValueChangingCallback(OnLetterboxColorChanging);
             _letterboxColorField.UnregisterValueChangedCallback(OnLetterboxColorChanged);
@@ -357,6 +401,7 @@ namespace VLiveKit.Camera
             _runtimeOpacity = _letterboxOpacity;
             _runtimeFrameResponseTime = _frameResponseTime;
             _runtimeGuidesEnabled = _drawGuides;
+            _runtimeGuideMode = _guideMode;
             _runtimeLineColor = _lineColor;
             _runtimeLineWidth = _lineWidth;
             _runtimePanelTheme = _panelTheme;
@@ -387,7 +432,7 @@ namespace VLiveKit.Camera
                 _runtimeLetterboxColor,
                 _runtimeOpacity,
                 _runtimeGuidesEnabled,
-                _guideMode,
+                _runtimeGuideMode,
                 _runtimeLineColor,
                 _runtimeLineWidth);
         }
@@ -456,6 +501,8 @@ namespace VLiveKit.Camera
 
             _letterboxToggle.SetValueWithoutNotify(_runtimeLetterboxEnabled);
             _guidesToggle.SetValueWithoutNotify(_runtimeGuidesEnabled);
+            _guideModeDropdown.SetEnabled(_runtimeGuidesEnabled);
+            _guideModeDropdown.SetValueWithoutNotify(new[] { (int)_runtimeGuideMode });
             _aspectSlider.SetValueWithoutNotify(_runtimeAspectRatio);
             _opacitySlider.SetValueWithoutNotify(_runtimeOpacity);
             _frameResponseSlider.SetValueWithoutNotify(_runtimeFrameResponseTime);
@@ -464,6 +511,7 @@ namespace VLiveKit.Camera
             _lineColorField.SetValueWithoutNotify(_runtimeLineColor);
             ApplyPanelPresentation();
         }
+
 
         private void OpenSettings() => SetSettingsOpen(true);
         private void CloseSettings() => SetSettingsOpen(false);
@@ -500,6 +548,12 @@ namespace VLiveKit.Camera
             ApplyPanelPresentation();
         }
 
+        private static void BindGuideModeItem(DropdownItem item, int index)
+        {
+            if (index >= 0 && index < GuideModeLabels.Length)
+                item.label = GuideModeLabels[index];
+        }
+
         private void ApplyPanelPresentation()
         {
             if (_appUiPanel == null)
@@ -529,7 +583,20 @@ namespace VLiveKit.Camera
         }
 
         private void OnLetterboxChanged(ChangeEvent<bool> evt) => _runtimeLetterboxEnabled = evt.newValue;
-        private void OnGuidesChanged(ChangeEvent<bool> evt) => _runtimeGuidesEnabled = evt.newValue;
+
+        private void OnGuidesChanged(ChangeEvent<bool> evt)
+        {
+            _runtimeGuidesEnabled = evt.newValue;
+            _guideModeDropdown.SetEnabled(evt.newValue);
+        }
+
+        private void OnGuideModeChanged(ChangeEvent<IEnumerable<int>> evt)
+        {
+            int index = _guideModeDropdown.selectedIndex;
+            if (index >= 0 && index < GuideModeLabels.Length)
+                _runtimeGuideMode = (SplitGuideMode)index;
+        }
+
         private void OnAspectChanging(ChangingEvent<float> evt) => SetAspectRatio(evt.newValue);
         private void OnAspectChanged(ChangeEvent<float> evt) => SetAspectRatio(evt.newValue);
         private void OnOpacityChanging(ChangingEvent<float> evt) => _runtimeOpacity = Mathf.Clamp01(evt.newValue);
