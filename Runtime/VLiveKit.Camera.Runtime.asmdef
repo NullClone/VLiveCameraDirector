@@ -1,5 +1,5 @@
 {
-    "name": "VLiveCameraDirector.Runtime",
+    "name": "VLiveKit.Camera.Runtime",
     "rootNamespace": "VLiveKit.Camera",
     "references": [
         "GUID:4307f53044263cf4b835bd812fc161a4",
