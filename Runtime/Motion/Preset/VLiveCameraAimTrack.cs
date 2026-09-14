@@ -11,7 +11,7 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Tooltip("Target Heightからの基準注視オフセット。単位はメートルです。")]
+        [Tooltip("被写体Target Group中心からの基準注視オフセット。単位はメートルです。")]
         [SerializeField]
         private Vector3 _aimOffset;
 

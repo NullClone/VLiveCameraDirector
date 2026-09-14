@@ -14,8 +14,13 @@ namespace VLiveKit.Camera
         /// <param name="motion">適用済みMotion設定。</param>
         /// <param name="time">クリップ再生時刻（秒単位）。</param>
         /// <param name="splineLength">実スプライン長（メートル単位）。</param>
+        /// <param name="sensorHeight">Physical Cameraのセンサー高（ミリメートル単位）。</param>
         /// <returns>評価されたMotion Sample。</returns>
-        public static VLiveCameraMotionSample Evaluate(VLiveCameraAppliedMotion motion, float time, float splineLength)
+        public static VLiveCameraMotionSample Evaluate(
+            VLiveCameraAppliedMotion motion,
+            float time,
+            float splineLength,
+            float sensorHeight = 24f)
         {
             var sample = new VLiveCameraMotionSample
             {
@@ -100,8 +105,8 @@ namespace VLiveKit.Camera
 
             if (motion.LensMode == LensMode.FocalLength && focal > 0.001f)
             {
-                float sensorY = motion.SensorSize.y > 0.001f ? motion.SensorSize.y : 24f;
-                fov = 2.0f * Mathf.Rad2Deg * Mathf.Atan((sensorY * 0.5f) / focal);
+                float resolvedSensorHeight = Mathf.Max(0.1f, sensorHeight);
+                fov = 2.0f * Mathf.Rad2Deg * Mathf.Atan((resolvedSensorHeight * 0.5f) / focal);
             }
 
             sample.FieldOfView = Mathf.Clamp(fov, 1f, 179f);
@@ -140,7 +145,11 @@ namespace VLiveKit.Camera
         /// <summary>
         /// Motion Preset原本から直接Motion Sampleを評価します（Editor Validator診断用）。
         /// </summary>
-        public static VLiveCameraMotionSample EvaluatePreset(VLiveCameraMotionPreset preset, float time, float splineLength)
+        public static VLiveCameraMotionSample EvaluatePreset(
+            VLiveCameraMotionPreset preset,
+            float time,
+            float splineLength,
+            float sensorHeight = 24f)
         {
             if (preset == null)
             {
@@ -149,7 +158,7 @@ namespace VLiveKit.Camera
 
             var tempApplied = new VLiveCameraAppliedMotion();
             tempApplied.ApplyFromPreset(preset, splineLength, preset.RigProfile);
-            return Evaluate(tempApplied, time, splineLength);
+            return Evaluate(tempApplied, time, splineLength, sensorHeight);
         }
     }
 }

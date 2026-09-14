@@ -35,9 +35,9 @@ namespace VLiveKit.Camera.Editor
                 report.HasErrors = true;
             }
 
-            if (shot.AimProxy == null)
+            if (shot.TargetGroup == null || shot.TargetGroup.IsEmpty)
             {
-                report.Messages.Add(new VLiveCameraDiagnosticMessage(VLiveCameraDiagnosticSeverity.Warning, "Aim", "Dedicated Aim Proxy is unassigned."));
+                report.Messages.Add(new VLiveCameraDiagnosticMessage(VLiveCameraDiagnosticSeverity.Warning, "Composition", "Subject Target Group has no valid Humanoid framing bones."));
                 report.HasWarnings = true;
             }
 
@@ -67,19 +67,25 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            if (shot.CinemachineCamera != null && shot.PerformerTarget != null)
+            if (shot.CinemachineCamera != null && shot.TargetGroup != null && !shot.TargetGroup.IsEmpty)
             {
                 float nearClip = shot.CinemachineCamera.Lens.NearClipPlane;
-                float distToTarget = Vector3.Distance(shot.CinemachineCamera.transform.position, shot.PerformerTarget.position);
-                if (distToTarget <= nearClip)
+                BoundingSphere subjectBounds = shot.TargetGroup.Sphere;
+                float distanceToBounds = Mathf.Max(
+                    0f,
+                    Vector3.Distance(shot.CinemachineCamera.transform.position, subjectBounds.position) - subjectBounds.radius);
+                if (distanceToBounds <= nearClip)
                 {
-                    report.Messages.Add(new VLiveCameraDiagnosticMessage(VLiveCameraDiagnosticSeverity.Warning, "Composition", $"Distance to Target ({distToTarget:F2}m) is within Near Clip Plane ({nearClip:F2}m). Subject may be clipped."));
+                    report.Messages.Add(new VLiveCameraDiagnosticMessage(VLiveCameraDiagnosticSeverity.Warning, "Composition", $"Distance to subject bounds ({distanceToBounds:F2}m) is within Near Clip Plane ({nearClip:F2}m). Subject may be clipped."));
                     report.HasWarnings = true;
                 }
             }
 
             VLiveCameraRigProfile profile = shot.AppliedPreset != null ? shot.AppliedPreset.RigProfile : null;
-            RunMotionDiagnostics(motion, splineLen, profile, report);
+            float sensorHeight = shot.CinemachineCamera != null
+                ? shot.CinemachineCamera.Lens.PhysicalProperties.SensorSize.y
+                : 24f;
+            RunMotionDiagnostics(motion, splineLen, profile, report, sensorHeight);
             return report;
         }
 
@@ -109,7 +115,7 @@ namespace VLiveKit.Camera.Editor
             var tempMotion = new VLiveCameraAppliedMotion();
             tempMotion.ApplyFromPreset(preset, splineLen, preset.RigProfile);
 
-            RunMotionDiagnostics(tempMotion, splineLen, preset.RigProfile, report);
+            RunMotionDiagnostics(tempMotion, splineLen, preset.RigProfile, report, 24f);
             return report;
         }
 
@@ -117,7 +123,8 @@ namespace VLiveKit.Camera.Editor
             VLiveCameraAppliedMotion motion,
             float splineLength,
             VLiveCameraRigProfile profile,
-            VLiveCameraMotionValidationReport report)
+            VLiveCameraMotionValidationReport report,
+            float sensorHeight)
         {
             report.Duration = motion.EffectiveDuration;
             report.SplineLength = splineLength;
@@ -161,7 +168,11 @@ namespace VLiveKit.Camera.Editor
             for (int i = 0; i < SampleCount; i++)
             {
                 float t = i * dt;
-                VLiveCameraMotionSample sample = VLiveCameraMotionEvaluator.Evaluate(motion, t, splineLength);
+                VLiveCameraMotionSample sample = VLiveCameraMotionEvaluator.Evaluate(
+                    motion,
+                    t,
+                    splineLength,
+                    sensorHeight);
 
                 if (!sample.IsValid)
                 {

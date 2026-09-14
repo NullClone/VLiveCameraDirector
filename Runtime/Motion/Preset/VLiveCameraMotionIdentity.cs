@@ -25,7 +25,7 @@ namespace VLiveKit.Camera
 
         [Tooltip("被写体に対するフレーミングの大きさ。")]
         [SerializeField]
-        private ShotSize _shotSize = ShotSize.Medium;
+        private ShotSize _shotSize = ShotSize.BustUp;
 
         [Tooltip("ショットの演出エネルギー。")]
         [SerializeField]

@@ -7,8 +7,8 @@ namespace VLiveKit.Camera
     {
         Wide,
         Full,
-        Medium,
-        Close,
-        ExtremeClose
+        BustUp,
+        CloseUp,
+        FaceUp
     }
 }

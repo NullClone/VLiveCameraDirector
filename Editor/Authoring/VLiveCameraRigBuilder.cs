@@ -14,10 +14,10 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        public const string RigGameObjectName = "Virtual Camera";
+        public const string RigGameObjectName = "Camera Director";
         public const string ShotsContainerName = "Shots";
         public const string SplinesContainerName = "Splines";
-        public const string AimProxiesContainerName = "Aim Proxies";
+        public const string TargetGroupsContainerName = "Target Groups";
 
 
         // Methods
@@ -25,19 +25,17 @@ namespace VLiveKit.Camera.Editor
         /// <summary>
         /// GameObjectメニューから新しいCamera Rigを作成します。
         /// </summary>
-        [MenuItem("GameObject/VLiveKit/" + RigGameObjectName, false, 10)]
-        public static void CreateRigFromMenu()
-        {
-            CreateRig();
-        }
+        [MenuItem("GameObject/VLiveKit/Camera Director", false, 10)]
+        public static void CreateRigFromMenu() => CreateRig();
 
         /// <summary>
         /// 現在のSceneに新しいVLiveCameraRig一式を作成します。
         /// </summary>
-        public static VLiveCameraRig CreateRig(Transform performerTarget = null, UnityEngine.Camera outputCamera = null)
+        public static VLiveCameraRig CreateRig(UnityEngine.Camera outputCamera = null)
         {
             if (Application.isPlaying)
             {
+                // TODO: ログを専用のメソッドを作りたい
                 Debug.LogWarning("[VLiveCameraRigBuilder] Cannot create Camera Rig during Play Mode.");
                 return null;
             }
@@ -54,10 +52,8 @@ namespace VLiveKit.Camera.Editor
 
             var rig = rigGo.AddComponent<VLiveCameraRig>();
             var switcher = rigGo.AddComponent<VLiveCameraSwitcher>();
-            var keyboardInput = rigGo.AddComponent<VLiveCameraKeyboardInput>();
 
             switcher.SetRig(rig);
-            keyboardInput.SetSwitcher(switcher);
 
 
             rig.ProgramCamera = outputCamera;
@@ -70,13 +66,12 @@ namespace VLiveKit.Camera.Editor
             splinesGo.transform.SetParent(rigGo.transform, false);
             Undo.RegisterCreatedObjectUndo(splinesGo, "Create Splines Container");
 
-            var aimProxiesGo = new GameObject(AimProxiesContainerName);
-            aimProxiesGo.transform.SetParent(rigGo.transform, false);
-            Undo.RegisterCreatedObjectUndo(aimProxiesGo, "Create Aim Proxies Container");
+            var targetGroupsObject = new GameObject(TargetGroupsContainerName);
+            targetGroupsObject.transform.SetParent(rigGo.transform, false);
+            Undo.RegisterCreatedObjectUndo(targetGroupsObject, "Create Target Groups Container");
 
             EditorUtility.SetDirty(rig);
             EditorUtility.SetDirty(switcher);
-            EditorUtility.SetDirty(keyboardInput);
 
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(currentScene);
@@ -84,12 +79,13 @@ namespace VLiveKit.Camera.Editor
             Selection.activeGameObject = rigGo;
             EditorGUIUtility.PingObject(rigGo);
 
-            Debug.Log("[VLiveCameraRigBuilder] VLive Camera Rig created. Assign Target and Program Camera in Inspector, then click 'Apply / Sync'.");
+            Debug.Log("[VLiveCameraRigBuilder] Camera Director created. Assign performers to Shot Slots and a Program Camera, then click Apply.");
+
             return rig;
         }
 
         /// <summary>
-        /// Rigの設定に基づき、不足Shot・Aim Proxy・Spline・MotionPlayerの生成、参照修復、順序同期を実行します。
+        /// Rigの設定に基づき、不足Shot・Target Group・Spline・MotionPlayerの生成、参照修復、順序同期を実行します。
         /// 既存Shotの手動調整値は保持されます。
         /// </summary>
         public static bool ApplySync(VLiveCameraRig rig)
@@ -102,12 +98,6 @@ namespace VLiveKit.Camera.Editor
 
             if (rig == null)
             {
-                return false;
-            }
-
-            if (rig.PerformerTarget == null)
-            {
-                Debug.LogWarning("[VLiveCameraRigBuilder] Performer Target が設定されていないため Apply / Sync を中断しました。");
                 return false;
             }
 
@@ -125,7 +115,7 @@ namespace VLiveKit.Camera.Editor
 
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
-            Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
+            Transform targetGroupsContainer = EnsureContainer(rig.transform, TargetGroupsContainerName);
 
             CinemachineBrain brain = rig.CinemachineBrain;
             if (brain == null && rig.ProgramCamera != null)
@@ -137,6 +127,7 @@ namespace VLiveKit.Camera.Editor
             {
                 Undo.RecordObject(brain, "Update CinemachineBrain Blend");
                 brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
+                ConfigureBrainForPhysicalCamera(brain);
                 EditorUtility.SetDirty(brain);
             }
 
@@ -190,12 +181,14 @@ namespace VLiveKit.Camera.Editor
                     assignedShots.Add(slot.Shot);
 
                     // 既存Shot: 手動調整（Transform, Lens, Spline, 速度）を保持し、Targetと破損参照のみ修復
-                    repairedCount += VLiveCameraShotBuilder.RepairReferences(rig, slot.Shot, i, aimProxiesContainer, splinesContainer);
+                    repairedCount += VLiveCameraShotBuilder.RepairReferences(
+                        rig, slot.Shot, slot, i, targetGroupsContainer, splinesContainer);
                 }
                 else
                 {
                     // 不足Shot: Preset初期値から新規生成
-                    VLiveCameraShotBuilder.BuildNew(rig, preset, i, shotsContainer, splinesContainer, aimProxiesContainer, slot);
+                    VLiveCameraShotBuilder.BuildNew(
+                        rig, preset, i, shotsContainer, splinesContainer, targetGroupsContainer, slot);
                     if (slot.Shot != null)
                     {
                         assignedShots.Add(slot.Shot);
@@ -237,12 +230,6 @@ namespace VLiveKit.Camera.Editor
                 return;
             }
 
-            if (rig.PerformerTarget == null)
-            {
-                Debug.LogWarning("[VLiveCameraRigBuilder] Performer Target が設定されていないため Rebuild できません。");
-                return;
-            }
-
             if (!rig.IsForwardReferenceValid())
             {
                 Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効のため Rebuild できません。");
@@ -256,7 +243,7 @@ namespace VLiveKit.Camera.Editor
 
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
-            Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
+            Transform targetGroupsContainer = EnsureContainer(rig.transform, TargetGroupsContainerName);
 
             if (slot.Shot == null || !IsShotOwnedByRig(rig, slot.Shot))
             {
@@ -266,11 +253,13 @@ namespace VLiveKit.Camera.Editor
                     slot.SetShot(null);
                 }
 
-                VLiveCameraShotBuilder.BuildNew(rig, slot.Preset, slotIndex, shotsContainer, splinesContainer, aimProxiesContainer, slot);
+                VLiveCameraShotBuilder.BuildNew(
+                    rig, slot.Preset, slotIndex, shotsContainer, splinesContainer, targetGroupsContainer, slot);
             }
             else
             {
-                VLiveCameraShotBuilder.Rebuild(rig, slot.Preset, slotIndex, slot.Shot, aimProxiesContainer, splinesContainer);
+                VLiveCameraShotBuilder.Rebuild(
+                    rig, slot.Preset, slot, slotIndex, slot.Shot, targetGroupsContainer, splinesContainer);
             }
 
             EditorUtility.SetDirty(rig);
@@ -335,12 +324,6 @@ namespace VLiveKit.Camera.Editor
                 return;
             }
 
-            if (rig.PerformerTarget == null)
-            {
-                Debug.LogWarning("[VLiveCameraRigBuilder] Performer Target が設定されていないため Rebuild できません。");
-                return;
-            }
-
             if (!rig.IsForwardReferenceValid())
             {
                 Debug.LogError("[VLiveCameraRigBuilder] 正面基準設定が無効のため Rebuild できません。");
@@ -354,7 +337,7 @@ namespace VLiveKit.Camera.Editor
 
             Transform shotsContainer = EnsureContainer(rig.transform, ShotsContainerName);
             Transform splinesContainer = EnsureContainer(rig.transform, SplinesContainerName);
-            Transform aimProxiesContainer = EnsureContainer(rig.transform, AimProxiesContainerName);
+            Transform targetGroupsContainer = EnsureContainer(rig.transform, TargetGroupsContainerName);
 
             for (int i = 0; i < rig.Slots.Count; i++)
             {
@@ -372,11 +355,13 @@ namespace VLiveKit.Camera.Editor
                         slot.SetShot(null);
                     }
 
-                    VLiveCameraShotBuilder.BuildNew(rig, slot.Preset, i, shotsContainer, splinesContainer, aimProxiesContainer, slot);
+                    VLiveCameraShotBuilder.BuildNew(
+                        rig, slot.Preset, i, shotsContainer, splinesContainer, targetGroupsContainer, slot);
                 }
                 else
                 {
-                    VLiveCameraShotBuilder.Rebuild(rig, slot.Preset, i, slot.Shot, aimProxiesContainer, splinesContainer);
+                    VLiveCameraShotBuilder.Rebuild(
+                        rig, slot.Preset, slot, i, slot.Shot, targetGroupsContainer, splinesContainer);
                 }
             }
 
@@ -388,7 +373,102 @@ namespace VLiveKit.Camera.Editor
         }
 
         /// <summary>
-        /// 指定スロットに対応するShot GameObject、Spline、Aim ProxyをSceneから明示的に削除し、スロット参照をクリアします。
+        /// Rigの共通Physical Camera設定をProgram Cameraと全Shotへ適用します。
+        /// </summary>
+        public static bool ApplyCommonCameraSettings(VLiveCameraRig rig)
+        {
+            if (Application.isPlaying)
+            {
+                Debug.LogWarning("[VLiveCameraRigBuilder] Play Mode中はCamera Settingsを適用できません。");
+                return false;
+            }
+
+            if (rig == null)
+            {
+                return false;
+            }
+
+            Undo.IncrementCurrentGroup();
+            Undo.SetCurrentGroupName("Apply Common Camera Settings");
+            int undoGroup = Undo.GetCurrentGroup();
+            int shotCount = 0;
+
+            if (rig.ProgramCamera != null)
+            {
+                Undo.RecordObject(rig.ProgramCamera, "Apply Program Camera Settings");
+                ApplyCommonPhysicalSettings(rig, rig.ProgramCamera);
+                EditorUtility.SetDirty(rig.ProgramCamera);
+
+                CinemachineBrain brain = rig.CinemachineBrain;
+                if (brain != null)
+                {
+                    Undo.RecordObject(brain, "Apply Cinemachine Brain Lens Mode");
+                    ConfigureBrainForPhysicalCamera(brain);
+                    EditorUtility.SetDirty(brain);
+                }
+            }
+
+            for (int i = 0; i < rig.SlotCount; i++)
+            {
+                VLiveCameraShot shot = rig.GetShot(i);
+                if (shot == null || !IsShotOwnedByRig(rig, shot) || shot.CinemachineCamera == null)
+                {
+                    continue;
+                }
+
+                Undo.RecordObject(shot.CinemachineCamera, "Apply Shot Camera Settings");
+                ApplyCommonPhysicalSettings(rig, shot.CinemachineCamera);
+                EditorUtility.SetDirty(shot.CinemachineCamera);
+                shotCount++;
+            }
+
+            Undo.CollapseUndoOperations(undoGroup);
+            EditorSceneManager.MarkSceneDirty(rig.gameObject.scene);
+            string programCameraResult = rig.ProgramCamera != null ? "Program Camera and " : string.Empty;
+            Debug.Log($"[VLiveCameraRigBuilder] Common Physical Camera settings applied to {programCameraResult}{shotCount} shots.");
+            return true;
+        }
+
+        internal static void ApplyCommonPhysicalSettings(VLiveCameraRig rig, CinemachineCamera camera)
+        {
+            if (rig == null || camera == null)
+            {
+                return;
+            }
+
+            LensSettings lens = camera.Lens;
+            LensSettings.PhysicalSettings physical = lens.PhysicalProperties;
+            lens.ModeOverride = LensSettings.OverrideModes.Physical;
+            lens.NearClipPlane = rig.NearClipPlane;
+            lens.FarClipPlane = rig.FarClipPlane;
+            physical.SensorSize = rig.SensorSize;
+            physical.GateFit = rig.GateFit;
+            physical.LensShift = rig.LensShift;
+            lens.PhysicalProperties = physical;
+            camera.Lens = lens;
+        }
+
+        private static void ApplyCommonPhysicalSettings(VLiveCameraRig rig, UnityEngine.Camera camera)
+        {
+            camera.usePhysicalProperties = true;
+            camera.sensorSize = rig.SensorSize;
+            camera.gateFit = rig.GateFit;
+            camera.lensShift = rig.LensShift;
+            camera.nearClipPlane = rig.NearClipPlane;
+            camera.farClipPlane = rig.FarClipPlane;
+        }
+
+        private static void ConfigureBrainForPhysicalCamera(CinemachineBrain brain)
+        {
+            brain.LensModeOverride = new CinemachineBrain.LensModeOverrideSettings
+            {
+                Enabled = true,
+                DefaultMode = LensSettings.OverrideModes.Physical
+            };
+        }
+
+        /// <summary>
+        /// 指定スロットに対応するShot GameObject、Spline、Target GroupをSceneから削除し、スロット参照をクリアします。
         /// </summary>
         public static void DeleteShotGameObject(VLiveCameraRig rig, int slotIndex)
         {
@@ -437,10 +517,9 @@ namespace VLiveKit.Camera.Editor
                 }
             }
 
-            // Aim Proxy削除
-            if (shot.AimProxy != null && shot.AimProxy.IsChildOf(rig.transform))
+            if (shot.TargetGroup != null && shot.TargetGroup.transform.IsChildOf(rig.transform))
             {
-                Undo.DestroyObjectImmediate(shot.AimProxy.gameObject);
+                Undo.DestroyObjectImmediate(shot.TargetGroup.gameObject);
             }
 
             // Shot GameObject削除
@@ -459,7 +538,7 @@ namespace VLiveKit.Camera.Editor
         }
 
         /// <summary>
-        /// 指定されたShot GameObject、Spline、Aim ProxyをSceneから明示的に削除します。
+        /// 指定されたShot GameObject、Spline、Target GroupをSceneから明示的に削除します。
         /// </summary>
         public static void DeleteShotGameObject(VLiveCameraShot shot)
         {
@@ -506,6 +585,7 @@ namespace VLiveKit.Camera.Editor
 
             return shot.transform.IsChildOf(rig.transform) && shot.gameObject != rig.gameObject;
         }
+
 
         private static Transform EnsureContainer(Transform parent, string name)
         {

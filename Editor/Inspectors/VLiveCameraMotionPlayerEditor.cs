@@ -12,7 +12,7 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _cinemachineCameraProp;
         private SerializedProperty _splineDollyProp;
         private SerializedProperty _rotationComposerProp;
-        private SerializedProperty _aimProxyProp;
+        private SerializedProperty _groupFramingProp;
 
 
         // Methods
@@ -23,7 +23,7 @@ namespace VLiveKit.Camera.Editor
             _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
             _splineDollyProp = serializedObject.FindProperty("_splineDolly");
             _rotationComposerProp = serializedObject.FindProperty("_rotationComposer");
-            _aimProxyProp = serializedObject.FindProperty("_aimProxy");
+            _groupFramingProp = serializedObject.FindProperty("_groupFraming");
         }
 
         public override void OnInspectorGUI()
@@ -37,7 +37,7 @@ namespace VLiveKit.Camera.Editor
                 EditorGUILayout.PropertyField(_cinemachineCameraProp);
                 EditorGUILayout.PropertyField(_splineDollyProp);
                 EditorGUILayout.PropertyField(_rotationComposerProp);
-                EditorGUILayout.PropertyField(_aimProxyProp);
+                EditorGUILayout.PropertyField(_groupFramingProp);
             }
 
             VLiveCameraMotionPlayer player = (VLiveCameraMotionPlayer)target;

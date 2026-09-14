@@ -11,6 +11,8 @@ namespace VLiveKit.Camera
     [DisallowMultipleComponent]
     public class VLiveCameraMotionPlayer : MonoBehaviour
     {
+        // Fields
+
         [Header("Target Shot & Components")]
         [Tooltip("このプレイヤーが属するVLiveCameraShot。")]
         [SerializeField]
@@ -28,9 +30,9 @@ namespace VLiveKit.Camera
         [SerializeField]
         private CinemachineRotationComposer _rotationComposer;
 
-        [Tooltip("注視点制御用のAim Proxy Transform。")]
+        [Tooltip("被写体Group全体の収まりを調整するCinemachineGroupFraming。")]
         [SerializeField]
-        private Transform _aimProxy;
+        private CinemachineGroupFraming _groupFraming;
 
 
         // Runtime Playback States (再生状態の正本)
@@ -53,7 +55,7 @@ namespace VLiveKit.Camera
         public CinemachineCamera CinemachineCamera => _cinemachineCamera;
         public CinemachineSplineDolly SplineDolly => _splineDolly;
         public CinemachineRotationComposer RotationComposer => _rotationComposer;
-        public Transform AimProxy => _aimProxy;
+        public CinemachineGroupFraming GroupFraming => _groupFraming;
 
         public float CurrentTime => _currentTime;
         public float CurrentSpeedMultiplier => _currentSpeedMultiplier;
@@ -354,13 +356,13 @@ namespace VLiveKit.Camera
             CinemachineCamera cmCam,
             CinemachineSplineDolly splineDolly,
             CinemachineRotationComposer composer,
-            Transform aimProxy)
+            CinemachineGroupFraming groupFraming)
         {
             _shot = shot;
             _cinemachineCamera = cmCam;
             _splineDolly = splineDolly;
             _rotationComposer = composer;
-            _aimProxy = aimProxy;
+            _groupFraming = groupFraming;
 
             if (_splineDolly != null && _splineDolly.PositionUnits != PathIndexUnit.Distance)
             {
@@ -392,11 +394,11 @@ namespace VLiveKit.Camera
                 {
                     _rotationComposer = _cinemachineCamera.GetComponent<CinemachineRotationComposer>();
                 }
-            }
 
-            if (_aimProxy == null && _shot != null)
-            {
-                _aimProxy = _shot.AimProxy;
+                if (_groupFraming == null)
+                {
+                    _groupFraming = _cinemachineCamera.GetComponent<CinemachineGroupFraming>();
+                }
             }
 
             if (_splineDolly != null && _splineDolly.PositionUnits != PathIndexUnit.Distance)
@@ -519,7 +521,14 @@ namespace VLiveKit.Camera
         private void EvaluateAndApply(VLiveCameraAppliedMotion motion)
         {
             float splineLength = GetSplineLength();
-            VLiveCameraMotionSample sample = VLiveCameraMotionEvaluator.Evaluate(motion, _currentTime, splineLength);
+            float sensorHeight = _cinemachineCamera != null
+                ? _cinemachineCamera.Lens.PhysicalProperties.SensorSize.y
+                : 24f;
+            VLiveCameraMotionSample sample = VLiveCameraMotionEvaluator.Evaluate(
+                motion,
+                _currentTime,
+                splineLength,
+                sensorHeight);
 
             if (!sample.IsValid)
             {
@@ -536,23 +545,31 @@ namespace VLiveKit.Camera
                 _splineDolly.CameraPosition = sample.SplineDistance;
             }
 
-            if (_aimProxy != null && _shot != null && _shot.PerformerTarget != null)
-            {
-                Vector3 targetPos = _shot.PerformerTarget.position;
-                Vector3 aimPos = targetPos + Vector3.up * _shot.AppliedTargetHeight + _shot.AppliedRigOrientation * sample.AimOffset;
-                _aimProxy.position = aimPos;
-            }
-
             if (_rotationComposer != null)
             {
-                _rotationComposer.Composition.ScreenPosition = sample.ScreenPosition;
+                _rotationComposer.TargetOffset = sample.AimOffset;
+            }
+
+            if (_groupFraming != null)
+            {
+                _groupFraming.CenterOffset = sample.ScreenPosition;
             }
 
             if (_cinemachineCamera != null)
             {
-                _cinemachineCamera.Lens.FieldOfView = sample.FieldOfView;
+                LensSettings lens = _cinemachineCamera.Lens;
+                if (motion.LensMode == LensMode.FocalLength)
+                {
+                    float physicalSensorHeight = Mathf.Max(0.1f, lens.PhysicalProperties.SensorSize.y);
+                    lens.FieldOfView = UnityEngine.Camera.FocalLengthToFieldOfView(sample.FocalLength, physicalSensorHeight);
+                }
+                else
+                {
+                    lens.FieldOfView = sample.FieldOfView;
+                }
 
-                _cinemachineCamera.Lens.Dutch = motion.RollMode == RollMode.RollCurve ? sample.Roll : 0f;
+                lens.Dutch = motion.RollMode == RollMode.RollCurve ? sample.Roll : 0f;
+                _cinemachineCamera.Lens = lens;
             }
         }
     }

@@ -62,8 +62,6 @@ namespace VLiveKit.Camera
         public AnimationCurve FieldOfViewCurve => _data.Lens.FieldOfViewCurve;
         public float FocalLength => _data.Lens.FocalLength;
         public AnimationCurve FocalLengthCurve => _data.Lens.FocalLengthCurve;
-        public Vector2 SensorSize => _data.Lens.SensorSize;
-
         public RollMode RollMode => _data.Roll.Mode;
         public AnimationCurve RollCurve => _data.Roll.Curve;
 

@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
 namespace VLiveKit.Camera
 {
     /// <summary>
-    /// 単一のカメラショットの所有物（専用Camera、Spline、Aim Proxy、適用済みMotion設定）とOn-Air/Off-Air lifecycleを管理するコンポーネント。
+    /// 単一のカメラショットの専用Camera、Spline、被写体Group、適用済みMotionとlifecycleを管理します。
     /// </summary>
     [DisallowMultipleComponent]
     public class VLiveCameraShot : MonoBehaviour
@@ -36,17 +37,25 @@ namespace VLiveKit.Camera
         [SerializeField]
         private CinemachineRotationComposer _rotationComposer;
 
-        [Tooltip("このショット専用のAim Proxy Transform。")]
+        [Tooltip("このショットの被写体ボーンを保持するCinemachine Target Group。")]
         [SerializeField]
-        private Transform _aimProxy;
+        private CinemachineTargetGroup _targetGroup;
+
+        [Tooltip("Target Group全体を画面内へ収めるCinemachine Group Framing。")]
+        [SerializeField]
+        private CinemachineGroupFraming _groupFraming;
 
         [Tooltip("このショット専用のMotion Player。")]
         [SerializeField]
         private VLiveCameraMotionPlayer _motionPlayer;
 
-        [Tooltip("注視・追従基準となる演者Target Transform。")]
+        [Tooltip("このショットに写す演者一覧。")]
         [SerializeField]
-        private Transform _performerTarget;
+        private List<VLivePerformer> _performers = new();
+
+        [Tooltip("適用済みの被写体フレーミング範囲。")]
+        [SerializeField]
+        private ShotSize _shotSize = ShotSize.BustUp;
 
         [Header("Applied Motion Settings")]
         [Tooltip("このショットに適用されている再利用元Preset参照。")]
@@ -56,10 +65,6 @@ namespace VLiveKit.Camera
         [Tooltip("このショットに適用済みのMotion設定実体。")]
         [SerializeField]
         private VLiveCameraAppliedMotion _appliedMotion = new VLiveCameraAppliedMotion();
-
-        [Tooltip("Rebuild時に適用された注視基準高さ（メートル単位）。")]
-        [SerializeField]
-        private float _appliedTargetHeight = 1.3f;
 
         [Tooltip("Rebuild時に適用されたリグ正面向きクォータニオン。")]
         [SerializeField]
@@ -123,7 +128,20 @@ namespace VLiveKit.Camera
             }
         }
 
-        public Transform AimProxy => _aimProxy;
+        public CinemachineTargetGroup TargetGroup => _targetGroup;
+
+        public CinemachineGroupFraming GroupFraming
+        {
+            get
+            {
+                if (_groupFraming == null && CinemachineCamera != null)
+                {
+                    _groupFraming = CinemachineCamera.GetComponent<CinemachineGroupFraming>();
+                }
+
+                return _groupFraming;
+            }
+        }
 
         public VLiveCameraMotionPlayer MotionPlayer
         {
@@ -138,15 +156,12 @@ namespace VLiveKit.Camera
             }
         }
 
-        public Transform PerformerTarget
-        {
-            get => _performerTarget;
-            set => _performerTarget = value;
-        }
+        public IReadOnlyList<VLivePerformer> Performers => _performers;
+
+        public ShotSize Size => _shotSize;
 
         public VLiveCameraMotionPreset AppliedPreset => _appliedPreset;
         public VLiveCameraAppliedMotion AppliedMotion => _appliedMotion;
-        public float AppliedTargetHeight => _appliedTargetHeight;
         public Quaternion AppliedRigOrientation => _appliedRigOrientation;
         public float AppliedDistanceScale => _appliedDistanceScale > 0.001f ? _appliedDistanceScale : 1.0f;
         public float AppliedMotionScale => _appliedMotionScale > 0.001f ? _appliedMotionScale : 1.0f;
@@ -178,7 +193,7 @@ namespace VLiveKit.Camera
                     return false;
                 }
 
-                if (_performerTarget == null || _aimProxy == null || RotationComposer == null)
+                if (_targetGroup == null || _targetGroup.IsEmpty || RotationComposer == null)
                 {
                     return false;
                 }
@@ -333,11 +348,18 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
-        /// Aim Proxy Transformを設定します（参照修復・初期化用）。
+        /// Builderが所有する構図参照を設定します。
         /// </summary>
-        public void SetAimProxy(Transform aimProxy)
+        public void SetCompositionReferences(
+            CinemachineTargetGroup targetGroup,
+            CinemachineGroupFraming groupFraming,
+            IReadOnlyList<VLivePerformer> performers,
+            ShotSize shotSize)
         {
-            _aimProxy = aimProxy;
+            _targetGroup = targetGroup;
+            _groupFraming = groupFraming;
+            _shotSize = shotSize;
+            CopyPerformers(performers);
         }
 
         /// <summary>
@@ -350,11 +372,11 @@ namespace VLiveKit.Camera
             VLiveCameraShotType shotType,
             CinemachineSplineDolly splineDolly,
             CinemachineRotationComposer composer,
-            Transform aimProxy,
+            CinemachineTargetGroup targetGroup,
+            CinemachineGroupFraming groupFraming,
             VLiveCameraMotionPlayer motionPlayer,
-            Transform performerTarget,
+            IReadOnlyList<VLivePerformer> performers,
             VLiveCameraMotionPreset preset,
-            float targetHeight,
             Quaternion rigOrientation,
             float distanceScale = 1.0f,
             float motionScale = 1.0f,
@@ -366,11 +388,12 @@ namespace VLiveKit.Camera
             _shotType = shotType;
             _splineDolly = splineDolly;
             _rotationComposer = composer;
-            _aimProxy = aimProxy;
+            _targetGroup = targetGroup;
+            _groupFraming = groupFraming;
             _motionPlayer = motionPlayer;
-            _performerTarget = performerTarget;
+            _shotSize = preset != null ? preset.Size : ShotSize.BustUp;
+            CopyPerformers(performers);
             _appliedPreset = preset;
-            _appliedTargetHeight = targetHeight;
             _appliedRigOrientation = rigOrientation;
             _appliedDistanceScale = Mathf.Max(0.01f, distanceScale);
             _appliedMotionScale = Mathf.Max(0.01f, motionScale);
@@ -394,7 +417,7 @@ namespace VLiveKit.Camera
 
             if (_motionPlayer != null)
             {
-                _motionPlayer.Configure(this, _cinemachineCamera, _splineDolly, _rotationComposer, _aimProxy);
+                _motionPlayer.Configure(this, _cinemachineCamera, _splineDolly, _rotationComposer, _groupFraming);
             }
         }
 
@@ -404,14 +427,13 @@ namespace VLiveKit.Camera
         public void SyncAppliedMotion(
             VLiveCameraMotionPreset preset,
             float splineLength,
-            float targetHeight,
             Quaternion rigOrientation,
             float distanceScale = 1.0f,
             float motionScale = 1.0f,
             float verticalMotionScale = 1.0f)
         {
             _appliedPreset = preset;
-            _appliedTargetHeight = targetHeight;
+            _shotSize = preset != null ? preset.Size : _shotSize;
             _appliedRigOrientation = rigOrientation;
             _appliedDistanceScale = Mathf.Max(0.01f, distanceScale);
             _appliedMotionScale = Mathf.Max(0.01f, motionScale);
@@ -475,6 +497,31 @@ namespace VLiveKit.Camera
                 if (_rotationComposer == null)
                 {
                     _rotationComposer = _cinemachineCamera.GetComponent<CinemachineRotationComposer>();
+                }
+
+                if (_groupFraming == null)
+                {
+                    _groupFraming = _cinemachineCamera.GetComponent<CinemachineGroupFraming>();
+                }
+            }
+        }
+
+        private void CopyPerformers(IReadOnlyList<VLivePerformer> performers)
+        {
+            _performers ??= new List<VLivePerformer>();
+            _performers.Clear();
+
+            if (performers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < performers.Count; i++)
+            {
+                VLivePerformer performer = performers[i];
+                if (performer != null && !_performers.Contains(performer))
+                {
+                    _performers.Add(performer);
                 }
             }
         }

@@ -33,11 +33,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private AnimationCurve _focalLengthCurve = new AnimationCurve();
 
-        [Tooltip("物理カメラで使用するセンサーサイズ。単位はミリメートルです。")]
-        [SerializeField]
-        private Vector2 _sensorSize = new Vector2(36f, 24f);
-
-
         // Properties
 
         public LensMode Mode
@@ -70,13 +65,6 @@ namespace VLiveKit.Camera
             set => _focalLengthCurve = VLiveCameraCurveUtility.Clone(value);
         }
 
-        public Vector2 SensorSize
-        {
-            get => _sensorSize;
-            set => _sensorSize = new Vector2(Mathf.Max(0.1f, value.x), Mathf.Max(0.1f, value.y));
-        }
-
-
         // Methods
 
         /// <summary>
@@ -90,8 +78,7 @@ namespace VLiveKit.Camera
                 FieldOfView = FieldOfView,
                 FieldOfViewCurve = FieldOfViewCurve,
                 FocalLength = FocalLength,
-                FocalLengthCurve = FocalLengthCurve,
-                SensorSize = SensorSize
+                FocalLengthCurve = FocalLengthCurve
             };
         }
     }

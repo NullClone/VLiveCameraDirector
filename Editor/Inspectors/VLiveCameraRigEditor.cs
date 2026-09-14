@@ -6,7 +6,7 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraRig用のカスタムインスペクター。
-    /// Target設定、正面基準、スケール、順序付きShot Slotsの編集、Apply/Syncおよび一括Rebuild操作を提供します。
+    /// 基準座標、Physical Camera、Shot Slotの被写体、Applyおよび一括Rebuild操作を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraRig))]
     public class VLiveCameraRigEditor : UnityEditor.Editor
@@ -16,12 +16,20 @@ namespace VLiveKit.Camera.Editor
         private static readonly GUIContent s_arrowContent = new GUIContent("→");
         private static readonly GUIContent s_warningContent = new GUIContent("⚠", "Slot Preset differs from Applied Preset on Shot. Rebuild Shot to apply.");
         private static readonly GUIContent s_motionScaleContent = new GUIContent("Horizontal Motion Scale");
+        private static readonly GUIContent s_programCameraContent = new GUIContent("Program Camera");
+        private static readonly GUIContent s_referenceTransformContent = new GUIContent("Reference Transform");
+        private static readonly GUIContent s_forwardModeContent = new GUIContent("Forward Mode");
+        private static readonly GUIContent s_performersContent = new GUIContent("Performers");
 
-        private SerializedProperty _performerTargetProp;
+        private SerializedProperty _referenceTransformProp;
         private SerializedProperty _programCameraProp;
         private SerializedProperty _forwardReferenceModeProp;
         private SerializedProperty _customReferenceProp;
-        private SerializedProperty _targetHeightProp;
+        private SerializedProperty _sensorSizeProp;
+        private SerializedProperty _gateFitProp;
+        private SerializedProperty _lensShiftProp;
+        private SerializedProperty _nearClipPlaneProp;
+        private SerializedProperty _farClipPlaneProp;
         private SerializedProperty _distanceScaleProp;
         private SerializedProperty _motionScaleProp;
         private SerializedProperty _verticalMotionScaleProp;
@@ -29,6 +37,7 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _slotsProp;
 
         private ReorderableList _slotsList;
+        private bool _showCameraSettings = true;
         private bool _showFramingSettings;
 
 
@@ -36,11 +45,15 @@ namespace VLiveKit.Camera.Editor
 
         private void OnEnable()
         {
-            _performerTargetProp = serializedObject.FindProperty("_performerTarget");
+            _referenceTransformProp = serializedObject.FindProperty("_referenceTransform");
             _programCameraProp = serializedObject.FindProperty("_programCamera");
             _forwardReferenceModeProp = serializedObject.FindProperty("_forwardReferenceMode");
             _customReferenceProp = serializedObject.FindProperty("_customReference");
-            _targetHeightProp = serializedObject.FindProperty("_targetHeight");
+            _sensorSizeProp = serializedObject.FindProperty("_sensorSize");
+            _gateFitProp = serializedObject.FindProperty("_gateFit");
+            _lensShiftProp = serializedObject.FindProperty("_lensShift");
+            _nearClipPlaneProp = serializedObject.FindProperty("_nearClipPlane");
+            _farClipPlaneProp = serializedObject.FindProperty("_farClipPlane");
             _distanceScaleProp = serializedObject.FindProperty("_distanceScale");
             _motionScaleProp = serializedObject.FindProperty("_motionScale");
             _verticalMotionScaleProp = serializedObject.FindProperty("_verticalMotionScale");
@@ -57,6 +70,7 @@ namespace VLiveKit.Camera.Editor
             var rig = (VLiveCameraRig)target;
 
             DrawSetupSection();
+            DrawCameraSettingsSection();
             DrawFramingAndScalingSection();
             DrawShotSlotsSection();
             DrawActionsSection(rig);
@@ -78,10 +92,10 @@ namespace VLiveKit.Camera.Editor
 
         private void DrawSetupSection()
         {
-            EditorGUILayout.PropertyField(_programCameraProp, new GUIContent("Camera"));
+            EditorGUILayout.PropertyField(_programCameraProp, s_programCameraContent);
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(_performerTargetProp, new GUIContent("Performer Target"));
-            EditorGUILayout.PropertyField(_forwardReferenceModeProp, new GUIContent("Forward Mode"));
+            EditorGUILayout.PropertyField(_referenceTransformProp, s_referenceTransformContent);
+            EditorGUILayout.PropertyField(_forwardReferenceModeProp, s_forwardModeContent);
             if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.CustomReference)
             {
                 EditorGUI.indentLevel++;
@@ -89,20 +103,15 @@ namespace VLiveKit.Camera.Editor
                 EditorGUI.indentLevel--;
             }
 
-            // Actionable validation messages
-            if (_performerTargetProp.objectReferenceValue == null)
+            if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.ReferenceForward)
             {
-                EditorGUILayout.HelpBox("Performer Target is unassigned. Assign a target Transform before running Apply / Sync.", MessageType.Warning);
-            }
-            else if (_forwardReferenceModeProp.enumValueIndex == (int)ForwardReferenceMode.TargetForward)
-            {
-                var targetTransform = (Transform)_performerTargetProp.objectReferenceValue;
-                if (targetTransform != null)
+                Transform reference = (Transform)_referenceTransformProp.objectReferenceValue;
+                if (reference != null)
                 {
-                    Vector3 fwdXZ = Vector3.ProjectOnPlane(targetTransform.forward, Vector3.up);
+                    Vector3 fwdXZ = Vector3.ProjectOnPlane(reference.forward, Vector3.up);
                     if (fwdXZ.sqrMagnitude < 0.0001f)
                     {
-                        EditorGUILayout.HelpBox("Target forward projected on XZ plane is near-zero. World +Z will be used.", MessageType.Warning);
+                        EditorGUILayout.HelpBox("Reference forward projected on XZ is near-zero. World +Z will be used.", MessageType.Warning);
                     }
                 }
             }
@@ -125,6 +134,29 @@ namespace VLiveKit.Camera.Editor
             }
         }
 
+        private void DrawCameraSettingsSection()
+        {
+            _showCameraSettings = EditorGUILayout.Foldout(_showCameraSettings, "Common Physical Camera Settings", true);
+            if (!_showCameraSettings)
+            {
+                return;
+            }
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(_sensorSizeProp);
+            EditorGUILayout.PropertyField(_gateFitProp);
+            EditorGUILayout.PropertyField(_lensShiftProp);
+            EditorGUILayout.PropertyField(_nearClipPlaneProp);
+            EditorGUILayout.PropertyField(_farClipPlaneProp);
+
+            if (_nearClipPlaneProp.floatValue <= 0f || _farClipPlaneProp.floatValue <= _nearClipPlaneProp.floatValue)
+            {
+                EditorGUILayout.HelpBox("Far Clip Plane must be greater than Near Clip Plane.", MessageType.Warning);
+            }
+
+            EditorGUI.indentLevel--;
+        }
+
         private void DrawFramingAndScalingSection()
         {
             _showFramingSettings = EditorGUILayout.Foldout(_showFramingSettings, "Motion Settings", true);
@@ -134,7 +166,6 @@ namespace VLiveKit.Camera.Editor
             }
 
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(_targetHeightProp);
             EditorGUILayout.PropertyField(_distanceScaleProp);
             EditorGUILayout.PropertyField(_motionScaleProp, s_motionScaleContent);
             EditorGUILayout.PropertyField(_verticalMotionScaleProp);
@@ -186,7 +217,14 @@ namespace VLiveKit.Camera.Editor
 
         private float GetSlotElementHeight(int index)
         {
-            return EditorGUIUtility.singleLineHeight + 4f;
+            if (index < 0 || index >= _slotsProp.arraySize)
+            {
+                return EditorGUIUtility.singleLineHeight + 4f;
+            }
+
+            SerializedProperty slot = _slotsProp.GetArrayElementAtIndex(index);
+            SerializedProperty performers = slot.FindPropertyRelative("_performers");
+            return EditorGUIUtility.singleLineHeight + EditorGUI.GetPropertyHeight(performers, true) + 8f;
         }
 
         private void DrawSlotElement(Rect rect, int index, bool isActive, bool isFocused)
@@ -198,6 +236,7 @@ namespace VLiveKit.Camera.Editor
 
             SerializedProperty slotElem = _slotsProp.GetArrayElementAtIndex(index);
             SerializedProperty presetProp = slotElem.FindPropertyRelative("_preset");
+            SerializedProperty performersProp = slotElem.FindPropertyRelative("_performers");
             SerializedProperty shotProp = slotElem.FindPropertyRelative("_shot");
 
             rect.y += 2f;
@@ -238,6 +277,13 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorGUI.PropertyField(shotRect, shotProp, GUIContent.none);
             }
+
+            Rect performersRect = new Rect(
+                presetRect.x,
+                rect.y + EditorGUIUtility.singleLineHeight + 4f,
+                rect.xMax - presetRect.x,
+                EditorGUI.GetPropertyHeight(performersProp, true));
+            EditorGUI.PropertyField(performersRect, performersProp, s_performersContent, true);
         }
 
         private void OnAddSlot(ReorderableList list)
@@ -246,6 +292,7 @@ namespace VLiveKit.Camera.Editor
             _slotsProp.InsertArrayElementAtIndex(newIndex);
             SerializedProperty newElem = _slotsProp.GetArrayElementAtIndex(newIndex);
             newElem.FindPropertyRelative("_preset").objectReferenceValue = null;
+            newElem.FindPropertyRelative("_performers").arraySize = 0;
             newElem.FindPropertyRelative("_shot").objectReferenceValue = null;
             serializedObject.ApplyModifiedProperties();
         }
@@ -281,10 +328,8 @@ namespace VLiveKit.Camera.Editor
 
             using (new GUILayout.HorizontalScope())
             {
-                bool hasTarget = _performerTargetProp.objectReferenceValue != null;
                 bool isForwardValid = rig.IsForwardReferenceValid();
-                bool canApply = hasTarget && isForwardValid;
-
+                bool canApply = isForwardValid;
 
                 using (new EditorGUI.DisabledScope(!canApply))
                 {
@@ -297,7 +342,7 @@ namespace VLiveKit.Camera.Editor
                     }
                 }
 
-                bool canRebuildAll = hasTarget && isForwardValid && _slotsProp.arraySize > 0;
+                bool canRebuildAll = isForwardValid && _slotsProp.arraySize > 0;
                 using (new EditorGUI.DisabledScope(!canRebuildAll))
                 {
                     if (GUILayout.Button("Rebuild", GUILayout.Height(22)))
@@ -314,6 +359,17 @@ namespace VLiveKit.Camera.Editor
                             GUIUtility.ExitGUI();
                         }
                     }
+                }
+            }
+
+            using (new EditorGUI.DisabledScope(_programCameraProp.objectReferenceValue == null && rig.SlotCount == 0))
+            {
+                if (GUILayout.Button("Apply Camera Settings to All Shots", GUILayout.Height(22)))
+                {
+                    serializedObject.ApplyModifiedProperties();
+                    VLiveCameraRigBuilder.ApplyCommonCameraSettings(rig);
+                    serializedObject.Update();
+                    GUIUtility.ExitGUI();
                 }
             }
         }

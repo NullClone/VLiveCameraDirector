@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VLiveKit.Camera
@@ -15,6 +16,10 @@ namespace VLiveKit.Camera
         [SerializeField]
         private VLiveCameraMotionPreset _preset;
 
+        [Tooltip("このショットに写す演者一覧。1人または複数のVLivePerformerを指定します。")]
+        [SerializeField]
+        private List<VLivePerformer> _performers = new();
+
         [Tooltip("このスロットに対応する生成済みShot。")]
         [SerializeField]
         private VLiveCameraShot _shot;
@@ -29,6 +34,8 @@ namespace VLiveKit.Camera
         }
 
         public VLiveCameraShot Shot => _shot;
+
+        public IReadOnlyList<VLivePerformer> Performers => _performers;
 
 
         // Methods
@@ -64,5 +71,13 @@ namespace VLiveKit.Camera
             _shot = shot;
         }
 #endif
+
+        /// <summary>
+        /// 指定した演者がこのスロットに含まれるかを返します。
+        /// </summary>
+        public bool ContainsPerformer(VLivePerformer performer)
+        {
+            return performer != null && _performers != null && _performers.Contains(performer);
+        }
     }
 }

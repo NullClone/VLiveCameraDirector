@@ -1,37 +1,59 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace VLiveKit.Camera
 {
     /// <summary>
-    /// カメラリグ全体の構成、注視対象、正面基準、スケール、順序付きShotスロットを保持する正本コンポーネント。
+    /// カメラリグ全体の基準座標、Physical Camera設定、スケール、順序付きShotスロットを保持します。
     /// </summary>
     [DisallowMultipleComponent]
     public class VLiveCameraRig : MonoBehaviour
     {
         // Fields
 
-        [Tooltip("カメラワークの注視・追従基準となる演者Transform。")]
+        [Tooltip("カメラ軌道の原点となるTransform。未設定時はCamera Director自身を使用します。被写体参照とは独立しています。")]
+        [FormerlySerializedAs("_performerTarget")]
         [SerializeField]
-        private Transform _performerTarget;
+        private Transform _referenceTransform;
 
         [Tooltip("Program映像を出力するUnity Camera。CinemachineBrainはこのカメラから取得されます。")]
         [SerializeField]
         private UnityEngine.Camera _programCamera;
 
-        [Tooltip("正面方向の基準モード（TargetForward: Targetの正面XZ, WorldPlusZ: World +Z, WorldMinusZ: World -Z, CustomReference: 指定Transformの正面XZ）。")]
+        [Tooltip("正面方向の基準モード（ReferenceForward: Referenceの正面XZ, WorldPlusZ: World +Z, WorldMinusZ: World -Z, CustomReference: 指定Transformの正面XZ）。")]
         [SerializeField]
-        private ForwardReferenceMode _forwardReferenceMode = ForwardReferenceMode.TargetForward;
+        private ForwardReferenceMode _forwardReferenceMode = ForwardReferenceMode.ReferenceForward;
 
         [Tooltip("正面基準がCustomReferenceの場合に使用するTransform。向き（forwardのXZ射影）のみ使用します。")]
         [SerializeField]
         private Transform _customReference;
 
-        [Tooltip("Target原点から注視点までの高さオフセット（メートル単位）。")]
-        [Min(0f)]
+        [Header("Common Physical Camera Settings")]
+        [Tooltip("全ShotとProgram Cameraへ適用するセンサーサイズ。単位はミリメートルです。")]
         [SerializeField]
-        private float _targetHeight = 1.3f;
+        private Vector2 _sensorSize = new Vector2(36f, 24f);
+
+        [Tooltip("センサーと出力アスペクトが異なる場合のGate Fit方式。")]
+        [SerializeField]
+        private UnityEngine.Camera.GateFitMode _gateFit = UnityEngine.Camera.GateFitMode.Horizontal;
+
+        [Tooltip("光学中心をセンサー中央からずらす量。通常はゼロを使用します。")]
+        [SerializeField]
+        private Vector2 _lensShift = Vector2.zero;
+
+        [Tooltip("全ShotのNear Clip Plane。メートル単位で、接写を欠かない範囲で大きくします。")]
+        [Min(0.001f)]
+        [SerializeField]
+        private float _nearClipPlane = 0.1f;
+
+        [Tooltip("全ShotのFar Clip Plane。メートル単位で、必要な背景を含む最小値にします。")]
+        [Min(0.01f)]
+        [SerializeField]
+        private float _farClipPlane = 1000f;
+
+        [Header("Motion Settings")]
 
         [Tooltip("カメラ開始位置の水平距離スケール。1.0が基準距離。0より大きい値。")]
         [Min(0.01f)]
@@ -61,12 +83,12 @@ namespace VLiveKit.Camera
         // Properties
 
         /// <summary>
-        /// 演者Target Transformを取得または設定します。
+        /// カメラ運動の基準Transformを取得または設定します。
         /// </summary>
-        public Transform PerformerTarget
+        public Transform ReferenceTransform
         {
-            get => _performerTarget;
-            set => _performerTarget = value;
+            get => _referenceTransform;
+            set => _referenceTransform = value;
         }
 
         /// <summary>
@@ -113,12 +135,48 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
-        /// Target原点からの注視基準高さを取得または設定します。
+        /// 共通センサーサイズを取得または設定します。
         /// </summary>
-        public float TargetHeight
+        public Vector2 SensorSize
         {
-            get => _targetHeight;
-            set => _targetHeight = Mathf.Max(0f, value);
+            get => _sensorSize;
+            set => _sensorSize = new Vector2(Mathf.Max(0.1f, value.x), Mathf.Max(0.1f, value.y));
+        }
+
+        /// <summary>
+        /// 共通Gate Fit方式を取得または設定します。
+        /// </summary>
+        public UnityEngine.Camera.GateFitMode GateFit
+        {
+            get => _gateFit;
+            set => _gateFit = value;
+        }
+
+        /// <summary>
+        /// 共通Lens Shiftを取得または設定します。
+        /// </summary>
+        public Vector2 LensShift
+        {
+            get => _lensShift;
+            set => _lensShift = value;
+        }
+
+        /// <summary>
+        /// 共通Near Clip Planeを取得または設定します。
+        /// </summary>
+        public float NearClipPlane
+        {
+            get => _nearClipPlane;
+            set => _nearClipPlane = Mathf.Max(0.001f, value);
+        }
+
+        /// <summary>
+        /// 共通Far Clip Planeを取得または設定します。
+        /// </summary>
+        public float FarClipPlane
+        {
+            get => _farClipPlane;
+            set => _farClipPlane = Mathf.Max(_nearClipPlane + 0.01f, value);
         }
 
         /// <summary>
@@ -197,10 +255,11 @@ namespace VLiveKit.Camera
         {
             switch (_forwardReferenceMode)
             {
-                case ForwardReferenceMode.TargetForward:
-                    if (_performerTarget != null)
+                case ForwardReferenceMode.ReferenceForward:
+                    Transform reference = _referenceTransform != null ? _referenceTransform : transform;
+                    if (reference != null)
                     {
-                        Vector3 fwd = Vector3.ProjectOnPlane(_performerTarget.forward, Vector3.up);
+                        Vector3 fwd = Vector3.ProjectOnPlane(reference.forward, Vector3.up);
                         if (fwd.sqrMagnitude > 0.0001f)
                         {
                             return fwd.normalized;
@@ -258,6 +317,14 @@ namespace VLiveKit.Camera
         }
 
         /// <summary>
+        /// カメラ運動の基準位置を取得します。
+        /// </summary>
+        public Vector3 GetReferencePosition()
+        {
+            return _referenceTransform != null ? _referenceTransform.position : transform.position;
+        }
+
+        /// <summary>
         /// 正面方向を向く回転クォータニオンを取得します。
         /// </summary>
         public Quaternion GetReferenceOrientation()
@@ -281,10 +348,10 @@ namespace VLiveKit.Camera
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (_targetHeight < 0f)
-            {
-                _targetHeight = 0f;
-            }
+            _sensorSize.x = Mathf.Max(0.1f, _sensorSize.x);
+            _sensorSize.y = Mathf.Max(0.1f, _sensorSize.y);
+            _nearClipPlane = Mathf.Max(0.001f, _nearClipPlane);
+            _farClipPlane = Mathf.Max(_nearClipPlane + 0.01f, _farClipPlane);
 
             if (_distanceScale < 0.01f)
             {

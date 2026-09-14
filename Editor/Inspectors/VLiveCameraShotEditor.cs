@@ -19,9 +19,11 @@ namespace VLiveKit.Camera.Editor
         private SerializedProperty _cinemachineCameraProp;
         private SerializedProperty _splineDollyProp;
         private SerializedProperty _rotationComposerProp;
-        private SerializedProperty _aimProxyProp;
+        private SerializedProperty _targetGroupProp;
+        private SerializedProperty _groupFramingProp;
         private SerializedProperty _motionPlayerProp;
-        private SerializedProperty _performerTargetProp;
+        private SerializedProperty _performersProp;
+        private SerializedProperty _shotSizeProp;
         private SerializedProperty _appliedPresetProp;
 
         private VLiveCameraMotionValidationReport _report;
@@ -39,9 +41,11 @@ namespace VLiveKit.Camera.Editor
             _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
             _splineDollyProp = serializedObject.FindProperty("_splineDolly");
             _rotationComposerProp = serializedObject.FindProperty("_rotationComposer");
-            _aimProxyProp = serializedObject.FindProperty("_aimProxy");
+            _targetGroupProp = serializedObject.FindProperty("_targetGroup");
+            _groupFramingProp = serializedObject.FindProperty("_groupFraming");
             _motionPlayerProp = serializedObject.FindProperty("_motionPlayer");
-            _performerTargetProp = serializedObject.FindProperty("_performerTarget");
+            _performersProp = serializedObject.FindProperty("_performers");
+            _shotSizeProp = serializedObject.FindProperty("_shotSize");
             _appliedPresetProp = serializedObject.FindProperty("_appliedPreset");
         }
 
@@ -109,6 +113,11 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorGUILayout.HelpBox("Spline Dolly is missing. Run Apply / Sync on the Rig to resolve.", MessageType.Warning);
             }
+
+            if (_targetGroupProp.objectReferenceValue == null)
+            {
+                EditorGUILayout.HelpBox("Subject Target Group is missing. Run Apply on the Rig to resolve.", MessageType.Warning);
+            }
         }
 
         private void DrawAppliedMotionSection(VLiveCameraShot shot)
@@ -126,7 +135,10 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorGUILayout.LabelField("Timing", $"{applied.EffectiveDuration:F2}s ({applied.ScaleMode})  |  Entry: {applied.EntryMode}  |  Exit: {applied.ExitBehavior}");
                 EditorGUILayout.LabelField("Framing", $"Aim Offset: {applied.AimOffset}  |  Screen Pos: ({applied.ScreenPosition.x:F2}, {applied.ScreenPosition.y:F2})");
-                EditorGUILayout.LabelField("Lens & Roll", $"FOV: {applied.FieldOfView:F1}° ({applied.LensMode})  |  Roll: {applied.RollMode}");
+                string lensText = applied.LensMode == LensMode.FocalLength
+                    ? $"{applied.FocalLength:F1} mm"
+                    : $"{applied.FieldOfView:F1}°";
+                EditorGUILayout.LabelField("Lens & Roll", $"Lens: {lensText} ({applied.LensMode})  |  Roll: {applied.RollMode}");
             }
             else
             {
@@ -145,7 +157,7 @@ namespace VLiveKit.Camera.Editor
 
             EditorGUILayout.LabelField("Shot Actions", EditorStyles.boldLabel);
 
-            bool canRebuild = !Application.isPlaying && shot.PerformerTarget != null && shot.AppliedPreset != null;
+            bool canRebuild = !Application.isPlaying && shot.Rig != null && shot.AppliedPreset != null;
             using (new EditorGUI.DisabledScope(!canRebuild))
             {
                 if (GUILayout.Button("Rebuild From Preset", GUILayout.Height(26)))
@@ -180,7 +192,7 @@ namespace VLiveKit.Camera.Editor
                     {
                         if (EditorUtility.DisplayDialog(
                                 "Delete Shot GameObject",
-                                $"Delete Shot GameObject '{shot.name}', Spline, and Aim Proxy from the Scene?\n\nThis action can be undone.",
+                            $"Delete Shot GameObject '{shot.name}', Spline, and Subject Target Group from the Scene?\n\nThis action can be undone.",
                                 "Delete",
                                 "Cancel"))
                         {
@@ -240,9 +252,11 @@ namespace VLiveKit.Camera.Editor
                 }
 
                 EditorGUILayout.PropertyField(_rotationComposerProp);
-                EditorGUILayout.PropertyField(_aimProxyProp);
+                EditorGUILayout.PropertyField(_targetGroupProp);
+                EditorGUILayout.PropertyField(_groupFramingProp);
                 EditorGUILayout.PropertyField(_motionPlayerProp);
-                EditorGUILayout.PropertyField(_performerTargetProp);
+                EditorGUILayout.PropertyField(_shotSizeProp);
+                EditorGUILayout.PropertyField(_performersProp, true);
             }
             EditorGUI.indentLevel--;
         }

@@ -38,7 +38,7 @@ namespace VLiveKit.Camera.Editor
             Vector3 firstPosition = knots[0].Position;
             Vector3 scaledFirstPosition = VLiveCameraMotionSpace.ScaleStartPosition(firstPosition, rig.DistanceScale);
             Quaternion orientation = rig.GetReferenceOrientation();
-            Vector3 targetPosition = rig.PerformerTarget != null ? rig.PerformerTarget.position : Vector3.zero;
+            Vector3 referencePosition = rig.GetReferencePosition();
 
             for (int i = 0; i < knots.Length; i++)
             {
@@ -50,7 +50,7 @@ namespace VLiveKit.Camera.Editor
                     scaledPosition += VLiveCameraMotionSpace.ScaleMotion(delta, rig.MotionScale, rig.VerticalMotionScale);
                 }
 
-                Vector3 worldPosition = targetPosition + orientation * scaledPosition;
+                Vector3 worldPosition = referencePosition + orientation * scaledPosition;
                 Vector3 localPosition = splineContainer.transform.InverseTransformPoint(worldPosition);
                 Quaternion worldRotation = orientation * source.Rotation;
                 Quaternion localRotation = Quaternion.Inverse(splineContainer.transform.rotation) * worldRotation;

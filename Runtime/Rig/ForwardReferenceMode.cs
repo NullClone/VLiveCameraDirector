@@ -5,7 +5,7 @@ namespace VLiveKit.Camera
     /// </summary>
     public enum ForwardReferenceMode
     {
-        TargetForward,
+        ReferenceForward,
         WorldPlusZ,
         WorldMinusZ,
         CustomReference
