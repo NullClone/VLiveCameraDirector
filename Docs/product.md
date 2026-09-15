@@ -11,12 +11,12 @@ VLive Camera Directorは、プロの現場水準を満たす直感的な手動�
 ## 2. 目指す操作体験
 
 1. GameObject MenuからCameraを含まないRig骨格を作成する。
-2. Actorへ`VLivePerformer`を設定し、Rig InspectorでProgram Camera、基準Transform、共通Physical Camera設定、ShotごとのActor、Motion Presetと順序を設定する。
+2. Actorへ`VLivePerformer`を設定し、Rig InspectorでProgram Camera、基準Transform、共通Physical Camera設定、Rig共通Actor、必要なShotだけのActor Override、Motion Presetと順序を設定する。
 3. `Apply`で不足するShotを生成し、Target Group、参照、順序を同期する。
 4. キーでShotへ直接Cutする。
 5. ShotはPresetから適用されたIn Pointから成立し、Rolling Shotは最初の表示区間から動いている。
 6. 必要なときだけSpeed、Reverse、Hold、Resumeを操作する。
-7. Scene上でCamera、Spline、Lensを調整し、Actor構図はShot Slot、Performer Radius、Shot Sizeから管理する。
+7. Scene上でCamera、Spline、Lensを調整し、Actor構図はRig共通Actor、Shot Slot Override、Performer Radius、Shot Sizeから管理する。
 
 初期導入後の日常的な編集は、UnityとCinemachineの標準Componentに近いInspectorで完結させる。専用の確認Sceneは配布せず、構図と操作感はユーザーが自身の作業用Sceneで判断する。
 
@@ -62,7 +62,7 @@ VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し�
 ## 4. 現在の製品範囲
 
 - Unity 6.3以上、Cinemachine 3
-- Shotごとに1人以上のActor
+- Rig共通の1人以上のActorとShotごとの任意Override
 - Humanoid AnimatorからのHead、UpperChestまたはChest、Hips認識
 - Wide、Full、BustUp、CloseUp、FaceUpのShot Size
 - Cinemachine Target GroupとGroup Framingによる単独・複数Actorの構図維持
@@ -97,7 +97,7 @@ VLive Camera DirectorはShotの意図、Motion、lifecycle、操作を所有し�
 
 ## 6. 成功条件
 
-1. Rig InspectorでShotごとに1人以上のActorと複数Shotを構成できる。
+1. Rig Inspectorで共通Actorを一度設定し、必要なShotだけActor一覧をOverrideして複数Shotを構成できる。
 2. キーだけで明確にCutでき、追加操作なしでも各Shotの意図が伝わる。
 3. StaticとRolling、機材差、Aim、Lensの意図が映像上読み取れる。
 4. Speed、Reverse、Hold、Resumeで位置と速度が不連続に飛ばない。

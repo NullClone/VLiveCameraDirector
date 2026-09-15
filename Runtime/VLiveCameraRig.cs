@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 namespace VLiveKit.Camera
 {
     /// <summary>
-    /// カメラリグ全体の基準座標、Physical Camera設定、スケール、順序付きShotスロットを保持します。
+    /// カメラリグ全体の基準座標、共通演者、Physical Camera設定、スケール、順序付きShotスロットを保持します。
     /// </summary>
     [DisallowMultipleComponent]
     public class VLiveCameraRig : MonoBehaviour
@@ -21,6 +21,10 @@ namespace VLiveKit.Camera
         [Tooltip("Program映像を出力するUnity Camera。CinemachineBrainはこのカメラから取得されます。")]
         [SerializeField]
         private UnityEngine.Camera _programCamera;
+
+        [Tooltip("通常の全Shotに写す共通演者一覧。Shot SlotでOverrideを有効にした場合だけ、その一覧へ置き換わります。")]
+        [SerializeField]
+        private List<VLivePerformer> _performers = new();
 
         [Tooltip("正面方向の基準モード（ReferenceForward: Referenceの正面XZ, WorldPlusZ: World +Z, WorldMinusZ: World -Z, CustomReference: 指定Transformの正面XZ）。")]
         [SerializeField]
@@ -112,6 +116,11 @@ namespace VLiveKit.Camera
                 return null;
             }
         }
+
+        /// <summary>
+        /// 通常の全Shotに使用する共通演者一覧を取得します。
+        /// </summary>
+        public IReadOnlyList<VLivePerformer> Performers => _performers;
 
         /// <summary>
         /// 正面方向の基準モードを取得または設定します。
@@ -342,6 +351,14 @@ namespace VLiveKit.Camera
             return _slots[index]?.Shot;
         }
 
+        /// <summary>
+        /// 指定Slotに対して、Shot固有OverrideまたはRig共通の演者一覧を解決します。
+        /// </summary>
+        public IReadOnlyList<VLivePerformer> ResolvePerformers(VLiveCameraShotSlot slot)
+        {
+            return slot != null ? slot.ResolvePerformers(_performers) : _performers;
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -370,6 +387,11 @@ namespace VLiveKit.Camera
             if (_slots == null)
             {
                 _slots = new List<VLiveCameraShotSlot>();
+            }
+
+            if (_performers == null)
+            {
+                _performers = new List<VLivePerformer>();
             }
         }
 #endif

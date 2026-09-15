@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEngine;
@@ -21,13 +22,14 @@ namespace VLiveKit.Camera.Editor
             Transform targetGroupsContainer,
             VLiveCameraShotSlot slot)
         {
+            IReadOnlyList<VLivePerformer> performers = rig.ResolvePerformers(slot);
             string shotObjectName = $"Shot {slotIndex + 1} ({preset.DisplayName})";
             var shotObject = new GameObject(shotObjectName);
             shotObject.transform.SetParent(shotsContainer, false);
             Undo.RegisterCreatedObjectUndo(shotObject, "Create Shot GameObject");
 
             CinemachineTargetGroup targetGroup = VLiveCameraTargetGroupBuilder.Ensure(
-                rig, null, slot.Performers, preset.Size, slotIndex, preset.DisplayName, targetGroupsContainer);
+                rig, null, performers, preset.Size, slotIndex, preset.DisplayName, targetGroupsContainer);
             targetGroup.DoUpdate();
 
             Quaternion orientation = rig.GetReferenceOrientation();
@@ -85,7 +87,7 @@ namespace VLiveKit.Camera.Editor
 
             shot.Configure(
                 preset.DisplayName, rig, camera, preset.ShotType, dolly, composer,
-                targetGroup, groupFraming, player, slot.Performers, preset, orientation,
+                targetGroup, groupFraming, player, performers, preset, orientation,
                 rig.DistanceScale, rig.MotionScale, rig.VerticalMotionScale);
 
             EditorUtility.SetDirty(camera);
@@ -109,11 +111,12 @@ namespace VLiveKit.Camera.Editor
             Transform targetGroupsContainer,
             Transform splinesContainer)
         {
+            IReadOnlyList<VLivePerformer> performers = rig.ResolvePerformers(slot);
             int repaired = 0;
             Undo.RecordObject(shot, "Repair Shot References");
 
             CinemachineTargetGroup targetGroup = VLiveCameraTargetGroupBuilder.Ensure(
-                rig, shot.TargetGroup, slot.Performers, shot.Size, slotIndex, shot.ShotName, targetGroupsContainer);
+                rig, shot.TargetGroup, performers, shot.Size, slotIndex, shot.ShotName, targetGroupsContainer);
             if (targetGroup != shot.TargetGroup)
             {
                 repaired++;
@@ -190,7 +193,7 @@ namespace VLiveKit.Camera.Editor
                 repaired++;
             }
 
-            shot.SetCompositionReferences(targetGroup, groupFraming, slot.Performers, shot.Size);
+            shot.SetCompositionReferences(targetGroup, groupFraming, performers, shot.Size);
             player.Configure(shot, camera, dolly, composer, groupFraming);
 
             EditorUtility.SetDirty(camera);
@@ -215,10 +218,11 @@ namespace VLiveKit.Camera.Editor
             Transform targetGroupsContainer,
             Transform splinesContainer)
         {
+            IReadOnlyList<VLivePerformer> performers = rig.ResolvePerformers(slot);
             Undo.RecordObject(shot, "Rebuild Shot");
 
             CinemachineTargetGroup targetGroup = VLiveCameraTargetGroupBuilder.Ensure(
-                rig, shot.TargetGroup, slot.Performers, preset.Size, slotIndex, preset.DisplayName, targetGroupsContainer);
+                rig, shot.TargetGroup, performers, preset.Size, slotIndex, preset.DisplayName, targetGroupsContainer);
             targetGroup.DoUpdate();
 
             Quaternion orientation = rig.GetReferenceOrientation();
@@ -282,7 +286,7 @@ namespace VLiveKit.Camera.Editor
 
             shot.Configure(
                 preset.DisplayName, rig, camera, preset.ShotType, dolly, composer,
-                targetGroup, groupFraming, player, slot.Performers, preset, orientation,
+                targetGroup, groupFraming, player, performers, preset, orientation,
                 rig.DistanceScale, rig.MotionScale, rig.VerticalMotionScale);
             player.Configure(shot, camera, dolly, composer, groupFraming);
             player.PrepareStart();

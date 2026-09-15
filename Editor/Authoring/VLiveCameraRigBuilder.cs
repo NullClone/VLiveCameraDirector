@@ -79,7 +79,7 @@ namespace VLiveKit.Camera.Editor
             Selection.activeGameObject = rigGo;
             EditorGUIUtility.PingObject(rigGo);
 
-            Debug.Log("[VLiveCameraRigBuilder] Camera Director created. Assign performers to Shot Slots and a Program Camera, then click Apply.");
+            Debug.Log("[VLiveCameraRigBuilder] Camera Director created. Assign Rig Performers and a Program Camera, then click Apply.");
 
             return rig;
         }

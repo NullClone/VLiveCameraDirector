@@ -173,8 +173,9 @@ RollingはCut後の最初の表示区間から運動を継続する。Out Time�
 ## 8. Aimと構図
 
 ```text
-Shot Slot Performers
-      -> VLivePerformer
+Rig Performers
+      +-- Shot Slot Override (optional)
+      -> Resolved VLivePerformer List
       -> Humanoid Bones
       -> Cinemachine Target Group
              |--> Rotation Composer Target Offset
@@ -182,6 +183,8 @@ Shot Slot Performers
 ```
 
 `VLivePerformer`はHumanoid Animatorを参照し、次の簡潔な規則でTarget Group Memberを構築する。Eyes、顔ランドマーク、補助Proxy、Constraintは使用しない。
+
+通常はRig共通のPerformer一覧を全Shotで使用する。Shot Slotの`Override Performers`が有効な場合だけ、そのShotでは共通一覧を使わずOverride一覧へ完全に置き換える。空のOverrideは被写体なしを明示する設定であり、Rig共通一覧へフォールバックしない。
 
 | Shot Size | Target Group Member、Weight、Radius | Group Framing Size |
 | --- | --- | --- |

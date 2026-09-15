@@ -6,7 +6,7 @@ namespace VLiveKit.Camera.Editor
 {
     /// <summary>
     /// VLiveCameraRig用のカスタムインスペクター。
-    /// 基準座標、Physical Camera、Shot Slotの被写体、Applyおよび一括Rebuild操作を提供します。
+    /// 基準座標、Physical Camera、Rig共通演者、Shot Slot Override、Applyおよび一括Rebuild操作を提供します。
     /// </summary>
     [CustomEditor(typeof(VLiveCameraRig))]
     public class VLiveCameraRigEditor : UnityEditor.Editor
@@ -19,10 +19,13 @@ namespace VLiveKit.Camera.Editor
         private static readonly GUIContent s_programCameraContent = new GUIContent("Program Camera");
         private static readonly GUIContent s_referenceTransformContent = new GUIContent("Reference Transform");
         private static readonly GUIContent s_forwardModeContent = new GUIContent("Forward Mode");
-        private static readonly GUIContent s_performersContent = new GUIContent("Performers");
+        private static readonly GUIContent s_rigPerformersContent = new GUIContent("Rig Performers");
+        private static readonly GUIContent s_usePerformerOverrideContent = new GUIContent("Override Performers");
+        private static readonly GUIContent s_performerOverrideContent = new GUIContent("Performers");
 
         private SerializedProperty _referenceTransform;
         private SerializedProperty _programCamera;
+        private SerializedProperty _performers;
         private SerializedProperty _forwardReferenceMode;
         private SerializedProperty _customReference;
         private SerializedProperty _sensorSize;
@@ -47,6 +50,7 @@ namespace VLiveKit.Camera.Editor
         {
             _referenceTransform = serializedObject.FindProperty(nameof(_referenceTransform));
             _programCamera = serializedObject.FindProperty(nameof(_programCamera));
+            _performers = serializedObject.FindProperty(nameof(_performers));
             _forwardReferenceMode = serializedObject.FindProperty(nameof(_forwardReferenceMode));
             _customReference = serializedObject.FindProperty(nameof(_customReference));
             _sensorSize = serializedObject.FindProperty(nameof(_sensorSize));
@@ -70,6 +74,7 @@ namespace VLiveKit.Camera.Editor
             var rig = (VLiveCameraRig)target;
 
             DrawSetupSection();
+            DrawPerformersSection();
             DrawCameraSettingsSection();
             DrawFramingAndScalingSection();
             DrawShotSlotsSection();
@@ -132,6 +137,12 @@ namespace VLiveKit.Camera.Editor
                     }
                 }
             }
+        }
+
+        private void DrawPerformersSection()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(_performers, s_rigPerformersContent, true);
         }
 
         private void DrawCameraSettingsSection()
@@ -223,8 +234,18 @@ namespace VLiveKit.Camera.Editor
             }
 
             SerializedProperty slot = _slots.GetArrayElementAtIndex(index);
+            SerializedProperty useOverride = slot.FindPropertyRelative("_usePerformerOverride");
             SerializedProperty performers = slot.FindPropertyRelative("_performers");
-            return EditorGUIUtility.singleLineHeight + EditorGUI.GetPropertyHeight(performers, true) + 8f;
+            SerializedProperty version = slot.FindPropertyRelative("_performerAssignmentVersion");
+            bool hasLegacyOverride = version.intValue == 0 && performers.arraySize > 0;
+            bool showOverride = useOverride.boolValue || hasLegacyOverride;
+            float height = (EditorGUIUtility.singleLineHeight * 2f) + 10f;
+            if (showOverride)
+            {
+                height += EditorGUI.GetPropertyHeight(performers, true) + 4f;
+            }
+
+            return height;
         }
 
         private void DrawSlotElement(Rect rect, int index, bool isActive, bool isFocused)
@@ -236,7 +257,9 @@ namespace VLiveKit.Camera.Editor
 
             SerializedProperty slotElem = _slots.GetArrayElementAtIndex(index);
             SerializedProperty presetProp = slotElem.FindPropertyRelative("_preset");
+            SerializedProperty useOverrideProp = slotElem.FindPropertyRelative("_usePerformerOverride");
             SerializedProperty performersProp = slotElem.FindPropertyRelative("_performers");
+            SerializedProperty performerAssignmentVersionProp = slotElem.FindPropertyRelative("_performerAssignmentVersion");
             SerializedProperty shotProp = slotElem.FindPropertyRelative("_shot");
 
             rect.y += 2f;
@@ -278,12 +301,31 @@ namespace VLiveKit.Camera.Editor
                 EditorGUI.PropertyField(shotRect, shotProp, GUIContent.none);
             }
 
-            Rect performersRect = new Rect(
+            bool hasLegacyOverride = performerAssignmentVersionProp.intValue == 0 && performersProp.arraySize > 0;
+            bool useOverride = useOverrideProp.boolValue || hasLegacyOverride;
+            Rect overrideRect = new Rect(
                 presetRect.x,
                 rect.y + EditorGUIUtility.singleLineHeight + 4f,
                 rect.xMax - presetRect.x,
-                EditorGUI.GetPropertyHeight(performersProp, true));
-            EditorGUI.PropertyField(performersRect, performersProp, s_performersContent, true);
+                EditorGUIUtility.singleLineHeight);
+
+            EditorGUI.BeginChangeCheck();
+            useOverride = EditorGUI.ToggleLeft(overrideRect, s_usePerformerOverrideContent, useOverride);
+            if (EditorGUI.EndChangeCheck())
+            {
+                useOverrideProp.boolValue = useOverride;
+                performerAssignmentVersionProp.intValue = 1;
+            }
+
+            if (useOverride)
+            {
+                Rect performersRect = new Rect(
+                    presetRect.x,
+                    overrideRect.yMax + 4f,
+                    rect.xMax - presetRect.x,
+                    EditorGUI.GetPropertyHeight(performersProp, true));
+                EditorGUI.PropertyField(performersRect, performersProp, s_performerOverrideContent, true);
+            }
         }
 
         private void OnAddSlot(ReorderableList list)
@@ -292,7 +334,9 @@ namespace VLiveKit.Camera.Editor
             _slots.InsertArrayElementAtIndex(newIndex);
             SerializedProperty newElem = _slots.GetArrayElementAtIndex(newIndex);
             newElem.FindPropertyRelative("_preset").objectReferenceValue = null;
+            newElem.FindPropertyRelative("_usePerformerOverride").boolValue = false;
             newElem.FindPropertyRelative("_performers").arraySize = 0;
+            newElem.FindPropertyRelative("_performerAssignmentVersion").intValue = 1;
             newElem.FindPropertyRelative("_shot").objectReferenceValue = null;
             serializedObject.ApplyModifiedProperties();
         }

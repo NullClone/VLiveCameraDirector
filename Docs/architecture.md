@@ -40,8 +40,8 @@ Resolved Shot Motion + Playback Time
 
 | 状態 | 唯一の所有者 |
 | --- | --- |
-| 基準Transform、Program Camera、共通Physical Camera設定、正面基準、Scale、Shot順 | `VLiveCameraRig` |
-| SlotのPreset参照、Actor一覧、生成済みShot参照 | `VLiveCameraShotSlot` |
+| 基準Transform、Program Camera、共通Actor一覧、共通Physical Camera設定、正面基準、Scale、Shot順 | `VLiveCameraRig` |
+| SlotのPreset参照、任意のActor Override、生成済みShot参照 | `VLiveCameraShotSlot` |
 | Humanoid AnimatorとActorごとの構図半径 | `VLivePerformer` |
 | 再利用可能なCamera Performance | `VLiveCameraMotionPreset` |
 | Sceneへ適用済みのMotion設定 | `VLiveCameraShot` |
@@ -56,7 +56,7 @@ Switcherへ別のShot一覧を持たせず、Motion Player以外へ再生状態�
 
 | 型 | 責務 |
 | --- | --- |
-| `VLiveCameraRig` | Scene全体の基準、共通Physical Camera設定、順序付きShot Slotを保持する |
+| `VLiveCameraRig` | Scene全体の基準、共通Actor、共通Physical Camera設定、順序付きShot Slotを保持する |
 | `VLivePerformer` | ActorのHumanoid AnimatorとHead、Bust、Bodyの構図半径を保持する |
 | `VLiveCameraMotionPreset` | Track集合からなる再利用可能なCamera Performanceを保持する |
 | `VLiveCameraRigProfile` | 機材固有の操作応答とValidator推奨値を共有する |
@@ -79,13 +79,13 @@ Presetは原本、ShotはSceneへ適用したインスタンス、PlayerはRunti
 | Body geometry | Motion Preset | `SplineContainer` |
 | Timing、Progress、Entry、Activation | Motion Preset | Shotの適用済みMotion |
 | Aim、Composition、Lens、Roll | Motion Preset | Shotの適用済みMotion |
-| Actor一覧 | Shot Slot | ShotとCinemachine Target Group |
+| 解決済みActor一覧 | Rig共通ActorまたはShot Slot Override | ShotとCinemachine Target Group |
 | ActorのHumanoidボーンと構図半径 | `VLivePerformer` | Cinemachine Target GroupのMember |
 | Sensor Size、Gate Fit、Lens Shift、Near / Far Clip Plane | Rig | Program Cameraと各ShotのPhysical Lens |
 | Rig応答 | Rig Profile | Rebuild時に解決した適用済みMotion |
 | 現在時刻、速度、方向、Hold | なし | Motion Playerだけ |
 
-通常のApplyはScene Overrideを保持しつつ、Shot SlotのActor一覧とTarget Group Memberを同期する。Preset、Rig Profile、Scale、正面基準の変更はRebuildでのみ既存Shotへ反映する。Scene変更をPresetへ自動逆同期しない。
+通常のApplyはScene Overrideを保持しつつ、Rig共通ActorまたはShot Slot Overrideから解決したActor一覧とTarget Group Memberを同期する。Preset、Rig Profile、Scale、正面基準の変更はRebuildでのみ既存Shotへ反映する。Scene変更をPresetへ自動逆同期しない。
 
 ## 6. Cinemachine統合契約
 
@@ -113,7 +113,7 @@ Presetは原本、ShotはSceneへ適用したインスタンス、PlayerはRunti
 - Program出力は1台のUnity CameraとCinemachine Brainを使用する。
 - Cinemachine BrainはPhysical Lens overrideを有効にする。
 - Unity CameraへTransformやLensを毎フレームコピーしない。
-- ActorはShot Slotから指定し、`VLivePerformer`がHumanoid Animatorから直接取得したボーンをTarget Groupへ登録する。補助Proxyは作らない。
+- ActorはRig共通一覧を通常値とし、Shot Slotで明示的にOverrideできる。`VLivePerformer`がHumanoid Animatorから直接取得したボーンをTarget Groupへ登録し、補助Proxyは作らない。
 - Aim OffsetはRotation ComposerのTarget Offset、Screen PositionはGroup FramingのCenter Offsetへ適用する。
 - Group Framingは画角を変更せずDollyで収まりを調整し、PresetのField of ViewまたはFocal Lengthを保持する。
 - Aim、Damping、Lookahead、Group Framing、LensなどはCinemachine標準機能を優先する。

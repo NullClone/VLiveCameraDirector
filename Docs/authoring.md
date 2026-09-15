@@ -40,6 +40,12 @@ Humanoidボーンの選択とShot SizeごとのMember構成は[motion.md](motion
 
 Reference TransformはCamera軌道の原点と`ReferenceForward`の向きを決める。未指定時はCamera Director Rootを使用し、Actor参照とは分離する。
 
+### Rig Performers
+
+- 通常の全Shotに写す1人以上の`VLivePerformer`一覧
+
+共通一覧を一度設定し、各Shot Slotは既定でこの一覧を使用する。Shotごとに被写体を変える必要がある場合だけ`Override Performers`を有効にする。
+
 ### Common Physical Camera Settings
 
 - Sensor Size
@@ -61,11 +67,12 @@ Reference TransformはCamera軌道の原点と`ReferenceForward`の向きを決�
 
 - Slot番号
 - Motion Preset参照
-- 1人以上の`VLivePerformer`一覧
+- `Override Performers`の有効・無効
+- Override有効時だけ使用する`VLivePerformer`一覧
 - 対応する生成済みShot参照
 - 追加、並び替え、Slotからの除外
 
-同じPresetを複数Slotへ設定できる。Slot順をShot番号とし、並び替えでShotを交換、再生成、初期化しない。無効なSlotがあっても後続番号を詰めない。
+同じPresetを複数Slotへ設定できる。OverrideはRig共通一覧への追加ではなく完全な置き換えであり、空のOverrideは被写体なしを明示する。Slot順をShot番号とし、並び替えでShotを交換、再生成、初期化しない。無効なSlotがあっても後続番号を詰めない。
 
 ### Actions
 
@@ -88,7 +95,7 @@ Reference TransformはCamera軌道の原点と`ReferenceForward`の向きを決�
 
 | Inspector | 主な表示 | 所有する操作 |
 | --- | --- | --- |
-| Rig | Reference、Program Camera、Physical Camera、Motion、Shot Slots | Apply、Rebuild、Camera Settings一括適用 |
+| Rig | Reference、Program Camera、共通Actor、Physical Camera、Motion、Shot SlotsとActor Override | Apply、Rebuild、Camera Settings一括適用 |
 | Performer | Humanoid Animator、表示名、Head / Bust / Body Radius | 子階層からのAnimator再取得 |
 | Shot | Source Preset、Actor、Target Group、Cinemachine参照、適用状態 | Rebuild、Validate、Delete |
 | Motion Preset | Identityと各Track | Preset編集と診断 |
@@ -106,20 +113,20 @@ Reference TransformはCamera軌道の原点と`ReferenceForward`の向きを決�
 
 - Slotに不足するShotと専用CinemachineCameraを生成する。
 - Motion Shotに不足する専用Splineを生成する。
-- ShotごとのActorからCinemachine Target Groupを生成し、HumanoidボーンMemberを同期する。
+- Rig共通ActorまたはShot Slot OverrideからCinemachine Target Groupを生成し、HumanoidボーンMemberを同期する。
 - Shotに不足するRotation Composer、Group Framing、Motion Playerを生成する。
 - Target Group、Program出力、SlotとShotの参照を修復する。
 - 明示指定されたProgram Cameraに必要なCinemachine BrainがなければUndo対応で追加する。
 - Cinemachine BrainをCut BlendとPhysical Lens overrideへ設定する。
 - 新規生成物だけへPreset初期値、正面基準、Scaleを適用する。
 
-既存ShotのTransform、Lens、Spline、Group Framing設定、適用済みMotionを上書きしない。Actor一覧とTarget Group Memberは通常のApplyで同期する。Preset、Rig Profile、Scale、正面基準、Shot Sizeの変更はRebuildで反映する。
+既存ShotのTransform、Lens、Spline、Group Framing設定、適用済みMotionを上書きしない。Rig共通ActorまたはShot Slot Overrideから解決したActor一覧とTarget Group Memberは通常のApplyで同期する。旧SceneのSlot別Actor一覧は、データを失わないようShot固有Overrideとして解釈する。Preset、Rig Profile、Scale、正面基準、Shot Sizeの変更はRebuildで反映する。
 
 Slotから外れたShotを自動削除しない。Inspector変更、`OnValidate`、Selection変更、Domain ReloadだけではScene構成を変更しない。
 
 ## 7. Rebuild
 
-`Rebuild From Preset`はCamera位置、Physical Lens、Aim、Target Group、Group Framing、Spline、Timing、Curve、Activationを現在のRig設定、Actor一覧、Presetから再生成する破壊的な明示操作である。
+`Rebuild From Preset`はCamera位置、Physical Lens、Aim、Target Group、Group Framing、Spline、Timing、Curve、Activationを現在のRig設定、解決済みActor一覧、Presetから再生成する破壊的な明示操作である。
 
 - 対象と失われるScene調整を実行前に表示する。
 - SelectedとAllを分ける。
@@ -159,7 +166,7 @@ Slotから外す操作とSceneオブジェクトの削除を分ける。生成�
 ## 11. 不変条件
 
 1. 1回の操作でCameraを生成せず初期Rig骨格を作成できる。
-2. Reference、Program Camera、共通Physical Camera、正面、Scale、ShotごとのActorをRig Inspectorで編集できる。
+2. Reference、Program Camera、共通Physical Camera、正面、Scale、Rig共通Actor、Shotごとの任意OverrideをRig Inspectorで編集できる。
 3. Applyは不足物だけを生成し、既存のScene調整を失わない。
 4. Rebuild、Camera Settings一括適用、削除は対象が明確な別操作である。
 5. 同じPresetを複数Slotで使用してもShot参照が混線しない。

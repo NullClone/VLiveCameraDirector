@@ -13,7 +13,7 @@
 - `VLiveKit.Camera.Runtime`と`VLiveKit.Camera.Editor` assembly
 - Rigと順序付きShot SlotによるScene Authoring
 - 1 Shotにつき1つの専用CinemachineCamera
-- Shotごとの単独・複数`VLivePerformer`
+- Rig共通の単独・複数`VLivePerformer`とShotごとの任意Override
 - HumanoidのHead、UpperChestまたはChest、Hips自動認識
 - Cinemachine Target Group、Rotation Composer、Group FramingによるActor構図
 - Wide、Full、BustUp、CloseUp、FaceUpのShot Size
