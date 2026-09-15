@@ -31,7 +31,9 @@ each decision. Do not copy the same rule into multiple documents.
 
 - Use `VLiveKit.Camera`, `VLiveKit.Camera.Editor`, and
   `VLiveKit.Camera.Tests` namespaces.
-- Keep exactly one source type per C# file and match the filename to that type.
+- Keep one primary type per C# file matching its filename. Closely coupled
+  enums and small helper types may reside in the same file within the same
+  namespace.
 - Keep one CinemachineCamera per shot. Never reconfigure a live camera as
   another shot.
 - Keep Motion Preset assets free of runtime state. Motion playback state has one

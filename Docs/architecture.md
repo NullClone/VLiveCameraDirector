@@ -133,15 +133,12 @@ RuntimeとEditor Validatorは同じMotion Evaluatorを使用する。EditorはRu
 
 ```text
 Runtime/
-  Rig/
+  (主要撮影・リグ・操作コンポーネント: Rig, Profile, Shot, Slot, Switcher, KeyboardInput, Performer)
+  Composition/
   Motion/Preset/
   Motion/Playback/
-  Switching/
-  Input/
-  Composition/
-  UI/
-  Performer/
   Timeline/
+  UI/
   VLiveKit.Camera.Runtime.asmdef
 
 Editor/
@@ -161,7 +158,7 @@ Presets/
 - フォルダ階層をnamespaceへ反映しない。
 - RuntimeとEditorのasmdefを機能フォルダごとに細分化しない。
 - `Core`、`Common`、`Utilities`、`Managers`、`Enums`、`Tools`のような投棄先フォルダを作らない。
-- enumは所有する機能の近くへ置く。
+- enumや密接に関連する補助型は、所有する主要機能のファイル（同一namespace）に同居させる。
 - MIDI、AIなど未実装機能の空フォルダを先に作らない。
 
 製品表示名は`VLive Camera Director`、Package IDは`com.toshi.vlivekit.camera-director`とする。Runtime asmdefは`VLiveKit.Camera.Runtime`、Editor asmdefは`VLiveKit.Camera.Editor`とし、コード型の`VLiveCamera`接頭辞は維持する。旧名の互換wrapperを並存させない。
@@ -189,7 +186,7 @@ Presets/
 6. RuntimeとValidatorが同じMotion Evaluatorを使用する。
 7. 無効な選択で現在のProgramを失わない。
 8. Preset変更が生成済みShotまたはLive中のMotionへ暗黙伝播しない。
-9. C#ソースはenum、struct、Serializable helperを含め1ファイル1型である。
+9. C#ソースは主要型ごとに1ファイルとし、密接なenumや小さな補助型は同一ファイル・同一namespaceに同居させる。
 10. 現在不要な汎用frameworkや将来用interfaceが存在しない。
 11. ActorのHumanoidボーンを独自Proxyへ複製せず、Cinemachine Target Groupが直接参照する。
 12. 共通Physical Camera設定はRigだけが所有し、Motion Presetへ重複保存しない。

@@ -17,8 +17,8 @@ of an unrelated task.
 ## File and naming conventions
 
 - Use four spaces and braces for every control-flow body.
-- Keep exactly one source type per file, including serializable helper classes,
-  structs, and enums, and match its filename.
+- Keep one primary type per file matching its filename. Closely coupled enums
+  and small helper types may reside in the same file within the same namespace.
 - Use block-scoped namespaces.
 - Use `PascalCase` for types, methods, properties, constants, and public members.
 - Use `_camelCase` for private fields.

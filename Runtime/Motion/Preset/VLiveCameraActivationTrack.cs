@@ -83,4 +83,23 @@ namespace VLiveKit.Camera
             _outTime = Mathf.Clamp(_outTime, _inTime, safeDuration);
         }
     }
+
+    /// <summary>
+    /// ショット開始時の運動状態。
+    /// </summary>
+    public enum EntryMode
+    {
+        Static,
+        Rolling,
+        Continuous
+    }
+
+    /// <summary>
+    /// ショット終端到達時の動作。
+    /// </summary>
+    public enum ExitBehavior
+    {
+        Hold,
+        PostRoll
+    }
 }

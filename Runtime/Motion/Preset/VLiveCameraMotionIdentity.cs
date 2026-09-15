@@ -93,4 +93,42 @@ namespace VLiveKit.Camera
             };
         }
     }
+
+    /// <summary>
+    /// カメラワークの動作系統分類。
+    /// </summary>
+    public enum MotionFamily
+    {
+        Fixed,
+        Push,
+        Pull,
+        Truck,
+        Arc,
+        Pedestal,
+        Crane,
+        Gimbal,
+        Fluid
+    }
+
+    /// <summary>
+    /// 被写体に対するフレーミングの大きさ。
+    /// </summary>
+    public enum ShotSize
+    {
+        Wide,
+        Full,
+        BustUp,
+        CloseUp,
+        FaceUp
+    }
+
+    /// <summary>
+    /// ショットの演出エネルギー。
+    /// </summary>
+    public enum ShotEnergy
+    {
+        Calm,
+        Normal,
+        Dynamic
+    }
 }

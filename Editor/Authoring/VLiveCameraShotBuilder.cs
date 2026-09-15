@@ -95,6 +95,7 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorUtility.SetDirty(dolly);
             }
+
             EditorUtility.SetDirty(shot);
             EditorUtility.SetDirty(player);
             slot.SetShot(shot);
@@ -199,6 +200,7 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorUtility.SetDirty(dolly);
             }
+
             EditorUtility.SetDirty(player);
             EditorUtility.SetDirty(shot);
             return repaired;
@@ -292,6 +294,7 @@ namespace VLiveKit.Camera.Editor
             {
                 EditorUtility.SetDirty(dolly);
             }
+
             EditorUtility.SetDirty(player);
             EditorUtility.SetDirty(shot);
         }

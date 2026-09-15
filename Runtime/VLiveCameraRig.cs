@@ -54,7 +54,6 @@ namespace VLiveKit.Camera
         private float _farClipPlane = 1000f;
 
         [Header("Motion Settings")]
-
         [Tooltip("カメラ開始位置の水平距離スケール。1.0が基準距離。0より大きい値。")]
         [Min(0.01f)]
         [SerializeField]
@@ -376,5 +375,16 @@ namespace VLiveKit.Camera
             }
         }
 #endif
+    }
+
+    /// <summary>
+    /// カメラ配置の正面方向を決める基準。
+    /// </summary>
+    public enum ForwardReferenceMode
+    {
+        ReferenceForward,
+        WorldPlusZ,
+        WorldMinusZ,
+        CustomReference
     }
 }

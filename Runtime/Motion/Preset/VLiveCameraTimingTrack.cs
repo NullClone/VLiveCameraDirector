@@ -110,4 +110,13 @@ namespace VLiveKit.Camera
             _progressCurve = VLiveCameraCurveUtility.CloneOrDefault(_progressCurve, AnimationCurve.Linear(0f, 0f, 1f, 1f));
         }
     }
+
+    /// <summary>
+    /// スケール変更時のタイミング調整方法。
+    /// </summary>
+    public enum ScaleTimingMode
+    {
+        PreserveDuration,
+        PreserveSpeed
+    }
 }

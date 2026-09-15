@@ -132,7 +132,6 @@ namespace VLiveKit.Camera
 
         private void DrawGuides(Painter2D painter, Rect rect)
         {
-
             switch (_guideMode)
             {
                 case SplitGuideMode.Symmetrical:
@@ -159,6 +158,7 @@ namespace VLiveKit.Camera
                     break;
             }
         }
+
 
         private static void DrawThirds(Painter2D painter, Rect rect)
         {

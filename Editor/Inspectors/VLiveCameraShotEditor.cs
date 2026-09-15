@@ -192,7 +192,7 @@ namespace VLiveKit.Camera.Editor
                     {
                         if (EditorUtility.DisplayDialog(
                                 "Delete Shot GameObject",
-                            $"Delete Shot GameObject '{shot.name}', Spline, and Subject Target Group from the Scene?\n\nThis action can be undone.",
+                                $"Delete Shot GameObject '{shot.name}', Spline, and Subject Target Group from the Scene?\n\nThis action can be undone.",
                                 "Delete",
                                 "Cancel"))
                         {
@@ -258,6 +258,7 @@ namespace VLiveKit.Camera.Editor
                 EditorGUILayout.PropertyField(_shotSizeProp);
                 EditorGUILayout.PropertyField(_performersProp, true);
             }
+
             EditorGUI.indentLevel--;
         }
 

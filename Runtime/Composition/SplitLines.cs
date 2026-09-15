@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Unity.AppUI.UI;
 using UnityEngine;
@@ -630,5 +629,39 @@ namespace VLiveKit.Camera
             }
         }
 #endif
+    }
+
+    /// <summary>
+    /// Game Viewへ表示する構図ガイドの種類です。
+    /// </summary>
+    public enum SplitGuideMode
+    {
+        Symmetrical,
+        Bisection,
+        Thirds,
+        Diagonal,
+        ThirdsAndDiagonal,
+        CinemaScope
+    }
+
+    /// <summary>
+    /// Game View設定パネルへ適用するApp UI標準テーマです。
+    /// </summary>
+    public enum CompositionPanelTheme
+    {
+        Dark,
+        Light,
+        EditorDark,
+        EditorLight
+    }
+
+    /// <summary>
+    /// Game View設定パネルへ適用するApp UI標準スケールです。
+    /// </summary>
+    public enum CompositionPanelScale
+    {
+        Small,
+        Medium,
+        Large
     }
 }
