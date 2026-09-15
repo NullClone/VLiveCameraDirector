@@ -13,14 +13,14 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        private SerializedProperty _rigProp;
+        private SerializedProperty _rig;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _rigProp = serializedObject.FindProperty("_rig");
+            _rig = serializedObject.FindProperty(nameof(_rig));
         }
 
         public override bool RequiresConstantRepaint()
@@ -49,9 +49,9 @@ namespace VLiveKit.Camera.Editor
         {
             EditorGUILayout.LabelField("Target Rig", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_rigProp);
+            EditorGUILayout.PropertyField(_rig);
 
-            if (_rigProp.objectReferenceValue == null)
+            if (_rig.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("VLiveCameraRig is unassigned. Shot slots and Program output are resolved from the Rig.", MessageType.Warning);
             }

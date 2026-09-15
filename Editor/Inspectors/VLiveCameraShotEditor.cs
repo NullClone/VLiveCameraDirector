@@ -13,40 +13,27 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        private SerializedProperty _shotNameProp;
-        private SerializedProperty _shotTypeProp;
-        private SerializedProperty _rigProp;
-        private SerializedProperty _cinemachineCameraProp;
-        private SerializedProperty _splineDollyProp;
-        private SerializedProperty _rotationComposerProp;
-        private SerializedProperty _targetGroupProp;
-        private SerializedProperty _groupFramingProp;
-        private SerializedProperty _motionPlayerProp;
-        private SerializedProperty _performersProp;
-        private SerializedProperty _shotSizeProp;
-        private SerializedProperty _appliedPresetProp;
+        private SerializedProperty _shotName;
+        private SerializedProperty _shotType;
+        private SerializedProperty _appliedPreset;
+        private SerializedProperty _cinemachineCamera;
+        private SerializedProperty _splineDolly;
+        private SerializedProperty _targetGroup;
 
         private VLiveCameraMotionValidationReport _report;
         private bool _showMotionProfile = true;
-        private bool _showInternalReferences = false;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _shotNameProp = serializedObject.FindProperty("_shotName");
-            _shotTypeProp = serializedObject.FindProperty("_shotType");
-            _rigProp = serializedObject.FindProperty("_rig");
-            _cinemachineCameraProp = serializedObject.FindProperty("_cinemachineCamera");
-            _splineDollyProp = serializedObject.FindProperty("_splineDolly");
-            _rotationComposerProp = serializedObject.FindProperty("_rotationComposer");
-            _targetGroupProp = serializedObject.FindProperty("_targetGroup");
-            _groupFramingProp = serializedObject.FindProperty("_groupFraming");
-            _motionPlayerProp = serializedObject.FindProperty("_motionPlayer");
-            _performersProp = serializedObject.FindProperty("_performers");
-            _shotSizeProp = serializedObject.FindProperty("_shotSize");
-            _appliedPresetProp = serializedObject.FindProperty("_appliedPreset");
+            _shotName = serializedObject.FindProperty(nameof(_shotName));
+            _shotType = serializedObject.FindProperty(nameof(_shotType));
+            _appliedPreset = serializedObject.FindProperty(nameof(_appliedPreset));
+            _cinemachineCamera = serializedObject.FindProperty(nameof(_cinemachineCamera));
+            _splineDolly = serializedObject.FindProperty(nameof(_splineDolly));
+            _targetGroup = serializedObject.FindProperty(nameof(_targetGroup));
         }
 
         public override bool RequiresConstantRepaint()
@@ -68,9 +55,6 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.Space(6);
 
             DrawOperationsSection(shot);
-            EditorGUILayout.Space(6);
-
-            DrawInternalReferencesSection();
 
             if (Application.isPlaying)
             {
@@ -85,9 +69,9 @@ namespace VLiveKit.Camera.Editor
         {
             EditorGUILayout.LabelField("Shot Configuration", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_shotNameProp);
-            EditorGUILayout.PropertyField(_shotTypeProp);
-            EditorGUILayout.PropertyField(_appliedPresetProp, new GUIContent("Source Preset"));
+            EditorGUILayout.PropertyField(_shotName);
+            EditorGUILayout.PropertyField(_shotType);
+            EditorGUILayout.PropertyField(_appliedPreset, new GUIContent("Source Preset"));
 
             // Status and Slot identification
             int slotIndex = GetSlotIndex(shot, out VLiveCameraMotionPreset slotPreset);
@@ -104,17 +88,17 @@ namespace VLiveKit.Camera.Editor
 
         private void CheckMissingReferences()
         {
-            if (_cinemachineCameraProp.objectReferenceValue == null)
+            if (_cinemachineCamera.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("CinemachineCamera is missing. Run Apply / Sync on the Rig to resolve.", MessageType.Warning);
             }
 
-            if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShotType.Spline && _splineDollyProp.objectReferenceValue == null)
+            if (_shotType.enumValueIndex == (int)VLiveCameraShotType.Spline && _splineDolly.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("Spline Dolly is missing. Run Apply / Sync on the Rig to resolve.", MessageType.Warning);
             }
 
-            if (_targetGroupProp.objectReferenceValue == null)
+            if (_targetGroup.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("Subject Target Group is missing. Run Apply on the Rig to resolve.", MessageType.Warning);
             }
@@ -233,34 +217,6 @@ namespace VLiveKit.Camera.Editor
             }
         }
 
-        private void DrawInternalReferencesSection()
-        {
-            _showInternalReferences = EditorGUILayout.Foldout(_showInternalReferences, "Internal References", false);
-            if (!_showInternalReferences)
-            {
-                return;
-            }
-
-            EditorGUI.indentLevel++;
-            using (new EditorGUI.DisabledScope(true))
-            {
-                EditorGUILayout.PropertyField(_rigProp);
-                EditorGUILayout.PropertyField(_cinemachineCameraProp);
-                if (_shotTypeProp.enumValueIndex == (int)VLiveCameraShotType.Spline)
-                {
-                    EditorGUILayout.PropertyField(_splineDollyProp);
-                }
-
-                EditorGUILayout.PropertyField(_rotationComposerProp);
-                EditorGUILayout.PropertyField(_targetGroupProp);
-                EditorGUILayout.PropertyField(_groupFramingProp);
-                EditorGUILayout.PropertyField(_motionPlayerProp);
-                EditorGUILayout.PropertyField(_shotSizeProp);
-                EditorGUILayout.PropertyField(_performersProp, true);
-            }
-
-            EditorGUI.indentLevel--;
-        }
 
         private void DrawRuntimeSection(VLiveCameraShot shot)
         {

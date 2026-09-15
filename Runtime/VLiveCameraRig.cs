@@ -30,7 +30,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private Transform _customReference;
 
-        [Header("Common Physical Camera Settings")]
         [Tooltip("全ShotとProgram Cameraへ適用するセンサーサイズ。単位はミリメートルです。")]
         [SerializeField]
         private Vector2 _sensorSize = new Vector2(36f, 24f);
@@ -53,7 +52,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _farClipPlane = 1000f;
 
-        [Header("Motion Settings")]
         [Tooltip("カメラ開始位置の水平距離スケール。1.0が基準距離。0より大きい値。")]
         [Min(0.01f)]
         [SerializeField]

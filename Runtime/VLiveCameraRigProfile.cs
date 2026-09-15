@@ -10,7 +10,6 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Operational Responses")]
         [Tooltip("手動速度倍率の目標値へ追従する応答時間（秒単位）。")]
         [Range(0.01f, 3f)]
         [SerializeField]
@@ -36,7 +35,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _reverseAccelerationTime = 0.5f;
 
-        [Header("Recommended Constraints")]
         [Tooltip("推奨最大移動速度（メートル/秒）。これを超えるとValidatorで警告されます。")]
         [Min(0.1f)]
         [SerializeField]

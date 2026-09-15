@@ -60,7 +60,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _frameResponseTime = 0.22f;
 
-        [Header("Composition Guides")]
         [Tooltip("表示する構図ガイドの種類。")]
         [SerializeField]
         private SplitGuideMode _guideMode = SplitGuideMode.Thirds;
@@ -78,7 +77,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private float _lineWidth = 1.5f;
 
-        [Header("Runtime Panel")]
         [Tooltip("再生開始時から右側の設定パネルを開いておくか。")]
         [SerializeField]
         private bool _showSettingsOnStart;

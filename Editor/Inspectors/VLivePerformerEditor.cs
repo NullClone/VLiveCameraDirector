@@ -18,43 +18,43 @@ namespace VLiveKit.Camera.Editor
         private static readonly GUIContent s_bustRadiusContent = new GUIContent("Bust Radius");
         private static readonly GUIContent s_bodyRadiusContent = new GUIContent("Body Radius");
 
-        private SerializedProperty _performerAnimatorProp;
-        private SerializedProperty _performerNameProp;
-        private SerializedProperty _headRadiusProp;
-        private SerializedProperty _bustRadiusProp;
-        private SerializedProperty _bodyRadiusProp;
+        private SerializedProperty _performerAnimator;
+        private SerializedProperty _performerName;
+        private SerializedProperty _headRadius;
+        private SerializedProperty _bustRadius;
+        private SerializedProperty _bodyRadius;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _performerAnimatorProp = serializedObject.FindProperty("_performerAnimator");
-            _performerNameProp = serializedObject.FindProperty("_performerName");
-            _headRadiusProp = serializedObject.FindProperty("_headRadius");
-            _bustRadiusProp = serializedObject.FindProperty("_bustRadius");
-            _bodyRadiusProp = serializedObject.FindProperty("_bodyRadius");
+            _performerAnimator = serializedObject.FindProperty(nameof(_performerAnimator));
+            _performerName = serializedObject.FindProperty(nameof(_performerName));
+            _headRadius = serializedObject.FindProperty(nameof(_headRadius));
+            _bustRadius = serializedObject.FindProperty(nameof(_bustRadius));
+            _bodyRadius = serializedObject.FindProperty(nameof(_bodyRadius));
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.PropertyField(_performerAnimatorProp, s_animatorContent);
-            EditorGUILayout.PropertyField(_performerNameProp, s_nameContent);
+            EditorGUILayout.PropertyField(_performerAnimator, s_animatorContent);
+            EditorGUILayout.PropertyField(_performerName, s_nameContent);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Framing Bounds", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_headRadiusProp, s_headRadiusContent);
-            EditorGUILayout.PropertyField(_bustRadiusProp, s_bustRadiusContent);
-            EditorGUILayout.PropertyField(_bodyRadiusProp, s_bodyRadiusContent);
+            EditorGUILayout.PropertyField(_headRadius, s_headRadiusContent);
+            EditorGUILayout.PropertyField(_bustRadius, s_bustRadiusContent);
+            EditorGUILayout.PropertyField(_bodyRadius, s_bodyRadiusContent);
 
-            if (!_performerAnimatorProp.hasMultipleDifferentValues && _performerAnimatorProp.objectReferenceValue == null)
+            if (!_performerAnimator.hasMultipleDifferentValues && _performerAnimator.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("Performer Animator is unassigned.", MessageType.Warning);
             }
-            else if (!_performerAnimatorProp.hasMultipleDifferentValues)
+            else if (!_performerAnimator.hasMultipleDifferentValues)
             {
-                var animator = (Animator)_performerAnimatorProp.objectReferenceValue;
+                var animator = (Animator)_performerAnimator.objectReferenceValue;
                 if (animator != null && !animator.isHuman)
                 {
                     EditorGUILayout.HelpBox("Performer Animator must use a valid Humanoid Avatar.", MessageType.Error);

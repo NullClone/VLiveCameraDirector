@@ -24,7 +24,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private VLiveCameraRig _rig;
 
-        [Header("Owned Components & References")]
         [Tooltip("このショット専用のCinemachineCamera。")]
         [SerializeField]
         private CinemachineCamera _cinemachineCamera;
@@ -57,7 +56,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private ShotSize _shotSize = ShotSize.BustUp;
 
-        [Header("Applied Motion Settings")]
         [Tooltip("このショットに適用されている再利用元Preset参照。")]
         [SerializeField]
         private VLiveCameraMotionPreset _appliedPreset;

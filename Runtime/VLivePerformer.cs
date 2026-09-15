@@ -10,7 +10,6 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Performer")]
         [Tooltip("Head、UpperChest、Chest、Hipsを取得するHumanoid Animator。")]
         [SerializeField]
         private Animator _performerAnimator;
@@ -19,7 +18,6 @@ namespace VLiveKit.Camera
         [SerializeField]
         private string _performerName = "Performer";
 
-        [Header("Framing Bounds")]
         [Tooltip("FaceUpとCloseUpでHeadボーンの周囲に含める半径。メートル単位です。")]
         [Min(0.01f)]
         [SerializeField]

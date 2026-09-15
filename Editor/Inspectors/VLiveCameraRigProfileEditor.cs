@@ -11,32 +11,32 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        private SerializedProperty _speedResponseTimeProp;
-        private SerializedProperty _holdDecelerationTimeProp;
-        private SerializedProperty _resumeAccelerationTimeProp;
-        private SerializedProperty _reverseDecelerationTimeProp;
-        private SerializedProperty _reverseAccelerationTimeProp;
+        private SerializedProperty _speedResponseTime;
+        private SerializedProperty _holdDecelerationTime;
+        private SerializedProperty _resumeAccelerationTime;
+        private SerializedProperty _reverseDecelerationTime;
+        private SerializedProperty _reverseAccelerationTime;
 
-        private SerializedProperty _recommendedMaxSpeedProp;
-        private SerializedProperty _recommendedMaxAccelerationProp;
-        private SerializedProperty _recommendedMaxJerkProp;
-        private SerializedProperty _recommendedMaxAngularSpeedProp;
+        private SerializedProperty _recommendedMaxSpeed;
+        private SerializedProperty _recommendedMaxAcceleration;
+        private SerializedProperty _recommendedMaxJerk;
+        private SerializedProperty _recommendedMaxAngularSpeed;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _speedResponseTimeProp = serializedObject.FindProperty("_speedResponseTime");
-            _holdDecelerationTimeProp = serializedObject.FindProperty("_holdDecelerationTime");
-            _resumeAccelerationTimeProp = serializedObject.FindProperty("_resumeAccelerationTime");
-            _reverseDecelerationTimeProp = serializedObject.FindProperty("_reverseDecelerationTime");
-            _reverseAccelerationTimeProp = serializedObject.FindProperty("_reverseAccelerationTime");
+            _speedResponseTime = serializedObject.FindProperty(nameof(_speedResponseTime));
+            _holdDecelerationTime = serializedObject.FindProperty(nameof(_holdDecelerationTime));
+            _resumeAccelerationTime = serializedObject.FindProperty(nameof(_resumeAccelerationTime));
+            _reverseDecelerationTime = serializedObject.FindProperty(nameof(_reverseDecelerationTime));
+            _reverseAccelerationTime = serializedObject.FindProperty(nameof(_reverseAccelerationTime));
 
-            _recommendedMaxSpeedProp = serializedObject.FindProperty("_recommendedMaxSpeed");
-            _recommendedMaxAccelerationProp = serializedObject.FindProperty("_recommendedMaxAcceleration");
-            _recommendedMaxJerkProp = serializedObject.FindProperty("_recommendedMaxJerk");
-            _recommendedMaxAngularSpeedProp = serializedObject.FindProperty("_recommendedMaxAngularSpeed");
+            _recommendedMaxSpeed = serializedObject.FindProperty(nameof(_recommendedMaxSpeed));
+            _recommendedMaxAcceleration = serializedObject.FindProperty(nameof(_recommendedMaxAcceleration));
+            _recommendedMaxJerk = serializedObject.FindProperty(nameof(_recommendedMaxJerk));
+            _recommendedMaxAngularSpeed = serializedObject.FindProperty(nameof(_recommendedMaxAngularSpeed));
         }
 
         public override void OnInspectorGUI()
@@ -55,21 +55,21 @@ namespace VLiveKit.Camera.Editor
         {
             EditorGUILayout.LabelField("Operational Responses", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_speedResponseTimeProp);
-            EditorGUILayout.PropertyField(_holdDecelerationTimeProp);
-            EditorGUILayout.PropertyField(_resumeAccelerationTimeProp);
-            EditorGUILayout.PropertyField(_reverseDecelerationTimeProp);
-            EditorGUILayout.PropertyField(_reverseAccelerationTimeProp);
+            EditorGUILayout.PropertyField(_speedResponseTime);
+            EditorGUILayout.PropertyField(_holdDecelerationTime);
+            EditorGUILayout.PropertyField(_resumeAccelerationTime);
+            EditorGUILayout.PropertyField(_reverseDecelerationTime);
+            EditorGUILayout.PropertyField(_reverseAccelerationTime);
         }
 
         private void DrawConstraintsSection()
         {
             EditorGUILayout.LabelField("Recommended Constraints", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_recommendedMaxSpeedProp);
-            EditorGUILayout.PropertyField(_recommendedMaxAccelerationProp);
-            EditorGUILayout.PropertyField(_recommendedMaxJerkProp);
-            EditorGUILayout.PropertyField(_recommendedMaxAngularSpeedProp);
+            EditorGUILayout.PropertyField(_recommendedMaxSpeed);
+            EditorGUILayout.PropertyField(_recommendedMaxAcceleration);
+            EditorGUILayout.PropertyField(_recommendedMaxJerk);
+            EditorGUILayout.PropertyField(_recommendedMaxAngularSpeed);
 
             EditorGUILayout.HelpBox("These constraints are used by the Motion Validator for diagnostics and do not alter runtime playback.", MessageType.None);
         }

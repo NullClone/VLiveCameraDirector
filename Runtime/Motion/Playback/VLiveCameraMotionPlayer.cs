@@ -13,7 +13,6 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Target Shot & Components")]
         [Tooltip("このプレイヤーが属するVLiveCameraShot。")]
         [SerializeField]
         private VLiveCameraShot _shot;

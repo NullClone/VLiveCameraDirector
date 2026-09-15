@@ -11,14 +11,14 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        private SerializedProperty _identityProp;
-        private SerializedProperty _bodyProp;
-        private SerializedProperty _timingProp;
-        private SerializedProperty _aimProp;
-        private SerializedProperty _lensProp;
-        private SerializedProperty _rollProp;
-        private SerializedProperty _activationProp;
-        private SerializedProperty _rigProfileProp;
+        private SerializedProperty _identity;
+        private SerializedProperty _body;
+        private SerializedProperty _timing;
+        private SerializedProperty _aim;
+        private SerializedProperty _lens;
+        private SerializedProperty _roll;
+        private SerializedProperty _activation;
+        private SerializedProperty _rigProfile;
 
         private VLiveCameraMotionValidationReport _cachedReport;
         private bool _diagnosticsExpanded;
@@ -29,14 +29,14 @@ namespace VLiveKit.Camera.Editor
         private void OnEnable()
         {
             SerializedProperty data = serializedObject.FindProperty("_data");
-            _identityProp = data.FindPropertyRelative("_identity");
-            _bodyProp = data.FindPropertyRelative("_body");
-            _timingProp = data.FindPropertyRelative("_timing");
-            _aimProp = data.FindPropertyRelative("_aim");
-            _lensProp = data.FindPropertyRelative("_lens");
-            _rollProp = data.FindPropertyRelative("_roll");
-            _activationProp = data.FindPropertyRelative("_activation");
-            _rigProfileProp = data.FindPropertyRelative("_rigProfile");
+            _identity = data.FindPropertyRelative(nameof(_identity));
+            _body = data.FindPropertyRelative(nameof(_body));
+            _timing = data.FindPropertyRelative(nameof(_timing));
+            _aim = data.FindPropertyRelative(nameof(_aim));
+            _lens = data.FindPropertyRelative(nameof(_lens));
+            _roll = data.FindPropertyRelative(nameof(_roll));
+            _activation = data.FindPropertyRelative(nameof(_activation));
+            _rigProfile = data.FindPropertyRelative(nameof(_rigProfile));
         }
 
         public override void OnInspectorGUI()
@@ -46,12 +46,12 @@ namespace VLiveKit.Camera.Editor
 
             DrawIdentity();
             EditorGUILayout.Space(4f);
-            DrawTrack(_bodyProp, "Body");
-            DrawTrack(_timingProp, "Timing");
-            DrawTrack(_aimProp, "Aim & Composition");
-            DrawTrack(_lensProp, "Lens");
-            DrawTrack(_rollProp, "Roll");
-            DrawTrack(_activationProp, "Activation");
+            DrawTrack(_body, "Body");
+            DrawTrack(_timing, "Timing");
+            DrawTrack(_aim, "Aim & Composition");
+            DrawTrack(_lens, "Lens");
+            DrawTrack(_roll, "Roll");
+            DrawTrack(_activation, "Activation");
 
             if (EditorGUI.EndChangeCheck())
             {
@@ -70,8 +70,8 @@ namespace VLiveKit.Camera.Editor
         private void DrawIdentity()
         {
             EditorGUILayout.LabelField("Camera Performance", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_identityProp, new GUIContent("Identity & Intent"), true);
-            EditorGUILayout.PropertyField(_rigProfileProp, new GUIContent("Rig Profile"));
+            EditorGUILayout.PropertyField(_identity, new GUIContent("Identity & Intent"), true);
+            EditorGUILayout.PropertyField(_rigProfile, new GUIContent("Rig Profile"));
         }
 
         private static void DrawTrack(SerializedProperty property, string label)

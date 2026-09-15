@@ -11,33 +11,33 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        private SerializedProperty _masterTimelineProp;
-        private SerializedProperty _sectionTimelinesProp;
-        private SerializedProperty _autoFindOnAwakeProp;
-        private SerializedProperty _includeInactiveProp;
+        private SerializedProperty _masterTimeline;
+        private SerializedProperty _sectionTimelines;
+        private SerializedProperty _autoFindOnAwake;
+        private SerializedProperty _includeInactive;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _masterTimelineProp = serializedObject.FindProperty("_masterTimeline");
-            _sectionTimelinesProp = serializedObject.FindProperty("_sectionTimelines");
-            _autoFindOnAwakeProp = serializedObject.FindProperty("_autoFindOnAwake");
-            _includeInactiveProp = serializedObject.FindProperty("_includeInactive");
+            _masterTimeline = serializedObject.FindProperty(nameof(_masterTimeline));
+            _sectionTimelines = serializedObject.FindProperty(nameof(_sectionTimelines));
+            _autoFindOnAwake = serializedObject.FindProperty(nameof(_autoFindOnAwake));
+            _includeInactive = serializedObject.FindProperty(nameof(_includeInactive));
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
-            EditorGUILayout.PropertyField(_masterTimelineProp, new GUIContent("Master Timeline"));
-            EditorGUILayout.PropertyField(_sectionTimelinesProp, new GUIContent("Section Timelines"), true);
+            EditorGUILayout.PropertyField(_masterTimeline, new GUIContent("Master Timeline"));
+            EditorGUILayout.PropertyField(_sectionTimelines, new GUIContent("Section Timelines"), true);
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Auto Collection", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_autoFindOnAwakeProp, new GUIContent("Auto Find On Awake"));
-            EditorGUILayout.PropertyField(_includeInactiveProp, new GUIContent("Include Inactive"));
+            EditorGUILayout.PropertyField(_autoFindOnAwake, new GUIContent("Auto Find On Awake"));
+            EditorGUILayout.PropertyField(_includeInactive, new GUIContent("Include Inactive"));
 
             serializedObject.ApplyModifiedProperties();
 

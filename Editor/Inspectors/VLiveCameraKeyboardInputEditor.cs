@@ -17,32 +17,31 @@ namespace VLiveKit.Camera.Editor
     {
         // Fields
 
-        private SerializedProperty _switcherProp;
+        private SerializedProperty _switcher;
 #if ENABLE_INPUT_SYSTEM
-        private SerializedProperty _cutKeysProp;
-        private SerializedProperty _speedUpKeyProp;
-        private SerializedProperty _speedDownKeyProp;
-        private SerializedProperty _reverseKeyProp;
-        private SerializedProperty _holdKeyProp;
-        private SerializedProperty _resumeKeyProp;
-        private SerializedProperty _freezeKeyProp;
+        private SerializedProperty _cutKeys;
+        private SerializedProperty _speedUpKey;
+        private SerializedProperty _speedDownKey;
+        private SerializedProperty _reverseKey;
+        private SerializedProperty _holdKey;
+        private SerializedProperty _resumeKey;
+        private SerializedProperty _freezeKey;
 #endif
-        private bool _showControlsReference = false;
 
 
         // Methods
 
         private void OnEnable()
         {
-            _switcherProp = serializedObject.FindProperty("_switcher");
+            _switcher = serializedObject.FindProperty(nameof(_switcher));
 #if ENABLE_INPUT_SYSTEM
-            _cutKeysProp = serializedObject.FindProperty("_cutKeys");
-            _speedUpKeyProp = serializedObject.FindProperty("_speedUpKey");
-            _speedDownKeyProp = serializedObject.FindProperty("_speedDownKey");
-            _reverseKeyProp = serializedObject.FindProperty("_reverseKey");
-            _holdKeyProp = serializedObject.FindProperty("_holdKey");
-            _resumeKeyProp = serializedObject.FindProperty("_resumeKey");
-            _freezeKeyProp = serializedObject.FindProperty("_freezeKey");
+            _cutKeys = serializedObject.FindProperty(nameof(_cutKeys));
+            _speedUpKey = serializedObject.FindProperty(nameof(_speedUpKey));
+            _speedDownKey = serializedObject.FindProperty(nameof(_speedDownKey));
+            _reverseKey = serializedObject.FindProperty(nameof(_reverseKey));
+            _holdKey = serializedObject.FindProperty(nameof(_holdKey));
+            _resumeKey = serializedObject.FindProperty(nameof(_resumeKey));
+            _freezeKey = serializedObject.FindProperty(nameof(_freezeKey));
 #endif
         }
 
@@ -54,9 +53,6 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.Space(8);
 
             DrawBindingsSection();
-            EditorGUILayout.Space(8);
-
-            DrawControlsReferenceSection();
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -65,9 +61,9 @@ namespace VLiveKit.Camera.Editor
         {
             EditorGUILayout.LabelField("Target Switcher", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(_switcherProp);
+            EditorGUILayout.PropertyField(_switcher);
 
-            if (_switcherProp.objectReferenceValue == null)
+            if (_switcher.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("VLiveCameraSwitcher is unassigned. Keyboard camera switching will not function.", MessageType.Warning);
             }
@@ -78,16 +74,16 @@ namespace VLiveKit.Camera.Editor
             EditorGUILayout.LabelField("Key Bindings", EditorStyles.boldLabel);
 
 #if ENABLE_INPUT_SYSTEM
-            EditorGUILayout.PropertyField(_cutKeysProp, new GUIContent("Shot Cut Keys"), true);
+            EditorGUILayout.PropertyField(_cutKeys, new GUIContent("Shot Cut Keys"), true);
             EditorGUILayout.Space(4);
 
             EditorGUILayout.LabelField("Motion Control Keys", EditorStyles.miniBoldLabel);
-            EditorGUILayout.PropertyField(_speedUpKeyProp);
-            EditorGUILayout.PropertyField(_speedDownKeyProp);
-            EditorGUILayout.PropertyField(_reverseKeyProp);
-            EditorGUILayout.PropertyField(_holdKeyProp);
-            EditorGUILayout.PropertyField(_resumeKeyProp);
-            EditorGUILayout.PropertyField(_freezeKeyProp);
+            EditorGUILayout.PropertyField(_speedUpKey);
+            EditorGUILayout.PropertyField(_speedDownKey);
+            EditorGUILayout.PropertyField(_reverseKey);
+            EditorGUILayout.PropertyField(_holdKey);
+            EditorGUILayout.PropertyField(_resumeKey);
+            EditorGUILayout.PropertyField(_freezeKey);
 
             ValidateKeyConflicts();
 #else
@@ -98,7 +94,7 @@ namespace VLiveKit.Camera.Editor
 #if ENABLE_INPUT_SYSTEM
         private void ValidateKeyConflicts()
         {
-            if (_cutKeysProp == null)
+            if (_cutKeys == null)
             {
                 return;
             }
@@ -109,9 +105,9 @@ namespace VLiveKit.Camera.Editor
             var seenCutKeys = new HashSet<int>();
             var duplicateCutKeys = new HashSet<int>();
 
-            for (int i = 0; i < _cutKeysProp.arraySize; i++)
+            for (int i = 0; i < _cutKeys.arraySize; i++)
             {
-                int keyVal = _cutKeysProp.GetArrayElementAtIndex(i).intValue;
+                int keyVal = _cutKeys.GetArrayElementAtIndex(i).intValue;
                 if (keyVal != (int)Key.None)
                 {
                     if (!seenCutKeys.Add(keyVal))
@@ -130,12 +126,12 @@ namespace VLiveKit.Camera.Editor
             // 2. Motion control keys duplicate check
             var motionKeys = new Dictionary<string, int>
             {
-                { "Speed Up", _speedUpKeyProp.intValue },
-                { "Speed Down", _speedDownKeyProp.intValue },
-                { "Reverse", _reverseKeyProp.intValue },
-                { "Hold", _holdKeyProp.intValue },
-                { "Resume", _resumeKeyProp.intValue },
-                { "Freeze", _freezeKeyProp.intValue }
+                { "Speed Up", _speedUpKey.intValue },
+                { "Speed Down", _speedDownKey.intValue },
+                { "Reverse", _reverseKey.intValue },
+                { "Hold", _holdKey.intValue },
+                { "Resume", _resumeKey.intValue },
+                { "Freeze", _freezeKey.intValue }
             };
 
             var seenMotionKeys = new Dictionary<int, string>();
@@ -166,9 +162,9 @@ namespace VLiveKit.Camera.Editor
             }
 
             // 4. Implicit keys check
-            for (int i = 0; i < _cutKeysProp.arraySize; i++)
+            for (int i = 0; i < _cutKeys.arraySize; i++)
             {
-                int keyVal = _cutKeysProp.GetArrayElementAtIndex(i).intValue;
+                int keyVal = _cutKeys.GetArrayElementAtIndex(i).intValue;
                 if (keyVal == (int)Key.None)
                 {
                     continue;
@@ -233,20 +229,5 @@ namespace VLiveKit.Camera.Editor
             }
         }
 #endif
-
-        private void DrawControlsReferenceSection()
-        {
-            _showControlsReference = EditorGUILayout.Foldout(_showControlsReference, "Controls Reference");
-            if (_showControlsReference)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.LabelField("• Numbers 1-9 / Numpad 1-9: Direct cut to corresponding shot");
-                EditorGUILayout.LabelField("• Up Arrow / = / +: Speed up spline motion");
-                EditorGUILayout.LabelField("• Down Arrow / -: Speed down spline motion");
-                EditorGUILayout.LabelField("• R: Reverse motion direction");
-                EditorGUILayout.LabelField("• Space / H: Hold or resume motion");
-                EditorGUI.indentLevel--;
-            }
-        }
     }
 }

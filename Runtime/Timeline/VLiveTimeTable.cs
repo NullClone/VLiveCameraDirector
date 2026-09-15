@@ -15,19 +15,16 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Master")]
         [Tooltip("ライブ進行の基準となるMaster PlayableDirector。")]
         [FormerlySerializedAs("masterTimeline")]
         [SerializeField]
         private PlayableDirector _masterTimeline;
 
-        [Header("Section Timelines")]
         [Tooltip("名前付きセクションとPlayableDirectorの対応一覧。")]
         [FormerlySerializedAs("sectionTimelines")]
         [SerializeField]
         private List<VLiveTimelineSlot> _sectionTimelines = new();
 
-        [Header("Auto Find")]
         [Tooltip("Awake時にMaster Timeline配下のPlayableDirectorを自動収集するか。")]
         [FormerlySerializedAs("autoFindOnAwake")]
         [SerializeField]

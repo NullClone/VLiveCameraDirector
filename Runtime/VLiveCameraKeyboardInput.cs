@@ -11,14 +11,12 @@ namespace VLiveKit.Camera
     {
         // Fields
 
-        [Header("Target Switcher")]
         [Tooltip("切り替え命令を送信するVLiveCameraSwitcher。")]
         [SerializeField]
         private VLiveCameraSwitcher _switcher;
 
 
 #if ENABLE_INPUT_SYSTEM
-        [Header("Keyboard Bindings - Shot Cut")]
         [Tooltip("ショット1〜9へ直接Cutするためのキー割り当て一覧。")]
         [SerializeField]
         private Key[] _cutKeys = new Key[]
@@ -34,7 +32,6 @@ namespace VLiveKit.Camera
             Key.Digit9
         };
 
-        [Header("Keyboard Bindings - Motion Control")]
         [Tooltip("Spline進行速度を上げるキー。")]
         [SerializeField]
         private Key _speedUpKey = Key.UpArrow;
