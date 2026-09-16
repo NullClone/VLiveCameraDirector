@@ -6,7 +6,7 @@
 
 ## 2. Current — Camera Director Foundation
 
-2026-09-14時点の基盤:
+2026-09-15時点の基盤:
 
 - Unity 6.3、Cinemachine 3.1.7、Input System 1.19.0
 - 製品名`VLive Camera Director`、Package ID`com.toshi.vlivekit.camera-director`
@@ -28,13 +28,14 @@
 - Motion EvaluatorとMotion Player
 - Static / Rolling Entry
 - Speed、Reverse、Hold、Resume
-- 10種の初期3D Motion Palette
+- 正式採用前の比較基準となる標準8カメPreset
+- 参照GUIDを維持してExperimentalへ移した従来10種の3D Motion Palette
 - 標準IMGUIを使った英語Custom Inspector
 - Editor Motion Validator
 - Runtime、Editor、Presetの責務別フォルダ構成
 - Game View用のApp UI構図パネル、テーマ切替、アニメーション付きアスペクトマスク、外周フレーム、Split Line
 
-ユーザーの作業用SceneでRig作成と基本的な切り替えは確認済みである。新しいActor構図とPhysical Camera基盤はUnity CompileとConsoleまで確認済みであり、実際のFaceUp、BustUp、複数Actorの画面構図は未評価である。初期Presetは評価候補であり、Gold Masterではない。
+ユーザーの作業用SceneでRig作成と基本的な切り替えは確認済みである。新しいActor構図とPhysical Camera基盤はUnity CompileとConsoleまで確認済みであり、実際のFaceUp、BustUp、複数Actorの画面構図は未評価である。標準8カメPresetは正式採用前の評価候補であり、Gold Masterではない。
 
 ## 3. Next — Framing and Physical Camera Acceptance
 
@@ -52,13 +53,14 @@
 
 ## 4. Then — Motion Quality and Gold Masters
 
-FramingとPhysical Cameraの基準値確定後、ユーザーのSceneで現在のPaletteを評価する。
+FramingとPhysical Cameraの基準値確定後、ユーザーのSceneで標準8カメとExperimentalを比較評価する。
 
 - Y移動、旋回、距離、Lens、Rolling Entryの映像確認
 - Dolly、Fluid Head、Crane、Gimbal、Handheld、RoboticのRig Character
 - Rig別のSpeed、Hold、Reverse応答
 - Roll、Horizon、必要な機材だけへのCinemachine Noise
 - Validatorの角速度、曲率、Horizon、Near Clip診断
+- 8枠の役割、キャラサイズ、画面の支点、切り替え時の連続性
 - Gold、Experimental、Reject分類
 - 代表的なGold Master候補の確立
 

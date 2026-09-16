@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4f85e2b01c34172a912e73527a0b3f1, type: 3}
+  m_Name: 07_RailLow
+  m_EditorClassIdentifier: VLiveKit.Camera.Runtime::VLiveKit.Camera.VLiveCameraMotionPreset
+  _data:
+    _identity:
+      _displayName: 07 Rail Low
+      _shotType: 1
+      _motionFamily: 3
+      _shotSize: 1
+      _energy: 2
+      _description: "\u4F4E\u3044\u30EC\u30FC\u30EB\u4F4D\u7F6E\u304B\u3089\u8FEB\u529B\u3068\u8863\u88C5\u306E\u30B7\u30EB\u30A8\u30C3\u30C8\u3092\u898B\u305B\u308B\u6A2A\u79FB\u52D5\u3002\u7D42\u7AEF\u306E\u6C7A\u3081\u753B\u3078\u81EA\u7136\u306B\u53CE\u675F\u3059\u308B\u3002"
+    _body:
+      _knots:
+      - Position: {x: -3.8, y: 0.62, z: 5.15}
+        TangentIn: {x: -1.1, y: -0.08, z: 0.3}
+        TangentOut: {x: 1.25, y: 0.08, z: -0.34}
+        TangentMode: 4
+        AutoSmoothTension: 0.33333334
+        Rotation: {x: 0, y: 0, z: 0, w: 1}
+      - Position: {x: 0, y: 0.72, z: 4.15}
+        TangentIn: {x: -1.5, y: -0.04, z: 0.05}
+        TangentOut: {x: 1.5, y: 0.04, z: -0.05}
+        TangentMode: 4
+        AutoSmoothTension: 0.33333334
+        Rotation: {x: 0, y: 0, z: 0, w: 1}
+      - Position: {x: 3.8, y: 0.72, z: 5.15}
+        TangentIn: {x: -1.25, y: 0, z: -0.34}
+        TangentOut: {x: 1.1, y: 0.05, z: 0.3}
+        TangentMode: 4
+        AutoSmoothTension: 0.33333334
+        Rotation: {x: 0, y: 0, z: 0, w: 1}
+      _isClosed: 0
+      _referenceSplineLength: 7.904112
+      _startDistance: 0
+      _endDistance: 0
+    _timing:
+      _clipDuration: 5.8
+      _progressCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 0.18
+          value: 0.08
+          inSlope: 0.78
+          outSlope: 0.78
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 0.74
+          value: 0.84
+          inSlope: 1.05
+          outSlope: 1.05
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _scaleTimingMode: 0
+      _minSpeedMultiplier: 0.25
+      _maxSpeedMultiplier: 2
+      _speedStep: 0.25
+    _aim:
+      _aimOffset: {x: 0, y: 0, z: 0}
+      _aimOffsetXCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _aimOffsetYCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _aimOffsetZCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _screenPosition: {x: 0, y: 0.07}
+      _screenPositionXCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _screenPositionYCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _deadZoneEnabled: 1
+      _deadZoneSize: {x: 0.08, y: 0.06}
+      _hardLimitsEnabled: 1
+      _hardLimitsSize: {x: 0.72, y: 0.68}
+      _hardLimitsOffset: {x: 0, y: 0}
+      _damping: {x: 0.3, y: 0.34}
+      _lookaheadEnabled: 0
+      _lookaheadTime: 0
+      _lookaheadSmoothing: 0
+      _centerOnActivate: 1
+    _lens:
+      _lensMode: 1
+      _fieldOfView: 40
+      _fieldOfViewCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _focalLength: 40
+      _focalLengthCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    _roll:
+      _rollMode: 0
+      _rollCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    _activation:
+      _entryMode: 0
+      _inTime: 0
+      _outTime: 5.8
+      _exitBehavior: 0
+    _rigProfile: {fileID: 11400000, guid: 54ec1dd82cf3c4f4da191f1ff7d58230, type: 2}

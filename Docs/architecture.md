@@ -148,13 +148,20 @@ Editor/
   VLiveKit.Camera.Editor.asmdef
 
 Presets/
-  Motion/
+  Motion/Standard/
+  Motion/Experimental/
   DefaultRigProfile.asset
+
+Tests/
+  Editor/
+    VLiveCameraStandardPresetAssetTests.cs
+    VLiveKit.Camera.Tests.asmdef
 ```
 
 - Runtime namespaceは`VLiveKit.Camera`とする。
 - Editor namespaceは`VLiveKit.Camera.Editor`とする。
 - Testsを追加する場合は`VLiveKit.Camera.Tests`とする。
+- Standard Presetの生成処理はTests assemblyの明示テストにだけ置き、製品Editor assemblyへ生成専用型を追加しない。
 - フォルダ階層をnamespaceへ反映しない。
 - RuntimeとEditorのasmdefを機能フォルダごとに細分化しない。
 - `Core`、`Common`、`Utilities`、`Managers`、`Enums`、`Tools`のような投棄先フォルダを作らない。

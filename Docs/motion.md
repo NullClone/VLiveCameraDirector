@@ -292,7 +292,24 @@ Validatorの閾値は検証開始値であり、警告を合否へ変換しな�
 
 ## 13. 初期Palette
 
-現在の10 Assetを3D Motion Paletteの候補とする。
+正式な8カメ規格を確定する前の比較基準として、`Presets/Motion/Standard`に次の8 Assetを置く。
+
+| No. | Asset | Shot | Size | Focal Length | 役割 |
+| --- | --- | --- | --- | ---: | --- |
+| 1 | `01_FOHWide` | Fixed | Wide | 28mm | ステージ、照明、フォーメーションを把握する正面全景 |
+| 2 | `02_FrontMedium` | Fixed | Full | 50mm | 情報を安定して伝える正面の基準点 |
+| 3 | `03_FrontClose` | Fixed | BustUp | 85mm | 歌詞、表情、感情を拾う正面寄り |
+| 4 | `04_KamiAngle` | Fixed | BustUp | 58mm | 客席から見て右の上手側から、衣装、髪型、腕、プロップを拾う斜め画 |
+| 5 | `05_ShimoAngle` | Fixed | BustUp | 58mm | 客席から見て左の下手側から、衣装、髪型、腕、プロップを拾う斜め画 |
+| 6 | `06_CraneHigh` | Spline | Wide | 32mm | 群舞、隊形変化、照明構造を見せるクレーン上昇 |
+| 7 | `07_RailLow` | Spline | Full | 40mm | 迫力と衣装のシルエットを見せる低い横移動 |
+| 8 | `08_DetailAccent` | Fixed | CloseUp | 100mm | 呼吸、遊び、視線移動の緩衝に限定する味付け枠 |
+
+全8 AssetはFocal Length指定と`DefaultRigProfile`を使用する。Splineの2 Assetは`Static`開始、終端速度0、`Hold`終了とし、止め画から動き、終点の決め画へ収束する。残る6 Assetは固定画とし、動きの量ではなく役割と画面内サイズの差を比較する。
+
+StandardはGold Masterではない。特に`01_FOHWide`は現行のActor Target GroupとGroup Framingを使うため、完全なステージ固定画ではなくActor中心の全景候補である。ユーザーの作業用Sceneで8枠の役割、距離、切れ位置、画面の支点、切り替え時の連続性を比較し、正式採用または再調整を判断する。
+
+従来の10 Assetは参照GUIDを維持したまま`Presets/Motion/Experimental`へ移し、比較対象として保持する。
 
 1. FixedMedium
 2. PushIn
@@ -305,7 +322,7 @@ Validatorの閾値は検証開始値であり、警告を合否へ変換しな�
 9. CraneDrop
 10. PedestalRise
 
-これらはGold Masterではない。ユーザーの作業用SceneでGold、Experimental、Rejectを判断してから、左右、距離、Duration、Lens、EnergyのVariantを増やす。Preset数より先にEntry、Body、Aim、Lens、終了、手動介入を確認する。
+Standardの正式採用後にGold、Experimental、Rejectを判断し、左右、距離、Duration、Lens、EnergyのVariantを増やす。Preset数より先にEntry、Body、Aim、Lens、終了、手動介入を確認する。
 
 ## 14. 不変条件
 

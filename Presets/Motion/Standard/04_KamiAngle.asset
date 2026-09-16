@@ -1,0 +1,137 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4f85e2b01c34172a912e73527a0b3f1, type: 3}
+  m_Name: 04_KamiAngle
+  m_EditorClassIdentifier: VLiveKit.Camera.Runtime::VLiveKit.Camera.VLiveCameraMotionPreset
+  _data:
+    _identity:
+      _displayName: 04 Kami Angle
+      _shotType: 0
+      _motionFamily: 0
+      _shotSize: 2
+      _energy: 1
+      _description: "\u5BA2\u5E2D\u304B\u3089\u898B\u3066\u53F3\u3001\u6F14\u8005\u304B\u3089\u898B\u3066\u5DE6\u306E\u4E0A\u624B\u5074\u304B\u3089\u3001\u8863\u88C5\u3001\u9AEA\u578B\u3001\u8155\u3001\u30D7\u30ED\u30C3\u30D7\u3092\u898B\u305B\u308B\u659C\u3081\u56FA\u5B9A\u753B\u3002"
+    _body:
+      _knots:
+      - Position: {x: -3.65, y: 1.6, z: 4.85}
+        TangentIn: {x: 0, y: 0, z: 0}
+        TangentOut: {x: 0, y: 0, z: 0}
+        TangentMode: 3
+        AutoSmoothTension: 0.33333334
+        Rotation: {x: 0, y: 0, z: 0, w: 1}
+      _isClosed: 0
+      _referenceSplineLength: 0
+      _startDistance: 0
+      _endDistance: 0
+    _timing:
+      _clipDuration: 4
+      _progressCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _scaleTimingMode: 0
+      _minSpeedMultiplier: 0.25
+      _maxSpeedMultiplier: 2
+      _speedStep: 0.25
+    _aim:
+      _aimOffset: {x: 0, y: 0, z: 0}
+      _aimOffsetXCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _aimOffsetYCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _aimOffsetZCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _screenPosition: {x: 0.04, y: 0.07}
+      _screenPositionXCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _screenPositionYCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _deadZoneEnabled: 1
+      _deadZoneSize: {x: 0.08, y: 0.06}
+      _hardLimitsEnabled: 1
+      _hardLimitsSize: {x: 0.72, y: 0.68}
+      _hardLimitsOffset: {x: 0, y: 0}
+      _damping: {x: 0.34, y: 0.38}
+      _lookaheadEnabled: 0
+      _lookaheadTime: 0
+      _lookaheadSmoothing: 0
+      _centerOnActivate: 1
+    _lens:
+      _lensMode: 1
+      _fieldOfView: 40
+      _fieldOfViewCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      _focalLength: 58
+      _focalLengthCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    _roll:
+      _rollMode: 0
+      _rollCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    _activation:
+      _entryMode: 0
+      _inTime: 0
+      _outTime: 4
+      _exitBehavior: 0
+    _rigProfile: {fileID: 11400000, guid: 54ec1dd82cf3c4f4da191f1ff7d58230, type: 2}
